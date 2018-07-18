@@ -38,11 +38,3 @@ All new development should be done in a branch named `<initials>-<description>`
 	git checkout -b <initials>-<description>
 
 When the feature is complete, tests pass, and you are ready for it to be merged, create a PR.
-
-# Pull Requests
-
-All pull requests should include:
-
-* ` # Goal` - description of what the PR is trying to accomplish.
-* ` # Testing` - description of how the PR should be tested.
-
