@@ -13,7 +13,7 @@ Peregrine is a REST API server written in Go for scouting and analysis of FIRST 
 
 Pull Peregrine from github:
 
-	go get github.com/Pigmice2733/scouting-backend
+	go get github.com/Pigmice2733/peregrine-backend
 
 ### Vendoring
 
