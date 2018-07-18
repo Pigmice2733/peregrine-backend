@@ -11,7 +11,7 @@ Peregrine is a REST API server written in Go for scouting and analysis of FIRST 
 >
 > If you do not, you can get more info at [golang.org's install guide](http://golang.org/doc/install).
 
-Pull Peregrine from github:
+Pull Peregrine from GitHub:
 
 	go get github.com/Pigmice2733/peregrine-backend
 
@@ -45,3 +45,4 @@ All pull requests should include:
 
 * ` # Goal` - description of what the PR is trying to accomplish.
 * ` # Testing` - description of how the PR should be tested.
+
