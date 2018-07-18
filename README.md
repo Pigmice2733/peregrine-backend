@@ -1,4 +1,4 @@
-# Peregrine
+<h1 align="center"><img src="https://raw.githubusercontent.com/Pigmice2733/peregrine-logo/master/logo-with-text.png" alt="Peregrine"></h1>
 
 Peregrine is a REST API server written in Go for scouting and analysis of FIRST Robotics competitions.
 
