@@ -6,10 +6,7 @@ Peregrine is a REST API server written in Go for scouting and analysis of FIRST 
 
 ### GOPATH
 
-> ## NOTE
-> These instructions assume that you already have Go installed and your environment setup.
->
-> If you do not, you can get more info at [golang.org's install guide](http://golang.org/doc/install).
+> **NOTE**: These instructions assume that you already have Go installed and your environment setup. If you do not, you can get more info at [golang.org's install guide](http://golang.org/doc/install).
 
 Pull Peregrine from GitHub:
 
