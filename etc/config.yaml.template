@@ -1,0 +1,4 @@
+# Peregrine Configuration
+server:
+  listen: :8080
+  origin: \*
