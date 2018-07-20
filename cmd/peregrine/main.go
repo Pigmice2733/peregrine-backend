@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/config"
 	"github.com/Pigmice2733/peregrine-backend/internal/server"
@@ -10,11 +11,12 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatalf("Usage: %s [config path]\n", os.Args[0])
+	conf := filepath.Join(os.Getenv("GOPATH"), "src", "github.com", "Pigmice2733", "peregrine-backend", "etc", "config.yaml")
+	if len(os.Args) >= 2 {
+		conf = os.Args[1]
 	}
 
-	f, err := os.Open(os.Args[1])
+	f, err := os.Open(conf)
 	if err != nil {
 		log.Fatalf("error opening config file: %v\n", err)
 	}
