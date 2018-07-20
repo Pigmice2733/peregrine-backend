@@ -11,14 +11,14 @@ import (
 
 // Server holds information neccesary for the peregrine-backend server.
 type Server struct {
-	router *mux.Router
-	addr   string
-	origin string
+	router  *mux.Router
+	address string
+	origin  string
 }
 
 // New returns a new peregrine server.
 func New(c config.Config) *Server {
-	s := &Server{addr: c.Server.Listen, origin: c.Server.Origin}
+	s := &Server{address: c.Server.Address, origin: c.Server.Origin}
 
 	r := mux.NewRouter()
 	initRoutes(r)
@@ -29,7 +29,7 @@ func New(c config.Config) *Server {
 
 // Run starts serving at the given address.
 func (s *Server) Run() error {
-	return http.ListenAndServe(s.addr, s.router)
+	return http.ListenAndServe(s.address, s.router)
 }
 
 func initRoutes(r *mux.Router) {
