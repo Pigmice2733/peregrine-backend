@@ -9,7 +9,7 @@ import (
 // initRoutesV1 creates the server router and sets all v1 routes.
 func (s *Server) initRoutesV1() {
 	r := mux.NewRouter().PathPrefix("/v1").Subrouter()
-	r.Use(ihttp.CORS, ihttp.JSON)
+	r.Use(ihttp.CORS)
 
 	r.HandleFunc("/health", handlers.Health()).Methods("GET")
 

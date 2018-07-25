@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,4 +73,13 @@ func TestRespond(t *testing.T) {
 			assert.Equal(t, testCase.expectedErrorCode, body.Error.Code())
 		}
 	}
+}
+
+func TestError(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	Error(rr, http.StatusOK)
+	http.StatusText(http.StatusOK)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, http.StatusText(http.StatusOK), strings.Trim(rr.Body.String(), "\n"))
 }
