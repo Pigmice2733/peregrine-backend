@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/config"
-	routes "github.com/Pigmice2733/peregrine-backend/internal/routes/v1"
 	"github.com/gorilla/mux"
 )
 
@@ -19,9 +18,7 @@ type Server struct {
 func New(c config.Config) *Server {
 	s := &Server{address: c.Server.Address, origin: c.Server.Origin}
 
-	r := mux.NewRouter()
-	routes.Register(r)
-	s.router = r
+	s.initRoutesV1()
 
 	return s
 }
