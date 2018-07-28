@@ -9,7 +9,7 @@ jobs:
       
     working_directory: /go/src/github.com/Pigmice2733/peregrine-backend
     steps:
-      - checkout'
+      - checkout
       - run: dep ensure
       - run: go get -v -t -d ./...
       - run: go test -v ./...
