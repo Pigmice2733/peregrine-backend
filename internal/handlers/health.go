@@ -6,7 +6,7 @@ import (
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 )
 
-// Health returns a health handler.
+// Health returns a health handler that respond with {"ok": true}
 func Health() http.HandlerFunc {
 	var success = map[string]bool{"ok": true}
 

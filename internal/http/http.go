@@ -18,14 +18,17 @@ type ResponseError struct {
 	ErrorCode int    `json:"code"`
 }
 
+// Error returns the ResponseError error message.
 func (re ResponseError) Error() string { return re.Message }
-func (re ResponseError) Code() int     { return re.ErrorCode }
+
+// Code returns the ResponseError error code.
+func (re ResponseError) Code() int { return re.ErrorCode }
 
 // Response defines a JSON response, a ResponseError, if applicable, and
 // data.
 type Response struct {
-	Error *ResponseError `json:"error"`
-	Data  interface{}    `json:"data"`
+	Error *ResponseError `json:"error,omitempty"`
+	Data  interface{}    `json:"data,omitempty"`
 }
 
 // Respond JSON encodes the given value and writes it to the ResponseWriter,

@@ -1,0 +1,15 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.10
+      
+    working_directory: /go/src/github.com/Pigmice2733/peregrine-backend
+    steps:
+      - checkout
+      - run: dep ensure
+      - run: go get -v -t -d ./...
+      - run: go test -v ./...
