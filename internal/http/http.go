@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// ResponseErrorer defines the neccessary methods for a ResponseError, the error
+// ResponseErrorer defines the necessary methods for a ResponseError, the error
 // message, and the error code.
 type ResponseErrorer interface {
 	Error() string
