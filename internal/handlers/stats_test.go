@@ -10,17 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func abs(a int64) int64 {
-	if a < 0 {
-		a *= -1
-	}
-	return a
-}
-
-func semiEqual(a, b, precision int64) bool {
-	return abs(a-b) <= precision
-}
-
 func TestStatsHandler(t *testing.T) {
 	weak := time.Now().Add(-time.Second * 10)
 	strongUptimeGame := time.Date(2002, 3, 4, 0, 0, 0, 0, time.UTC)
