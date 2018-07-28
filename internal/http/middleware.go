@@ -1,11 +1,22 @@
 package http
 
 import (
+	"context"
 	"net/http"
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 )
+
+type key int
+
+const keyCorrelationIDCtx key = 0
+
+// GetCorrelationID returns the correlation ID from a http request.
+func GetCorrelationID(r *http.Request) string {
+	v, _ := r.Context().Value(keyCorrelationIDCtx).(string)
+	return v
+}
 
 // CORS is a middleware for setting Cross Origin Resource Sharing headers.
 func CORS(next http.Handler) http.Handler {
@@ -28,6 +39,7 @@ func MakeLoggerMiddleware(logger *logrus.Logger) func(http.Handler) http.Handler
 					correlationID = correlationUUID.String()
 				}
 			}
+			r.WithContext(context.WithValue(r.Context(), keyCorrelationIDCtx, correlationID))
 
 			logger.WithFields(logrus.Fields{
 				"url":           r.URL.String(),
