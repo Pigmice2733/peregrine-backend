@@ -35,9 +35,7 @@ func MakeLoggerMiddleware(logger *logrus.Logger) func(http.Handler) http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			correlationID := r.Header.Get("X-Correlation-ID")
 			if correlationID == "" {
-				if correlationUUID, err := uuid.NewV4(); err == nil {
-					correlationID = correlationUUID.String()
-				}
+				correlationID = uuid.NewV4().String()
 			}
 			r.WithContext(context.WithValue(r.Context(), keyCorrelationIDCtx, correlationID))
 
