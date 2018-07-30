@@ -2,6 +2,7 @@
 
 ![CircleCI](https://circleci.com/gh/Pigmice2733/peregrine-backend.svg?style=shield&circle-token=:circle-token)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Pigmice2733/peregrine-backend)](https://goreportcard.com/report/github.com/Pigmice2733/peregrine-backend)
+[![GitHub](https://img.shields.io/github/license/Pigmice2733/peregrine-backend.svg)](https://github.com/Pigmice2733/peregrine-backend/blob/master/LICENSE.md)
 
 Peregrine is a REST API server written in Go for scouting and analysis of FIRST Robotics competitions.
 
@@ -38,3 +39,11 @@ All new development should be done in a branch named `<initials>/<description>`
 	git checkout -b <initials>/<description>
 
 When the feature is complete, tests pass, and you are ready for it to be merged, create a PR.
+
+Pull requests must have at least one approving review (ideally two), and the CircleCI tests must pass.
+
+A watch script at `scripts/watch.sh` is provided for developers. It will rebuild and restart the server on change.
+
+# Testing
+
+You can run all peregrine-backend tests by simply running `go test ./...` in the root project directory. These will be the same tests that CircleCI runs so before you even *think* about pushing a branch, make sure you've tested it.
