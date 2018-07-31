@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Server holds information neccesary for the peregrine-backend server.
+// Server holds information necessary for the peregrine-backend server.
 type Server struct {
 	router    *mux.Router
 	startTime *time.Time
