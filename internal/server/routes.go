@@ -13,12 +13,13 @@ func (s *Server) initRoutesV1() {
 	r := mux.NewRouter()
 	r.Use(ihttp.CORS)
 
-	r.HandleFunc("/", handlers.Stats(func() *time.Time {
-		return s.startTime
-	}))
-
 	routerV1 := r.PathPrefix("/v1").Subrouter()
 
+	getStartTime := func() *time.Time {
+		return s.startTime
+	}
+
+	routerV1.HandleFunc("/stats", handlers.Stats(getStartTime)).Methods("GET")
 	routerV1.HandleFunc("/health", handlers.Health()).Methods("GET")
 
 	s.router = r
