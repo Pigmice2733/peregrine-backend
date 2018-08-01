@@ -31,12 +31,6 @@ func Stats(getServerStartTime getStartTimeFunc) http.HandlerFunc {
 		startTime := getServerStartTime()
 		now := time.Now()
 
-		asdf := func() error {
-			return nil
-		}
-
-		asdf()
-
 		resp := statsResponse{Running: startTime != nil, Time: now.Format(time.RFC3339)}
 		if startTime != nil {
 			resp.StartTime = startTime.Format(time.RFC3339)
