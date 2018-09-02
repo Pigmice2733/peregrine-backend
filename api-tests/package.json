@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "eslint": "^5.5.0",
+    "eslint-config-google": "^0.9.1",
+    "eslint-plugin-jest": "^21.22.0",
+    "jest": "^23.5.0"
+  },
+  "dependencies": {
+    "node-fetch": "^2.2.0"
+  }
+}

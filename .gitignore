@@ -1,3 +1,4 @@
 /cmd/peregrine/peregrine
 /vendor/
-config*.yaml
+/.vscode
+/etc/config*.json
