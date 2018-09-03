@@ -1,5 +1,5 @@
-const fetch = require('node-fetch')
-const config = require('./../etc/config.development.json')
+import fetch from 'node-fetch'
+import config from './../etc/config.development.json'
 
 const addr = `http://${config.server.address}/`
 
