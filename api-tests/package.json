@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
   "devDependencies": {
     "eslint": "^5.5.0",
     "eslint-config-google": "^0.9.1",
