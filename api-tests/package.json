@@ -1,0 +1,29 @@
+{
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.0.0",
+    "@babel/plugin-transform-modules-commonjs": "^7.0.0",
+    "babel-core": "^7.0.0-bridge.0",
+    "babel-jest": "^23.4.2",
+    "eslint": "^5.5.0",
+    "eslint-plugin-jest": "^21.22.0",
+    "jest": "^23.5.0",
+    "prettier": "^1.14.2"
+  },
+  "dependencies": {
+    "node-fetch": "^2.2.0"
+  },
+  "babel": {
+    "plugins": [
+      "@babel/plugin-transform-modules-commonjs"
+    ]
+  },
+  "prettier": {
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "all"
+  }
+}

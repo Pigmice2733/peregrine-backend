@@ -30,7 +30,7 @@ Install vendored dependencies:
 
 # Config File
 
-Copy `./etc/config.yaml.template` to `./etc/config.yaml` as a starting point.
+Copy `./etc/config.json.template` to `./etc/config.development.json` as a starting point.
 
 # Development
 
@@ -42,8 +42,11 @@ When the feature is complete, tests pass, and you are ready for it to be merged,
 
 Pull requests must have at least one approving review (ideally two), and the CircleCI tests must pass.
 
-A watch script at `scripts/watch.sh` is provided for developers. It will rebuild and restart the server on change.
-
 # Testing
 
-You can run all peregrine-backend tests by simply running `go test ./...` in the root project directory. These will be the same tests that CircleCI runs so before you even *think* about pushing a branch, make sure you've tested it.
+You can run all peregrine-backend unit tests by simply running `go test ./...` in the root project directory. These will be the same tests that CircleCI runs so before you even *think* about pushing a branch, make sure you've tested it.
+
+You can run API blackbox integration tests by going to the api-tests folder and doing the following:
+
+    yarn
+    ./node_modules/.bin/jest

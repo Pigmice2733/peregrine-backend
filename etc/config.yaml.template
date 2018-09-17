@@ -1,4 +1,0 @@
-# Peregrine Configuration
-server:
-  address: :8080 # address for peregrine-backend to listen on
-  origin: \* # origin for CORS headers
