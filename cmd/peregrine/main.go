@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/server"
 )
 
-const year = 2018
+var year = time.Now().Year()
 
 func main() {
 	basePath := "."

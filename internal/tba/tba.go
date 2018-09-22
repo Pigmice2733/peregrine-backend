@@ -40,6 +40,10 @@ type tbaEvent struct {
 	Webcasts     []tbaWebcast `json:"webcasts"`
 }
 
+// Maximum size of response from the TBA API to read. This value is about 4x the
+// size of a typical /events/{year} response from TBA.
+const maxResponseSize int64 = 1.2e+6
+
 func (s *Service) makeRequest(path string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", s.URL+path, nil)
 	if err != nil {
@@ -53,16 +57,16 @@ func (s *Service) makeRequest(path string) (*http.Response, error) {
 
 func webcastURL(webcastType string, channel string) (string, store.WebcastType) {
 	if string(store.Twitch) == webcastType {
-		return fmt.Sprintf("https://www.twitch.tv/%v", channel), store.Twitch
+		return fmt.Sprintf("https://www.twitch.tv/%s", channel), store.Twitch
 	} else if string(store.Youtube) == webcastType {
-		return fmt.Sprintf("https://www.youtube.com/watch?v=%v", channel), store.Youtube
+		return fmt.Sprintf("https://www.youtube.com/watch?v=%s", channel), store.Youtube
 	}
 	return "", ""
 }
 
 // GetEvents retreives all events from the given year (e.g. 2018).
 func (s *Service) GetEvents(year int) ([]store.Event, error) {
-	path := fmt.Sprintf("/events/%v", year)
+	path := fmt.Sprintf("/events/%d", year)
 
 	response, err := s.makeRequest(path)
 	if err != nil {
@@ -74,7 +78,7 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 	}
 
 	var tbaEvents []tbaEvent
-	if err := json.NewDecoder(io.LimitReader(response.Body, 1.2e+6)).Decode(&tbaEvents); err != nil {
+	if err := json.NewDecoder(io.LimitReader(response.Body, maxResponseSize)).Decode(&tbaEvents); err != nil {
 		return nil, err
 	}
 
@@ -101,9 +105,9 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 
 		var webcasts []store.Webcast
 		for _, webcast := range tbaEvent.Webcasts {
-			URL, webcastType := webcastURL(webcast.Type, webcast.Channel)
-			if URL != "" {
-				webcasts = append(webcasts, store.Webcast{Type: webcastType, URL: URL})
+			url, webcastType := webcastURL(webcast.Type, webcast.Channel)
+			if url != "" {
+				webcasts = append(webcasts, store.Webcast{Type: webcastType, URL: url})
 			}
 		}
 

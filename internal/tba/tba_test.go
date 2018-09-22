@@ -18,7 +18,7 @@ type tbaServer struct {
 
 const testingYear = 2018
 
-func intPointer(a int) *int {
+func newInt(a int) *int {
 	return &a
 }
 
@@ -30,8 +30,6 @@ func newTBAServer() *tbaServer {
 	ts := new(tbaServer)
 
 	mux := http.NewServeMux()
-
-	ts.getEventsHandler = nil
 
 	mux.HandleFunc("/events/"+strconv.Itoa(testingYear), func(w http.ResponseWriter, r *http.Request) { ts.getEventsHandler(w, r) })
 
@@ -183,7 +181,7 @@ func TestGetEvents(t *testing.T) {
 				Key:       "key2",
 				Name:      "Event",
 				District:  strPointer("ABC"),
-				Week:      intPointer(5),
+				Week:      newInt(5),
 				StartDate: time.Date(2018, 5, 6, 0, 0, 0, 0, time.UTC),
 				EndDate:   time.Date(2018, 5, 7, 0, 0, 0, 0, time.UTC),
 				Location: store.Location{
@@ -202,7 +200,7 @@ func TestGetEvents(t *testing.T) {
 				Key:       "key3",
 				Name:      "PIGMICE_IS_BEST",
 				District:  strPointer("PNW"),
-				Week:      intPointer(2),
+				Week:      newInt(2),
 				StartDate: time.Date(2018, 11, 19, 8, 0, 0, 0, time.UTC),
 				EndDate:   time.Date(2018, 11, 23, 8, 0, 0, 0, time.UTC),
 				Location: store.Location{

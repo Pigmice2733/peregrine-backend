@@ -22,11 +22,6 @@ func Error(w http.ResponseWriter, httpCode int) {
 	http.Error(w, http.StatusText(httpCode), httpCode)
 }
 
-// ServerError sets an InternalServerError.
-func ServerError(w http.ResponseWriter) {
-	Error(w, http.StatusInternalServerError)
-}
-
 // Respond encodes the data and ResponseError to JSON and responds with it and
 // the http code. If the encoding fails, sets an InternalServerError.
 func Respond(w http.ResponseWriter, data interface{}, respErr *ResponseError, httpCode int) error {

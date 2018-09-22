@@ -24,7 +24,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fullEvents, err := s.tba.GetEvents(s.year)
 		if err != nil {
-			ihttp.ServerError(w)
+			ihttp.Error(w, http.StatusInternalServerError)
 			s.logger.Println(err)
 			return
 		}
