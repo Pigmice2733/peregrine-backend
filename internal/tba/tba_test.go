@@ -31,9 +31,8 @@ func newTBAServer() *tbaServer {
 
 	mux := http.NewServeMux()
 
-	ts.getEventsHandler = func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`Not Implemented!`))
-	}
+	ts.getEventsHandler = nil
+
 	mux.HandleFunc("/events/"+strconv.Itoa(testingYear), func(w http.ResponseWriter, r *http.Request) { ts.getEventsHandler(w, r) })
 
 	ts.Server = httptest.NewServer(mux)
@@ -66,7 +65,7 @@ func TestGetEvents(t *testing.T) {
 					return
 				}
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`
+				_, err := w.Write([]byte(`
 				[
                     {
 						"key": "key1",
@@ -88,6 +87,10 @@ func TestGetEvents(t *testing.T) {
 					}
 				]
 				`))
+
+				if err != nil {
+					t.Errorf("Failed to write test data")
+				}
 			},
 			events: []store.Event{
 				{
@@ -117,7 +120,7 @@ func TestGetEvents(t *testing.T) {
 					return
 				}
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`
+				_, err := w.Write([]byte(`
 				[
                     {
 						"key": "key2",
@@ -171,6 +174,10 @@ func TestGetEvents(t *testing.T) {
 				    }
 				]
 				`))
+
+				if err != nil {
+					t.Errorf("Failed to write test data")
+				}
 			},
 			events: []store.Event{{
 				Key:       "key2",
