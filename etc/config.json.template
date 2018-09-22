@@ -1,5 +1,8 @@
 {
   "server": {
     "address": "localhost:8080"
+  },
+  "tba": {
+    "URL": "https://www.thebluealliance.com/api/v3"
   }
 }

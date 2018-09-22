@@ -6,4 +6,8 @@ type Config struct {
 		Address string `json:"address"`
 		Origin  string `json:"origin"`
 	} `json:"server"`
+
+	TBA struct {
+		URL string `json:"URL"`
+	} `json:"tba"`
 }

@@ -3,12 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 
+	"github.com/Pigmice2733/peregrine-backend/internal/tba"
+
 	"github.com/Pigmice2733/peregrine-backend/internal/config"
+	"github.com/Pigmice2733/peregrine-backend/internal/server"
 )
+
+const year = 2018
 
 func main() {
 	basePath := "."
@@ -32,7 +36,19 @@ func main() {
 		panic(err)
 	}
 
-	if err := http.ListenAndServe(c.Server.Address, nil); err != nil {
+	tbaKey, ok := os.LookupEnv("TBA_API_KEY")
+	if !ok {
+		fmt.Println("Error: TBA_API_KEY env var not set")
+		os.Exit(0)
+	}
+
+	tba := tba.Service{
+		URL:    c.TBA.URL,
+		APIKey: tbaKey,
+	}
+
+	server := server.New(tba, c.Server.Address, year)
+	if err := server.Run(); err != nil {
 		panic(err)
 	}
 }

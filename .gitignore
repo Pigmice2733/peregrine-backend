@@ -2,3 +2,4 @@
 /vendor/
 /.vscode
 /etc/config*.json
+*.exe
