@@ -43,6 +43,6 @@ func Respond(w http.ResponseWriter, data interface{}, respErr *ResponseError, ht
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpCode)
-	w.Write(jsonData)
-	return nil
+	_, err = w.Write(jsonData)
+	return err
 }
