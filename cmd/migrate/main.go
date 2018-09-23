@@ -5,8 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strconv"
 
+	"github.com/Pigmice2733/peregrine-backend/internal/config"
 	"github.com/golang-migrate/migrate"
 	"github.com/golang-migrate/migrate/database/postgres"
 	_ "github.com/golang-migrate/migrate/source/file"
@@ -31,6 +31,8 @@ func main() {
 	var up = flag.Bool("up", false, "Migrate up. Cannot be used with -down.")
 	var down = flag.Bool("down", false, "Migrate down. Cannot be used with -up.")
 	var migrationstable = flag.String("migrationstable", "migrations", "Name of SQL table to store migrations in.")
+	var envFlag = flag.String("environment", "development", "Environment of the backend (e.g. development or production).")
+	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
 
 	flag.Parse()
 
@@ -40,25 +42,28 @@ func main() {
 		return
 	}
 
-	port, err := strconv.Atoi(os.Getenv("PG_PORT"))
-	if err != nil {
-		port = 5432
-		fmt.Printf("PG_PORT defaulted to: %d\n", port)
+	env := "development"
+	if e, ok := os.LookupEnv("GO_ENV"); ok {
+		env = e
 	}
 
-	dbName, ok := os.LookupEnv("PG_DB_NAME")
-	if !ok {
-		dbName = "postgres"
-		fmt.Printf("PG_DB_NAME defaulted to: %s\n", dbName)
+	if *envFlag != "" {
+		env = *envFlag
+	}
+
+	c, err := config.Open(*basePath, env)
+	if err != nil {
+		fmt.Printf("Error: opening config: %v\n", err)
+		return
 	}
 
 	o := options{
-		user:    os.Getenv("PG_USER"),
-		pass:    os.Getenv("PG_PASS"),
-		host:    os.Getenv("PG_HOST"),
-		port:    port,
-		dbName:  dbName,
-		sslMode: os.Getenv("PG_SSL_MODE"),
+		user:    c.Database.User,
+		pass:    c.Database.Pass,
+		host:    c.Database.Host,
+		port:    c.Database.Port,
+		dbName:  c.Database.Name,
+		sslMode: c.Database.SSLMode,
 	}
 
 	db, err := sql.Open("postgres", o.connectionInfo())
@@ -68,15 +73,15 @@ func main() {
 	}
 	defer db.Close()
 
-	config := &postgres.Config{MigrationsTable: *migrationstable, DatabaseName: dbName}
+	config := &postgres.Config{MigrationsTable: *migrationstable, DatabaseName: c.Database.Name}
 	driver, err := postgres.WithInstance(db, config)
 	if err != nil {
-		fmt.Printf("Error: getting PostgreSQl driver: %v\n", err)
+		fmt.Printf("Error: getting PostgreSQL driver: %v\n", err)
 		return
 	}
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://./migrations/",
-		dbName, driver)
+		c.Database.Name, driver)
 	if err != nil {
 		fmt.Printf("Error: creating migrations: %v\n", err)
 		return

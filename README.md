@@ -26,15 +26,24 @@ Install vendored dependencies:
 
     dep ensure
 
-# Database Setup
-
 # Config File
 
 Copy `./etc/config.json.template` to `./etc/config.development.json` as a starting point.
 
-# Environment Variables
+You must set the field `tba.apiKey` to your TBA API key. If you don't have one, go to The Blue Alliance and signup/login. From the account overview page you should be able to request a read-only API key.
+You must also configure the `database` section with the credentials and details of the database you are using.
 
-You must set the environment variable `TBA_API_KEY` to your TBA API key. If you don't have one, go to The Blue Alliance and signup/login. From the account overview page you should be able to request a read-only API key.
+### Environment Variables and Flags
+
+The environment variable `GO_ENV` can be optionally used to choose which config file to use. If it is set to "developement", `./etc/config.development.json` will be used, if "production", then `./etc/config.production.json`, etc. This can be overridden by specifying the flag `-environment` when running either peregrine or migrate.
+
+The flag `-basePath` will set the directory where `/etc/config.{environment}.json` is, and is available for both `peregrine` and `migrate`.
+
+# Database Migrations
+
+The `migrate` tool can be used to run migrations on the database.
+
+To run all the up migrations, run `./migrate -up`, to run all the down migrations run `./migrate -down`. To run just a few migrations, additionally set the `steps` flag to the number of migrations that should be run.
 
 # Development
 

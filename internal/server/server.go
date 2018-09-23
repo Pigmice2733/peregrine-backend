@@ -23,7 +23,7 @@ type Server struct {
 }
 
 // New creates a new Peregrine API server
-func New(tba tba.Service, store store.Service, address string, year int) Server {
+func New(tba tba.Service, store store.Service, address string, origin string, year int) Server {
 	s := Server{
 		tba:     tba,
 		store:   store,
@@ -32,7 +32,7 @@ func New(tba tba.Service, store store.Service, address string, year int) Server 
 	}
 
 	router := s.registerRoutes()
-	s.handler = ihttp.CORS(ihttp.LimitBody(router))
+	s.handler = ihttp.CORS(ihttp.LimitBody(router), origin)
 
 	s.logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
 
