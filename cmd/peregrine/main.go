@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
+	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/config"
@@ -48,7 +50,26 @@ func main() {
 		APIKey: tbaKey,
 	}
 
-	server := server.New(tba, c.Server.Address, year)
+	port, err := strconv.Atoi(os.Getenv("PG_PORT"))
+	if err != nil {
+		port = 5432
+		fmt.Printf("PG_PORT defaulted to: %d\n", port)
+	}
+
+	store, err := store.New(store.Options{
+		User:    os.Getenv("PG_USER"),
+		Pass:    os.Getenv("PG_PASS"),
+		Host:    os.Getenv("PG_HOST"),
+		Port:    port,
+		DBName:  os.Getenv("PG_DB_NAME"),
+		SSLMode: os.Getenv("PG_SSL_MODE"),
+	})
+	if err != nil {
+		fmt.Printf("unable to connect to postgres server: %v\n", err)
+		os.Exit(1)
+	}
+
+	server := server.New(tba, *store, c.Server.Address, year)
 	if err := server.Run(); err != nil {
 		panic(err)
 	}

@@ -116,8 +116,8 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 			Name:      tbaEvent.ShortName,
 			District:  district,
 			Week:      tbaEvent.Week,
-			StartDate: startDate.UTC(),
-			EndDate:   endDate.UTC(),
+			StartDate: store.NewUnix(startDate),
+			EndDate:   store.NewUnix(endDate),
 			Webcasts:  webcasts,
 			Location: store.Location{
 				Lat:  tbaEvent.Lat,

@@ -1,32 +1,42 @@
 package store
 
 import (
+	"database/sql"
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"time"
+
+	// Register lib/pq PostreSQL driver
+	_ "github.com/lib/pq"
 )
 
-// WebcastType represents a data source for a webcast such as twitch or youtube.
-type WebcastType string
-
-const (
-	// Twitch provides livestreams of events.
-	Twitch WebcastType = "twitch"
-	// Youtube provides livestreams of events.
-	Youtube WebcastType = "youtube"
-)
-
-// Webcast represents a webcast of an events.
-type Webcast struct {
-	Type WebcastType
-	URL  string
+// Service is an interface to manipulate the data store.
+type Service struct {
+	db *sql.DB
 }
 
-// Location holds a location for events: a name, and a latlong.
-type Location struct {
-	Name string
-	Lat  float64
-	Lon  float64
+// Options holds information for connecting to a PostgreSQL instance.
+type Options struct {
+	User, Pass string
+	Host       string
+	Port       int
+	DBName     string
+	SSLMode    string
+}
+
+// ConnectionInfo returns the PostgreSQL connection string from an options struct.
+func (o Options) ConnectionInfo() string {
+	return fmt.Sprintf("host='%s' port='%d' user='%s' password='%s' dbname='%s' sslmode='%s'", o.Host, o.Port, o.User, o.Pass, o.DBName, o.SSLMode)
+}
+
+// New creates a new store service.
+func New(o Options) (*Service, error) {
+	db, err := sql.Open("postgres", o.ConnectionInfo())
+	if err != nil {
+		return nil, err
+	}
+	return &Service{db: db}, nil
 }
 
 // UnixTime exists so that we can have times that look like time.Time's to
@@ -34,6 +44,13 @@ type Location struct {
 // represented as unix timestamps for easier comparison.
 type UnixTime struct {
 	unix int64
+}
+
+// NewUnix creates a new UnixTime timestamp from a time.Time.
+func NewUnix(time time.Time) UnixTime {
+	return UnixTime{
+		unix: time.Unix(),
+	}
 }
 
 // Scan accepts either a time.Time or an int64 for scanning from a database into
@@ -57,15 +74,19 @@ func (ut *UnixTime) Value() (driver.Value, error) {
 	return time.Unix(ut.unix, 0), nil
 }
 
-// Event holds information about an FRC event such as webcast associated with
-// it, the location, it's start date, and more.
-type Event struct {
-	Key       string    `json:"key"`
-	Name      string    `json:"name"`
-	District  *string   `json:"district,omitempty"`
-	Week      *int      `json:"week,omitempty"`
-	StartDate time.Time `json:"startDate"`
-	EndDate   time.Time `json:"endDate"`
-	Webcasts  []Webcast `json:"webcasts,omitempty"`
-	Location  Location  `json:"location"`
+// MarshalJSON returns a []byte that represents this UnixTime in RFC 3339 format.
+func (ut *UnixTime) MarshalJSON() ([]byte, error) {
+	return time.Unix(ut.unix, 0).MarshalJSON()
+}
+
+// UnmarshalJSON accepts a []byte representing a time.Time value, and unmarshals
+// it into a unix timestamp.
+func (ut *UnixTime) UnmarshalJSON(data []byte) error {
+	var time time.Time
+	err := json.Unmarshal(data, &time)
+	if err != nil {
+		return err
+	}
+	ut.unix = time.Unix()
+	return nil
 }
