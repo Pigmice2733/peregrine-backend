@@ -31,7 +31,6 @@ func main() {
 	var up = flag.Bool("up", false, "Migrate up. Cannot be used with -down.")
 	var down = flag.Bool("down", false, "Migrate down. Cannot be used with -up.")
 	var migrationstable = flag.String("migrationstable", "migrations", "Name of SQL table to store migrations in.")
-	var envFlag = flag.String("environment", "development", "Environment of the backend (e.g. development or production).")
 	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
 
 	flag.Parse()
@@ -45,10 +44,6 @@ func main() {
 	env := "development"
 	if e, ok := os.LookupEnv("GO_ENV"); ok {
 		env = e
-	}
-
-	if *envFlag != "" {
-		env = *envFlag
 	}
 
 	c, err := config.Open(*basePath, env)

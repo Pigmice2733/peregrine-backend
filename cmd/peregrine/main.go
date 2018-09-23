@@ -16,7 +16,6 @@ import (
 var year = time.Now().Year()
 
 func main() {
-	var envFlag = flag.String("environment", "", "Environment of the backend (e.g. development or production).")
 	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
 
 	flag.Parse()
@@ -24,10 +23,6 @@ func main() {
 	env := "development"
 	if e, ok := os.LookupEnv("GO_ENV"); ok {
 		env = e
-	}
-
-	if *envFlag != "" {
-		env = *envFlag
 	}
 
 	c, err := config.Open(*basePath, env)

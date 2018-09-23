@@ -35,7 +35,7 @@ You must also configure the `database` section with the credentials and details 
 
 ### Environment Variables and Flags
 
-The environment variable `GO_ENV` can be optionally used to choose which config file to use. If it is set to "developement", `./etc/config.development.json` will be used, if "production", then `./etc/config.production.json`, etc. This can be overridden by specifying the flag `-environment` when running either peregrine or migrate.
+The environment variable `GO_ENV` can be optionally used to choose which config file to use. If it is set to "developement", `./etc/config.development.json` will be used, if "production", then `./etc/config.production.json`, etc.
 
 The flag `-basePath` will set the directory where `/etc/config.{environment}.json` is, and is available for both `peregrine` and `migrate`.
 
