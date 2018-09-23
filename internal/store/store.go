@@ -31,12 +31,12 @@ func (o Options) ConnectionInfo() string {
 }
 
 // New creates a new store service.
-func New(o Options) (*Service, error) {
-	db, err := sql.Open("postgres", o.ConnectionInfo())
-	if err != nil {
-		return nil, err
-	}
-	return &Service{db: db}, nil
+func New(o Options) (Service, error) {
+	service := Service{}
+	var err error
+
+	service.db, err = sql.Open("postgres", o.ConnectionInfo())
+	return service, err
 }
 
 // UnixTime exists so that we can have times that look like time.Time's to

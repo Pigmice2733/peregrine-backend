@@ -71,14 +71,14 @@ func main() {
 	config := &postgres.Config{MigrationsTable: *migrationstable, DatabaseName: dbName}
 	driver, err := postgres.WithInstance(db, config)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("Error: getting PostgreSQl driver: %v\n", err)
 		return
 	}
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://./migrations/",
 		dbName, driver)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("Error: creating migrations: %v\n", err)
 		return
 	}
 
@@ -104,14 +104,13 @@ func main() {
 
 	srcErr, dbErr := m.Close()
 	if srcErr != nil {
-		fmt.Printf("Error: %v\n", srcErr)
+		fmt.Printf("Error: closing migrations source: %v\n", srcErr)
 	}
 	if dbErr != nil {
-		fmt.Printf("Error: %v\n", dbErr)
+		fmt.Printf("Error: closing connection to database: %v\n", dbErr)
 	}
 
-	err = db.Close()
-	if err != nil {
-		fmt.Printf("Error: %v\n", srcErr)
+	if err = db.Close(); err != nil {
+		fmt.Printf("Error: closing database: %v\n", err)
 	}
 }

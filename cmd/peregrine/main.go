@@ -69,7 +69,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := server.New(tba, *store, c.Server.Address, year)
+	server := server.New(tba, store, c.Server.Address, year)
 	if err := server.Run(); err != nil {
 		panic(err)
 	}
