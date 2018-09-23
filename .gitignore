@@ -1,4 +1,6 @@
 /cmd/peregrine/peregrine
+/cmd/migrate/migrate
 /vendor/
 /.vscode
-/etc/config*.json
+/etc/config*.yaml
+*.exe
