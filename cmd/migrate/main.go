@@ -35,7 +35,7 @@ func main() {
 	flag.Parse()
 
 	// Neither are set or both are set
-	if *up == !*down {
+	if *up == *down {
 		fmt.Printf("Error: must specify either -up or -down\n")
 		return
 	}
