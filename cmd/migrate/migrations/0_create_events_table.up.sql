@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS events (
+	key TEXT PRIMARY KEY,
+	name TEXT NOT NULL,
+	district TEXT,
+    week INTEGER,
+	startDate TIMESTAMPTZ NOT NULL,
+    endDate TIMESTAMPTZ NOT NULL,
+    locationName TEXT NOT NULL,
+    lat REAL NOT NULL,
+    lon REAL NOT NULL
+)
