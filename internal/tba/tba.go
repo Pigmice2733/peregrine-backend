@@ -74,7 +74,7 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("TBA: request failed with status code: %v", response.StatusCode)
+		return nil, fmt.Errorf("TBA request failed with status code: %v", response.StatusCode)
 	}
 
 	var tbaEvents []tbaEvent

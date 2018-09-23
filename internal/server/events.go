@@ -28,7 +28,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		err := s.updateEvents()
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error updating event data: %v\n", err)
+			s.logger.Printf("Error: updating event data: %v\n", err)
 			return
 		}
 

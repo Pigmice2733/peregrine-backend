@@ -43,7 +43,7 @@ func New(tba tba.Service, store store.Service, address string, year int) Server 
 func (s *Server) Run() error {
 	err := s.updateEvents()
 	if err != nil {
-		s.logger.Printf("Error updating event data on Run: %v\n", err)
+		s.logger.Printf("Error: updating event data on Run: %v\n", err)
 	}
 
 	return http.ListenAndServe(s.address, s.handler)

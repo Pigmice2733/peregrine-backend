@@ -28,19 +28,15 @@ func (o options) connectionInfo() string {
 
 func main() {
 	var steps = flag.Int("steps", 0, "Number of steps to migrate. Leave unspecified to migrate all the way up or down.")
-	var up = flag.Bool("up", false, "Migrate up.")
-	var down = flag.Bool("down", false, "Migrate down.")
+	var up = flag.Bool("up", false, "Migrate up. Cannot be used with -down.")
+	var down = flag.Bool("down", false, "Migrate down. Cannot be used with -up.")
 	var migrationstable = flag.String("migrationstable", "migrations", "Name of SQL table to store migrations in.")
 
 	flag.Parse()
 
-	if !*up && !*down {
+	// Neither are set or both are set
+	if *up == !*down {
 		fmt.Printf("Error: must specify either -up or -down\n")
-		return
-	}
-
-	if *up && *down {
-		fmt.Printf("Error: both -up or -down specified\n")
 		return
 	}
 
@@ -67,10 +63,9 @@ func main() {
 
 	db, err := sql.Open("postgres", o.connectionInfo())
 	if err != nil {
-		fmt.Printf("Error connecting to db: %v\n", err)
+		fmt.Printf("Error: connecting to db: %v\n", err)
 		return
 	}
-
 	defer db.Close()
 
 	config := &postgres.Config{MigrationsTable: *migrationstable, DatabaseName: dbName}
@@ -92,12 +87,12 @@ func main() {
 	if *steps == 0 {
 		if *up {
 			if err := m.Up(); err != nil {
-				fmt.Printf("Error running migrations: %v\n", err)
+				fmt.Printf("Error: running migrations: %v\n", err)
 				return
 			}
 		} else {
 			if err := m.Down(); err != nil {
-				fmt.Printf("Error running migrations: %v\n", err)
+				fmt.Printf("Error: running migrations: %v\n", err)
 				return
 			}
 		}
@@ -106,7 +101,7 @@ func main() {
 			*steps = -*steps
 		}
 		if err := m.Steps(*steps); err != nil {
-			fmt.Printf("Error running migrations: %v\n", err)
+			fmt.Printf("Error: running migrations: %v\n", err)
 			return
 		}
 	}

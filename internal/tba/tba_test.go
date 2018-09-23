@@ -87,7 +87,7 @@ func TestGetEvents(t *testing.T) {
 				`))
 
 				if err != nil {
-					t.Errorf("Failed to write test data")
+					t.Errorf("failed to write test data")
 				}
 			},
 			events: []store.Event{
@@ -174,7 +174,7 @@ func TestGetEvents(t *testing.T) {
 				`))
 
 				if err != nil {
-					t.Errorf("Failed to write test data")
+					t.Errorf("failed to write test data")
 				}
 			},
 			events: []store.Event{{
