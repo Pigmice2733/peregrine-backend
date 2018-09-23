@@ -44,6 +44,10 @@ type tbaEvent struct {
 // size of a typical /events/{year} response from TBA.
 const maxResponseSize int64 = 1.2e+6
 
+var tbaClient = &http.Client{
+	Timeout: time.Second * 10,
+}
+
 func (s *Service) makeRequest(path string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", s.URL+path, nil)
 	if err != nil {
@@ -52,11 +56,11 @@ func (s *Service) makeRequest(path string) (*http.Response, error) {
 
 	req.Header.Set("X-TBA-Auth-Key", s.APIKey)
 
-	return http.DefaultClient.Do(req)
+	return tbaClient.Do(req)
 }
 
 func webcastURL(webcastType string, channel string) (string, store.WebcastType) {
-	if string(store.Twitch) == webcastType {
+	if webcastType == string(store.Twitch) {
 		return fmt.Sprintf("https://www.twitch.tv/%s", channel), store.Twitch
 	} else if string(store.Youtube) == webcastType {
 		return fmt.Sprintf("https://www.youtube.com/watch?v=%s", channel), store.Youtube
