@@ -34,7 +34,7 @@ Copy `./etc/config.json.template` to `./etc/config.development.json` as a starti
 
 # Environment Variables
 
-You must set the env var `TBA_API_KEY` to your TBA API key. If you don't have one, go to The Blue Alliance and signup/login. From the account overview page you should be able to request a read-only API key.
+You must set the environment variable `TBA_API_KEY` to your TBA API key. If you don't have one, go to The Blue Alliance and signup/login. From the account overview page you should be able to request a read-only API key.
 
 # Development
 
