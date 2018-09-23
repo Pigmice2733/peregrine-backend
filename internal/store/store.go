@@ -18,16 +18,17 @@ type Service struct {
 
 // Options holds information for connecting to a PostgreSQL instance.
 type Options struct {
-	User, Pass string
-	Host       string
-	Port       int
-	DBName     string
-	SSLMode    string
+	User    string `yaml:"user"`
+	Pass    string `yaml:"pass"`
+	Host    string `yaml:"host"`
+	Port    int    `yaml:"port"`
+	Name    string `yaml:"name"`
+	SSLMode string `yaml:"sslMode"`
 }
 
 // ConnectionInfo returns the PostgreSQL connection string from an options struct.
 func (o Options) ConnectionInfo() string {
-	return fmt.Sprintf("host='%s' port='%d' user='%s' password='%s' dbname='%s' sslmode='%s'", o.Host, o.Port, o.User, o.Pass, o.DBName, o.SSLMode)
+	return fmt.Sprintf("host='%s' port='%d' user='%s' password='%s' dbname='%s' sslmode='%s'", o.Host, o.Port, o.User, o.Pass, o.Name, o.SSLMode)
 }
 
 // New creates a new store service.

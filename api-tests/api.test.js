@@ -1,5 +1,10 @@
 import fetch from 'node-fetch'
-import config from './../etc/config.development.json'
+import jsyaml from 'js-yaml'
+import fs from 'fs'
+
+const config = jsyaml.safeLoad(
+  fs.readFileSync('./../etc/config.development.yaml', 'utf8'),
+)
 
 const addr = `http://${config.server.address}/`
 

@@ -36,14 +36,7 @@ func main() {
 		APIKey: c.TBA.APIKey,
 	}
 
-	store, err := store.New(store.Options{
-		User:    c.Database.User,
-		Pass:    c.Database.Pass,
-		Host:    c.Database.Host,
-		Port:    c.Database.Port,
-		DBName:  c.Database.Name,
-		SSLMode: c.Database.SSLMode,
-	})
+	store, err := store.New(c.Database)
 	if err != nil {
 		fmt.Printf("Error: unable to connect to postgres server: %v\n", err)
 		return

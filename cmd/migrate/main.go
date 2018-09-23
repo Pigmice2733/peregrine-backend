@@ -13,19 +13,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type options struct {
-	user, pass string
-	host       string
-	port       int
-	dbName     string
-	sslMode    string
-}
-
-func (o options) connectionInfo() string {
-	return fmt.Sprintf("host='%s' port='%d' user='%s' password='%s' dbname='%s' sslmode='%s'",
-		o.host, o.port, o.user, o.pass, o.dbName, o.sslMode)
-}
-
 func main() {
 	var steps = flag.Int("steps", 0, "Number of steps to migrate. Leave unspecified to migrate all the way up or down.")
 	var up = flag.Bool("up", false, "Migrate up. Cannot be used with -down.")
@@ -52,16 +39,7 @@ func main() {
 		return
 	}
 
-	o := options{
-		user:    c.Database.User,
-		pass:    c.Database.Pass,
-		host:    c.Database.Host,
-		port:    c.Database.Port,
-		dbName:  c.Database.Name,
-		sslMode: c.Database.SSLMode,
-	}
-
-	db, err := sql.Open("postgres", o.connectionInfo())
+	db, err := sql.Open("postgres", c.Database.ConnectionInfo())
 	if err != nil {
 		fmt.Printf("Error: connecting to db: %v\n", err)
 		return
