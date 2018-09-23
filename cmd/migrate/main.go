@@ -84,27 +84,22 @@ func main() {
 
 	defer m.Close()
 
-	if *steps == 0 {
-		if *up {
-			if err := m.Up(); err != nil {
-				fmt.Printf("Error: running migrations: %v\n", err)
-				return
-			}
-		} else {
-			if err := m.Down(); err != nil {
-				fmt.Printf("Error: running migrations: %v\n", err)
-				return
-			}
-		}
+	if *steps == 0 && *up {
+		err = m.Up()
+	} else if *steps == 0 && *down {
+		err = m.Down()
 	} else {
 		if *down {
 			*steps = -*steps
 		}
-		if err := m.Steps(*steps); err != nil {
-			fmt.Printf("Error: running migrations: %v\n", err)
-			return
-		}
+		err = m.Steps(*steps)
 	}
+
+	if err != nil {
+		fmt.Printf("Error: running migrations: %v\n", err)
+		return
+	}
+
 	fmt.Println("Migrations successfully run")
 
 	srcErr, dbErr := m.Close()
