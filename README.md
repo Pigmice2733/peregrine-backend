@@ -61,4 +61,9 @@ You can run all peregrine-backend unit tests by simply running `go test ./...` i
 
 You can run API blackbox integration tests by going to the api-tests folder and doing the following:
 
-    npm test
+```
+npm i
+npm test
+```
+
+After the first time, you don't need to do `npm i`, just `npm test`.
