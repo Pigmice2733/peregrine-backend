@@ -3,7 +3,7 @@ package store
 // Event holds information about an FRC event such as webcast associated with
 // it, the location, it's start date, and more.
 type Event struct {
-	Key       string    `json:"key"`
+	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	District  *string   `json:"district,omitempty"`
 	Week      *int      `json:"week,omitempty"`
@@ -40,7 +40,7 @@ type Location struct {
 func (s *Service) GetEvents() ([]Event, error) {
 	var events []Event
 
-	rows, err := s.db.Query("SELECT key, name, district, week, startDate, endDate, locationName, lat, lon FROM events")
+	rows, err := s.db.Query("SELECT id, name, district, week, startDate, endDate, locationName, lat, lon FROM events")
 	if err != nil {
 		return events, err
 	}
@@ -49,7 +49,7 @@ func (s *Service) GetEvents() ([]Event, error) {
 	for rows.Next() {
 		var event Event
 		event.Location = Location{}
-		if err := rows.Scan(&event.Key, &event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
+		if err := rows.Scan(&event.ID, &event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
 			return nil, err
 		}
 		events = append(events, event)
@@ -61,9 +61,9 @@ func (s *Service) GetEvents() ([]Event, error) {
 // EventsUpsert upserts multiple events into the database.
 func (s *Service) EventsUpsert(events []Event) error {
 	eventStmt, err := s.db.Prepare(`
-		INSERT INTO events (key, name, district, week, startDate, endDate, locationName, lat, lon)
+		INSERT INTO events (id, name, district, week, startDate, endDate, locationName, lat, lon)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		ON CONFLICT (key)
+		ON CONFLICT (id)
 		DO
 			UPDATE
 				SET name = $2, district = $3, week = $4, startDate = $5, endDate = $6, locationName = $7, lat = $8, lon = $9
@@ -74,7 +74,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 	defer eventStmt.Close()
 
 	deleteWebcastsStmt, err := s.db.Prepare(`
-	    DELETE FROM webcasts WHERE eventKey = $1
+	    DELETE FROM webcasts WHERE eventID = $1
 	`)
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 	defer deleteWebcastsStmt.Close()
 
 	webcastStmt, err := s.db.Prepare(`
-		INSERT INTO webcasts (eventKey, type, url)
+		INSERT INTO webcasts (eventID, type, url)
 		VALUES ($1, $2, $3)
 	`)
 	if err != nil {
@@ -91,17 +91,17 @@ func (s *Service) EventsUpsert(events []Event) error {
 	defer webcastStmt.Close()
 
 	for _, event := range events {
-		if _, err := eventStmt.Exec(event.Key, event.Name, event.District, event.Week, &event.StartDate, &event.EndDate,
+		if _, err := eventStmt.Exec(event.ID, event.Name, event.District, event.Week, &event.StartDate, &event.EndDate,
 			event.Location.Name, event.Location.Lat, event.Location.Lon); err != nil {
 			return err
 		}
 
-		if _, err := deleteWebcastsStmt.Exec(event.Key); err != nil {
+		if _, err := deleteWebcastsStmt.Exec(event.ID); err != nil {
 			return err
 		}
 
 		for _, webcast := range event.Webcasts {
-			if _, err := webcastStmt.Exec(event.Key, webcast.Type, webcast.URL); err != nil {
+			if _, err := webcastStmt.Exec(event.ID, webcast.Type, webcast.URL); err != nil {
 				return err
 			}
 		}

@@ -116,7 +116,7 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 		}
 
 		events = append(events, store.Event{
-			Key:       tbaEvent.Key,
+			ID:        tbaEvent.Key,
 			Name:      tbaEvent.ShortName,
 			District:  district,
 			Week:      tbaEvent.Week,
