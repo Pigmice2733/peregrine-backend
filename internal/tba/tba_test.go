@@ -22,7 +22,7 @@ func newInt(a int) *int {
 	return &a
 }
 
-func strPointer(s string) *string {
+func newString(s string) *string {
 	return &s
 }
 
@@ -180,7 +180,7 @@ func TestGetEvents(t *testing.T) {
 			events: []store.Event{{
 				ID:        "key2",
 				Name:      "Event",
-				District:  strPointer("ABC"),
+				District:  newString("ABC"),
 				Week:      newInt(5),
 				StartDate: store.NewUnix(time.Date(2018, 5, 6, 0, 0, 0, 0, time.UTC)),
 				EndDate:   store.NewUnix(time.Date(2018, 5, 7, 0, 0, 0, 0, time.UTC)),
@@ -199,7 +199,7 @@ func TestGetEvents(t *testing.T) {
 			}, {
 				ID:        "key3",
 				Name:      "PIGMICE_IS_BEST",
-				District:  strPointer("PNW"),
+				District:  newString("PNW"),
 				Week:      newInt(2),
 				StartDate: store.NewUnix(time.Date(2018, 11, 19, 8, 0, 0, 0, time.UTC)),
 				EndDate:   store.NewUnix(time.Date(2018, 11, 23, 8, 0, 0, 0, time.UTC)),
