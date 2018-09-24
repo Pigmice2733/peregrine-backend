@@ -43,7 +43,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		var events []event
 		for _, fullEvent := range fullEvents {
 			events = append(events, event{
-				ID:        fullEvent.Key,
+				ID:        fullEvent.ID,
 				Name:      fullEvent.Name,
 				District:  fullEvent.District,
 				Week:      fullEvent.Week,
