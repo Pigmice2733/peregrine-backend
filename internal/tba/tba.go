@@ -113,11 +113,9 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 		for _, webcast := range tbaEvent.Webcasts {
 			wt := store.WebcastType(webcast.Type)
 			url, err := webcastURL(wt, webcast.Channel)
-			if err != nil {
-				continue
+			if err == nil {
+				webcasts = append(webcasts, store.Webcast{Type: wt, URL: url})
 			}
-
-			webcasts = append(webcasts, store.Webcast{Type: wt, URL: url})
 		}
 
 		events = append(events, store.Event{
