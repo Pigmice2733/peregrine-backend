@@ -42,8 +42,7 @@ func New(tba tba.Service, store store.Service, address string, origin string, ye
 // Run starts the server, and returns if it runs into an error
 func (s *Server) Run() error {
 	s.logger.Printf("Fetching seed events")
-	err := s.updateEvents()
-	if err != nil {
+	if err := s.updateEvents(); err != nil {
 		s.logger.Printf("Error: updating event data on Run: %v\n", err)
 	}
 
