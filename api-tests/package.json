@@ -4,18 +4,21 @@
     "test:watch": "jest --watch"
   },
   "devDependencies": {
-    "@babel/core": "^7.0.0",
-    "@babel/plugin-transform-modules-commonjs": "^7.0.0",
-    "babel-core": "^7.0.0-bridge.0",
-    "babel-jest": "^23.4.2",
-    "eslint": "^5.5.0",
-    "eslint-plugin-jest": "^21.22.0",
-    "jest": "^23.5.0",
-    "prettier": "^1.14.2"
+    "@babel/core": "7.1.0",
+    "@babel/plugin-transform-modules-commonjs": "7.1.0",
+    "babel-core": "7.0.0-bridge.0",
+    "eslint": "5.6.0",
+    "eslint-plugin-caleb": "1.6.0",
+    "jest": "23.6.0",
+    "js-yaml": "3.12.0",
+    "node-fetch": "2.2.0",
+    "prettier": "1.14.3"
   },
-  "dependencies": {
-    "js-yaml": "^3.12.0",
-    "node-fetch": "^2.2.0"
+  "eslintConfig": {
+    "extends": [
+      "plugin:caleb/recommended",
+      "plugin:caleb/jest"
+    ]
   },
   "babel": {
     "plugins": [
