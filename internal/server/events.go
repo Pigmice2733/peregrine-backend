@@ -10,6 +10,7 @@ import (
 )
 
 type event struct {
+	ID        string         `json:"id"`
 	Name      string         `json:"name"`
 	District  *string        `json:"district,omitempty"`
 	Week      *int           `json:"week,omitempty"`
@@ -42,6 +43,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		var events []event
 		for _, fullEvent := range fullEvents {
 			events = append(events, event{
+				ID:        fullEvent.ID,
 				Name:      fullEvent.Name,
 				District:  fullEvent.District,
 				Week:      fullEvent.Week,

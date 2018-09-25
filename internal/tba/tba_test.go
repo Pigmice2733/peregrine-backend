@@ -92,7 +92,7 @@ func TestGetEvents(t *testing.T) {
 			},
 			events: []store.Event{
 				{
-					Key:       "key1",
+					ID:        "key1",
 					Name:      "event1",
 					Week:      nil,
 					District:  nil,
@@ -178,7 +178,7 @@ func TestGetEvents(t *testing.T) {
 				}
 			},
 			events: []store.Event{{
-				Key:       "key2",
+				ID:        "key2",
 				Name:      "Event",
 				District:  strPointer("ABC"),
 				Week:      newInt(5),
@@ -197,7 +197,7 @@ func TestGetEvents(t *testing.T) {
 					URL:  "https://www.twitch.tv/firstinspires12",
 				}},
 			}, {
-				Key:       "key3",
+				ID:        "key3",
 				Name:      "PIGMICE_IS_BEST",
 				District:  strPointer("PNW"),
 				Week:      newInt(2),

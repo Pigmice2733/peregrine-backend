@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS events (
-	key TEXT PRIMARY KEY,
+	id TEXT PRIMARY KEY,
 	name TEXT NOT NULL,
 	district TEXT,
     week INTEGER,
