@@ -9,9 +9,48 @@ expect.extend({
       ? () => `expected ${received} not to be an integer`
       : () => `expected ${received} to be an integer`
     return {
-      message: message,
-      pass: pass,
+      message,
+      pass,
     }
+  },
+  toBeADateString(received) {
+    const parsedDate = new Date(received)
+    const pass = !isNaN(Number(parsedDate))
+    const message = pass
+      ? () => `expected ${received} to not be a valid date string`
+      : () => `expected ${received} to be a valid date string`
+    return { pass, message }
+  },
+  toBeA(received, type) {
+    try {
+      expect(received).toEqual(expect.any(type))
+    } catch (error) {
+      return { message: error.matcherResult.message, pass: false }
+    }
+    return { pass: true }
+  },
+  toBeUndefinedOr(received, type) {
+    if (received === undefined) {
+      return { pass: true }
+    }
+    try {
+      expect(received).toEqual(expect.any(type))
+    } catch (error) {
+      return { message: error.matcherResult.message, pass: false }
+    }
+    return { pass: true }
+  },
+  toBeASubsetOf(received, items) {
+    const s = new Set(items)
+    let unexpected = received.reduce(
+      (unexpected, i) => (s.has(i) ? unexpected : unexpected.concat(i)),
+      [],
+    )
+    const pass = unexpected.length === 0
+    const message = pass
+      ? () => `did not expect item(s): ${unexpected}`
+      : () => `did not expect item(s): ${unexpected}`
+    return { message, pass }
   },
 })
 
@@ -29,25 +68,24 @@ test('/events endpoint', async () => {
   const d = await fetch(addr + '/events').then(d => d.json())
   expect(d).toEqual({ data: expect.any(Array) })
   expect(d.data.length).toBeGreaterThan(1)
-  const firstEvent = d.data[0]
-
-  expect(firstEvent.name).toEqual(expect.any(String))
-  expect(firstEvent.startDate).toEqual(expect.any(String))
-  expect(firstEvent.endDate).toEqual(expect.any(String))
-  expect(firstEvent.location).toEqual(expect.any(Object))
-  expect(firstEvent.location.lat).toEqual(expect.any(Number))
-  expect(firstEvent.location.lon).toEqual(expect.any(Number))
-
-  const startDate = Number(new Date(firstEvent.startDate))
-  const endDate = Number(new Date(firstEvent.endDate))
-  expect(startDate).not.toBeNaN()
-  expect(endDate).not.toBeNaN()
-  expect(startDate).toBeLessThan(endDate)
-
-  if ('district' in firstEvent) {
-    expect(firstEvent.district).toEqual(expect.any(String))
-  }
-  if ('week' in firstEvent) {
-    expect(firstEvent.week).toBeAnInt()
-  }
+  d.data.forEach(event => {
+    expect(event.name).toBeA(String)
+    expect(event.startDate).toBeA(String)
+    expect(event.endDate).toBeA(String)
+    expect(event.location).toBeA(Object)
+    expect(event.location.lat).toBeA(Number)
+    expect(event.location.lon).toBeA(Number)
+    expect(event.id).toBeA(String)
+    expect(event.district).toBeUndefinedOr(String)
+    expect(event.week).toBeUndefinedOr(Number)
+    expect(Object.keys(event)).toBeASubsetOf([
+      'id',
+      'name',
+      'week',
+      'startDate',
+      'endDate',
+      'location',
+      'district',
+    ])
+  })
 })
