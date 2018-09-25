@@ -59,13 +59,15 @@ func (s *Service) makeRequest(path string) (*http.Response, error) {
 	return tbaClient.Do(req)
 }
 
-func webcastURL(webcastType string, channel string) (string, store.WebcastType) {
-	if webcastType == string(store.Twitch) {
-		return fmt.Sprintf("https://www.twitch.tv/%s", channel), store.Twitch
-	} else if string(store.Youtube) == webcastType {
-		return fmt.Sprintf("https://www.youtube.com/watch?v=%s", channel), store.Youtube
+func webcastURL(webcastType store.WebcastType, channel string) (string, error) {
+	switch webcastType {
+	case store.Twitch:
+		return fmt.Sprintf("https://www.twitch.tv/%s", channel), nil
+	case store.Youtube:
+		return fmt.Sprintf("https://www.youtube.com/watch?v=%s", channel), nil
 	}
-	return "", ""
+
+	return "", fmt.Errorf("got invalid webcast url")
 }
 
 // GetEvents retreives all events from the given year (e.g. 2018).
@@ -109,9 +111,10 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 
 		var webcasts []store.Webcast
 		for _, webcast := range tbaEvent.Webcasts {
-			url, webcastType := webcastURL(webcast.Type, webcast.Channel)
-			if url != "" {
-				webcasts = append(webcasts, store.Webcast{Type: webcastType, URL: url})
+			wt := store.WebcastType(webcast.Type)
+			url, err := webcastURL(wt, webcast.Channel)
+			if err == nil {
+				webcasts = append(webcasts, store.Webcast{Type: wt, URL: url})
 			}
 		}
 
