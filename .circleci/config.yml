@@ -3,13 +3,41 @@
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2
 jobs:
-  build:
+  test:
     docker:
       - image: circleci/golang:1.10
-      
     working_directory: /go/src/github.com/Pigmice2733/peregrine-backend
     steps:
       - checkout
       - run: dep ensure
       - run: go get -v -t -d ./...
       - run: go test -v ./...
+      
+  deploy:
+    docker:
+      - image: circleci/golang:1.10
+    working_directory: /go/src/github.com/Pigmice2733/peregrine-backend
+    steps:
+      - checkout
+      - run: dep ensure
+      - run: go get -v -t -d ./...
+      - run: mkdir -p /tmp/builds
+      - run: go build -o /tmp/builds/peregrine cmd/peregrine/main.go
+      - run: go build -o /tmp/builds/migrate cmd/migrate/main.go
+      - run: mkdir -p /tmp/deploy/bin
+      - run: mkdir -p /tmp/deploy/migrations
+      - run: cp -r /tmp/builds/* /tmp/deploy/bin
+      - run: cp -r cmd/migrate/migrations/* /tmp/deploy/migrations
+      - run: tar czvf deploy.tgz -C /tmp/ deploy
+      - run: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null deploy.tgz $SSH_USER@$SSH_HOST:/root
+      - run: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null deploy.sh $SSH_USER@$SSH_HOST:/root
+      - run: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -t $SSH_USER@$SSH_HOST "./deploy.sh"
+
+workflows:
+  version: 2
+  test_n_deploy:
+    jobs:
+      - test
+      - deploy:
+          requires:
+            - test
