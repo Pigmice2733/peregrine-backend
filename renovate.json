@@ -1,0 +1,12 @@
+{
+  "extends": [
+    "config:base"
+  ],
+  "packageRules": [
+    {
+      "packagePatterns": [".*"],
+      "groupName": "Dependencies",
+      "schedule": "after 8am on saturday"
+    }
+  ]
+}
