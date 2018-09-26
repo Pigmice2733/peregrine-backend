@@ -26,24 +26,44 @@ Install vendored dependencies:
 
     dep ensure
 
+### Building
+
+    cd cmd/peregrine
+    go build
+
+# Database
+
+ See the postgresql first steps guide here: https://wiki.postgresql.org/wiki/First_steps
+
+    sudo -i -u postgres
+    psql
+    CREATE DATABASE peregrine;
+
+Build and run migrate:
+
+    cd cmd/migrate
+    go build
+    ./migrate -up -basePath ../..
+
 # Config File
 
 Copy `./etc/config.json.template` to `./etc/config.development.json` as a starting point.
 
 You must set the field `tba.apiKey` to your TBA API key. If you don't have one, go to The Blue Alliance and signup/login. From the account overview page you should be able to request a read-only API key.
-You must also configure the `database` section with the credentials and details of the database you are using.
+You must also configure the `database` section with the credentials and details of the database you are using. If you've just setup postgres the config file will likely work without any modifications.
 
-### Environment Variables and Flags
+# Environment Variables and Flags
 
 The environment variable `GO_ENV` can be optionally used to choose which config file to use. If it is set to "developement", `./etc/config.development.json` will be used, if "production", then `./etc/config.production.json`, etc.
 
 The flag `-basePath` will set the directory where `/etc/config.{environment}.json` is, and is available for both `peregrine` and `migrate`.
 
-# Database Migrations
+# Running
 
-The `migrate` tool can be used to run migrations on the database.
+After building:
 
-To run all the up migrations, run `./migrate -up`, to run all the down migrations run `./migrate -down`. To run just a few migrations, additionally set the `steps` flag to the number of migrations that should be run.
+    cd cmd/peregrine
+    ./peregrine
 
 # Development
 
