@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/config"
 	"github.com/golang-migrate/migrate"
@@ -18,7 +20,7 @@ func main() {
 	var up = flag.Bool("up", false, "Migrate up. Cannot be used with -down.")
 	var down = flag.Bool("down", false, "Migrate down. Cannot be used with -up.")
 	var migrationstable = flag.String("migrationstable", "migrations", "Name of SQL table to store migrations in.")
-	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
+	var basePath = flag.String("basePath", "", "Path to the etc directory where the config file is.")
 
 	flag.Parse()
 
@@ -52,8 +54,28 @@ func main() {
 		fmt.Printf("Error: getting PostgreSQL driver: %v\n", err)
 		return
 	}
+
+	if *basePath == "" {
+		*basePath, err = filepath.Abs("./")
+		if err != nil {
+			fmt.Printf("Error: unable to get absolute path of current working directory: %v\n", err)
+			return
+		}
+	} else {
+		*basePath, err = filepath.Abs(*basePath)
+		if err != nil {
+			fmt.Printf("Error: unable to get absolute path of basePath: %v\n", err)
+			return
+		}
+	}
+
+	migrationsFolder := filepath.Join(*basePath, "migrations")
+	segments := strings.Split(migrationsFolder, "\\")
+	migrationsFolder = strings.Join(segments, "/")
+	migrationsSource := fmt.Sprintf("file://%s", migrationsFolder)
+
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://./migrations/",
+		migrationsSource,
 		c.Database.Name, driver)
 	if err != nil {
 		fmt.Printf("Error: creating migrations: %v\n", err)
