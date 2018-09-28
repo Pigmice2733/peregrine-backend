@@ -56,7 +56,7 @@ func main() {
 
 	migrationsSource := "file://"
 	if *basePath != "" {
-		migrationsSource += filepath.Clean(*basePath) + "/"
+		migrationsSource += filepath.ToSlash(filepath.Clean(*basePath)) + "/"
 	} else {
 		migrationsSource += "./"
 	}
