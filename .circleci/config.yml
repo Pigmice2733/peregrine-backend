@@ -21,9 +21,9 @@ jobs:
       - run: go build -o peregrine cmd/peregrine/main.go
       - run: ./migrate -up
       - run: ./peregrine &
-      - run: cd api-tests
-      - run: npm i
-      - run: npm test
+      - run: cd api-tests && npm i
+      - run: while ! nc -z localhost 8080; do; sleep 0.1; done
+      - run: cd api-tests && npm test
 
   deploy_edge:
     docker:
