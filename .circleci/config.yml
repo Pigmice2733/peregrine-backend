@@ -30,7 +30,6 @@ jobs:
       - run: cp -r cmd/migrate/migrations/* /tmp/deploy/migrations
       - run: tar czvf deploy.tgz -C /tmp/ deploy
       - run: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null deploy.tgz $EDGE_SSH_USER@$EDGE_SSH_HOST:/root
-      - run: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null deploy.sh $EDGE_SSH_USER@$EDGE_SSH_HOST:/root
       - run: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -t $EDGE_SSH_USER@$EDGE_SSH_HOST "./deploy.sh"
       
   deploy_prod:
@@ -50,7 +49,6 @@ jobs:
       - run: cp -r cmd/migrate/migrations/* /tmp/deploy/migrations
       - run: tar czvf deploy.tgz -C /tmp/ deploy
       - run: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null deploy.tgz $PROD_SSH_USER@$PROD_SSH_HOST:/root
-      - run: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null deploy.sh $PROD_SSH_USER@$PROD_SSH_HOST:/root
       - run: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -t $PROD_SSH_USER@$PROD_SSH_HOST "./deploy.sh"
 
 workflows:
