@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -20,12 +19,7 @@ func main() {
 
 	flag.Parse()
 
-	env := "development"
-	if e, ok := os.LookupEnv("GO_ENV"); ok {
-		env = e
-	}
-
-	c, err := config.Open(*basePath, env)
+	c, err := config.Open(*basePath)
 	if err != nil {
 		fmt.Printf("Error: opening config: %v\n", err)
 		return

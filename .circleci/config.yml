@@ -6,12 +6,25 @@ jobs:
   test:
     docker:
       - image: circleci/golang:1.10
+      - image: circleci/node:9
+      - image: circleci/postgres:10-alpine
+        environment:
+            POSTGRES_USER: peregrine
+            POSTGRES_DB: peregrine
     working_directory: /go/src/github.com/Pigmice2733/peregrine-backend
     steps:
       - checkout
       - run: dep ensure
       - run: go get -v -t -d ./...
       - run: go test -v ./...
+      - run: export GO_ENV=testing
+      - run: go build -o migrate cmd/migrate/main.go
+      - run: go build -o peregrine cmd/peregrine/main.go
+      - run: ./migrate -up
+      - run: ./peregrine &
+      - run: cd api_tests
+      - run: yarn install
+      - run: yarn test
 
   deploy_edge:
     docker:
