@@ -67,7 +67,7 @@ workflows:
       - deploy_edge:
           requires:
             - test
-          # filters:
-          #   branches:
-          #     only: develop
+          filters:
+            branches:
+              only: develop
               
