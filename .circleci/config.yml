@@ -22,7 +22,7 @@ jobs:
       - run: go build -o peregrine cmd/peregrine/main.go
       - run: ./migrate -up
       - run: ./peregrine &
-      - run: cd api_tests
+      - run: cd api-tests
       - run: yarn install
       - run: yarn test
 
