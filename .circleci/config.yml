@@ -14,7 +14,6 @@ jobs:
     working_directory: /go/src/github.com/Pigmice2733/peregrine-backend
     steps:
       - checkout
-      - run: yarn --version
       - run: dep ensure
       - run: go get -v -t -d ./...
       - run: go test -v ./...
@@ -24,8 +23,8 @@ jobs:
       - run: ./migrate -up
       - run: ./peregrine &
       - run: cd api-tests
-      - run: yarn install
-      - run: yarn test
+      - run: npm i
+      - run: npm test
 
   deploy_edge:
     docker:
