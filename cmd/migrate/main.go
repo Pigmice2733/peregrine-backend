@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/config"
 	"github.com/golang-migrate/migrate"
@@ -18,7 +19,7 @@ func main() {
 	var up = flag.Bool("up", false, "Migrate up. Cannot be used with -down.")
 	var down = flag.Bool("down", false, "Migrate down. Cannot be used with -up.")
 	var migrationstable = flag.String("migrationstable", "migrations", "Name of SQL table to store migrations in.")
-	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
+	var basePath = flag.String("basePath", "", "Path to the etc directory where the config file is.")
 
 	flag.Parse()
 
@@ -52,8 +53,17 @@ func main() {
 		fmt.Printf("Error: getting PostgreSQL driver: %v\n", err)
 		return
 	}
+
+	migrationsSource := "file://"
+	if *basePath != "" {
+		migrationsSource += filepath.ToSlash(filepath.Clean(*basePath)) + "/"
+	} else {
+		migrationsSource += "./"
+	}
+	migrationsSource += "migrations"
+
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://./migrations/",
+		migrationsSource,
 		c.Database.Name, driver)
 	if err != nil {
 		fmt.Printf("Error: creating migrations: %v\n", err)
