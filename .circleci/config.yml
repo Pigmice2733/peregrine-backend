@@ -5,8 +5,7 @@ version: 2
 jobs:
   test:
     docker:
-      - image: circleci/golang:1.10
-      - image: circleci/node:9
+      - image: circleci/golang:1.10-node
       - image: circleci/postgres:10-alpine
         environment:
             POSTGRES_USER: peregrine
