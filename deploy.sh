@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pkill peregrine
+systemctl stop peregrine
 
 rm -rf deploy
 tar xf deploy.tgz
@@ -12,5 +12,4 @@ export GO_ENV="production"
 cd ./deploy
 ./bin/migrate -up
 
-echo 'a'
-nohup ./bin/peregrine &
+systemctl start peregrine
