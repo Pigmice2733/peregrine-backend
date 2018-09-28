@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/config"
 	"github.com/golang-migrate/migrate"
@@ -55,24 +54,13 @@ func main() {
 		return
 	}
 
-	if *basePath == "" {
-		*basePath, err = filepath.Abs("./")
-		if err != nil {
-			fmt.Printf("Error: unable to get absolute path of current working directory: %v\n", err)
-			return
-		}
+	migrationsSource := "file://"
+	if *basePath != "" {
+		migrationsSource += filepath.Clean(*basePath) + "/"
 	} else {
-		*basePath, err = filepath.Abs(*basePath)
-		if err != nil {
-			fmt.Printf("Error: unable to get absolute path of basePath: %v\n", err)
-			return
-		}
+		migrationsSource += "./"
 	}
-
-	migrationsFolder := filepath.Join(*basePath, "migrations")
-	segments := strings.Split(migrationsFolder, "\\")
-	migrationsFolder = strings.Join(segments, "/")
-	migrationsSource := fmt.Sprintf("file://%s", migrationsFolder)
+	migrationsSource += "migrations"
 
 	m, err := migrate.NewWithDatabaseInstance(
 		migrationsSource,
