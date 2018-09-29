@@ -9,6 +9,11 @@ import (
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 )
 
+type location struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+}
+
 type event struct {
 	ID        string         `json:"id"`
 	Name      string         `json:"name"`
@@ -16,18 +21,14 @@ type event struct {
 	Week      *int           `json:"week,omitempty"`
 	StartDate store.UnixTime `json:"startDate"`
 	EndDate   store.UnixTime `json:"endDate"`
-	Location  struct {
-		Lat float64 `json:"lat"`
-		Lon float64 `json:"lon"`
-	} `json:"location"`
+	Location  location       `json:"location"`
 }
 
 // eventsHandler returns a handler to get all events in a given year
 func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get new event data from TBA if event data is over 24 hours old
-		err := s.updateEvents()
-		if err != nil {
+		if err := s.updateEvents(); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.logger.Printf("Error: updating event data: %v\n", err)
 			return
@@ -36,7 +37,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		fullEvents, err := s.store.GetEvents()
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Println(err)
+			s.logger.Printf("Error: getting events from store: %v\n", err)
 			return
 		}
 
@@ -49,20 +50,14 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 				Week:      fullEvent.Week,
 				StartDate: fullEvent.StartDate,
 				EndDate:   fullEvent.EndDate,
-				Location: struct {
-					Lat float64 `json:"lat"`
-					Lon float64 `json:"lon"`
-				}{
+				Location: location{
 					Lat: fullEvent.Location.Lat,
 					Lon: fullEvent.Location.Lon,
 				},
 			})
 		}
 
-		err = ihttp.Respond(w, events, nil, http.StatusOK)
-		if err != nil {
-			s.logger.Println(err)
-		}
+		ihttp.Respond(w, events, nil, http.StatusOK)
 	}
 }
 
@@ -70,16 +65,19 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 // Upsert event data into database.
 func (s *Server) updateEvents() error {
 	now := time.Now()
+
 	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > 24.0 {
 		fullEvents, err := s.tba.GetEvents(s.year)
 		if err != nil {
 			return err
 		}
-		err = s.store.EventsUpsert(fullEvents)
-		if err != nil {
+
+		if err := s.store.EventsUpsert(fullEvents); err != nil {
 			return err
 		}
+
 		s.eventsLastUpdate = &now
 	}
+
 	return nil
 }

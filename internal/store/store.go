@@ -85,10 +85,12 @@ func (ut *UnixTime) MarshalJSON() ([]byte, error) {
 // it into a unix timestamp.
 func (ut *UnixTime) UnmarshalJSON(data []byte) error {
 	var time time.Time
-	err := json.Unmarshal(data, &time)
-	if err != nil {
+
+	if err := json.Unmarshal(data, &time); err != nil {
 		return err
 	}
+
 	ut.unix = time.Unix()
+
 	return nil
 }
