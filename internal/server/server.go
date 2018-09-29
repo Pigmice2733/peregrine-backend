@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/NYTimes/gziphandler"
+
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
@@ -32,7 +34,7 @@ func New(tba tba.Service, store store.Service, address string, origin string, ye
 	}
 
 	router := s.registerRoutes()
-	s.handler = ihttp.CORS(ihttp.LimitBody(router), origin)
+	s.handler = gziphandler.GzipHandler(ihttp.CORS(ihttp.LimitBody(router), origin))
 
 	s.logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
 
