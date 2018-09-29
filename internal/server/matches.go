@@ -10,7 +10,7 @@ import (
 )
 
 type match struct {
-	ID           string          `json:"id"`
+	Key          string          `json:"key"`
 	Time         *store.UnixTime `json:"time"`
 	RedScore     *int            `json:"redScore,omitempty"`
 	BlueScore    *int            `json:"blueScore,omitempty"`
@@ -50,7 +50,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			}
 
 			matches = append(matches, match{
-				ID:           fullMatch.ID,
+				Key:          fullMatch.Key,
 				Time:         time,
 				RedScore:     fullMatch.RedScore,
 				BlueScore:    fullMatch.BlueScore,
@@ -99,7 +99,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		}
 
 		match := match{
-			ID:           fullMatch.ID,
+			Key:          fullMatch.Key,
 			Time:         time,
 			RedScore:     fullMatch.RedScore,
 			BlueScore:    fullMatch.BlueScore,
@@ -115,8 +115,8 @@ func (s *Server) matchHandler() http.HandlerFunc {
 }
 
 // Get new match data from TBA for a particular event. Upsert match data into database.
-func (s *Server) updateMatches(eventID string) error {
-	fullMatches, err := s.tba.GetMatches(eventID)
+func (s *Server) updateMatches(eventKey string) error {
+	fullMatches, err := s.tba.GetMatches(eventKey)
 	if err != nil {
 		return err
 	}

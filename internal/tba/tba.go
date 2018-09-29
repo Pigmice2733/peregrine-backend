@@ -134,7 +134,7 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 		}
 
 		events = append(events, store.Event{
-			ID:        tbaEvent.Key,
+			Key:       tbaEvent.Key,
 			Name:      tbaEvent.ShortName,
 			District:  district,
 			Week:      tbaEvent.Week,
@@ -153,8 +153,8 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 }
 
 // GetMatches retrieves all matches from a specific event.
-func (s *Service) GetMatches(eventID string) ([]store.Match, error) {
-	path := fmt.Sprintf("/event/%s/matches/simple", eventID)
+func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
+	path := fmt.Sprintf("/event/%s/matches/simple", eventKey)
 
 	response, err := s.makeRequest(path)
 	if err != nil {
@@ -194,8 +194,8 @@ func (s *Service) GetMatches(eventID string) ([]store.Match, error) {
 		}
 
 		match := store.Match{
-			ID:            tbaMatch.Key,
-			EventID:       eventID,
+			Key:           tbaMatch.Key,
+			EventKey:      eventKey,
 			PredictedTime: predictedTime,
 			ActualTime:    actualTime,
 			RedScore:      redScore,

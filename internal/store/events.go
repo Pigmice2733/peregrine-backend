@@ -5,7 +5,7 @@ import "database/sql"
 // Event holds information about an FRC event such as webcast associated with
 // it, the location, it's start date, and more.
 type Event struct {
-	ID        string
+	Key       string
 	Name      string
 	District  *string
 	Week      *int
@@ -41,7 +41,7 @@ type Location struct {
 // GetEvents returns all events from the database. event.Webcasts will be nil for every event.
 func (s *Service) GetEvents() ([]Event, error) {
 	var events []Event
-	rows, err := s.db.Query("SELECT id, name, district, week, start_date, end_date, location_name, lat, lon FROM events")
+	rows, err := s.db.Query("SELECT key, name, district, week, start_date, end_date, location_name, lat, lon FROM events")
 	if err != nil {
 		return events, err
 	}
@@ -50,7 +50,7 @@ func (s *Service) GetEvents() ([]Event, error) {
 	for rows.Next() {
 		var event Event
 		event.Location = Location{}
-		if err := rows.Scan(&event.ID, &event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
+		if err := rows.Scan(&event.Key, &event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
 			return nil, err
 		}
 		events = append(events, event)
@@ -60,9 +60,9 @@ func (s *Service) GetEvents() ([]Event, error) {
 }
 
 // GetEvent retrieves a specific event.
-func (s *Service) GetEvent(eventID string) (Event, error) {
-	event := Event{ID: eventID, Location: Location{}}
-	if err := s.db.QueryRow("SELECT name, district, week, start_date, end_date, location_name, lat, lon FROM events WHERE id = $1", eventID).
+func (s *Service) GetEvent(eventKey string) (Event, error) {
+	event := Event{Key: eventKey, Location: Location{}}
+	if err := s.db.QueryRow("SELECT name, district, week, start_date, end_date, location_name, lat, lon FROM events WHERE key = $1", eventKey).
 		Scan(&event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
 		if err == sql.ErrNoRows {
 			return event, ErrNoResult
@@ -70,7 +70,7 @@ func (s *Service) GetEvent(eventID string) (Event, error) {
 		return event, err
 	}
 
-	rows, err := s.db.Query("SELECT type, url FROM webcasts WHERE event_id = $1", eventID)
+	rows, err := s.db.Query("SELECT type, url FROM webcasts WHERE event_key = $1", eventKey)
 	if err != nil {
 		return event, err
 	}
@@ -92,9 +92,9 @@ func (s *Service) GetEvent(eventID string) (Event, error) {
 // EventsUpsert upserts multiple events into the database.
 func (s *Service) EventsUpsert(events []Event) error {
 	eventStmt, err := s.db.Prepare(`
-		INSERT INTO events (id, name, district, week, start_date, end_date, location_name, lat, lon)
+		INSERT INTO events (key, name, district, week, start_date, end_date, location_name, lat, lon)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		ON CONFLICT (id)
+		ON CONFLICT (key)
 		DO
 			UPDATE
 				SET name = $2, district = $3, week = $4, start_date = $5, end_date = $6, location_name = $7, lat = $8, lon = $9
@@ -105,7 +105,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 	defer eventStmt.Close()
 
 	deleteWebcastsStmt, err := s.db.Prepare(`
-	    DELETE FROM webcasts WHERE event_id = $1
+	    DELETE FROM webcasts WHERE event_key = $1
 	`)
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 	defer deleteWebcastsStmt.Close()
 
 	webcastStmt, err := s.db.Prepare(`
-		INSERT INTO webcasts (event_id, type, url)
+		INSERT INTO webcasts (event_key, type, url)
 		VALUES ($1, $2, $3)
 	`)
 	if err != nil {
@@ -122,17 +122,17 @@ func (s *Service) EventsUpsert(events []Event) error {
 	defer webcastStmt.Close()
 
 	for _, event := range events {
-		if _, err := eventStmt.Exec(event.ID, event.Name, event.District, event.Week, &event.StartDate, &event.EndDate,
+		if _, err := eventStmt.Exec(event.Key, event.Name, event.District, event.Week, &event.StartDate, &event.EndDate,
 			event.Location.Name, event.Location.Lat, event.Location.Lon); err != nil {
 			return err
 		}
 
-		if _, err := deleteWebcastsStmt.Exec(event.ID); err != nil {
+		if _, err := deleteWebcastsStmt.Exec(event.Key); err != nil {
 			return err
 		}
 
 		for _, webcast := range event.Webcasts {
-			if _, err := webcastStmt.Exec(event.ID, webcast.Type, webcast.URL); err != nil {
+			if _, err := webcastStmt.Exec(event.Key, webcast.Type, webcast.URL); err != nil {
 				return err
 			}
 		}

@@ -75,11 +75,11 @@ test('/events endpoint', async () => {
     expect(event.location).toBeA(Object)
     expect(event.location.lat).toBeA(Number)
     expect(event.location.lon).toBeA(Number)
-    expect(event.id).toBeA(String)
+    expect(event.key).toBeA(String)
     expect(event.district).toBeUndefinedOr(String)
     expect(event.week).toBeUndefinedOr(Number)
     expect(Object.keys(event)).toBeASubsetOf([
-      'id',
+      'key',
       'name',
       'week',
       'startDate',

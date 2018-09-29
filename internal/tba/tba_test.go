@@ -101,7 +101,7 @@ func TestGetEvents(t *testing.T) {
 			},
 			events: []store.Event{
 				{
-					ID:        "key1",
+					Key:       "key1",
 					Name:      "event1",
 					Week:      nil,
 					District:  nil,
@@ -187,7 +187,7 @@ func TestGetEvents(t *testing.T) {
 				}
 			},
 			events: []store.Event{{
-				ID:        "key2",
+				Key:       "key2",
 				Name:      "Event",
 				District:  newString("ABC"),
 				Week:      newInt(5),
@@ -206,7 +206,7 @@ func TestGetEvents(t *testing.T) {
 					URL:  "https://www.twitch.tv/firstinspires12",
 				}},
 			}, {
-				ID:        "key3",
+				Key:       "key3",
 				Name:      "PIGMICE_IS_BEST",
 				District:  newString("PNW"),
 				Week:      newInt(2),
@@ -250,7 +250,7 @@ func TestGetMatches(t *testing.T) {
 
 	testCases := []struct {
 		getMatchesHandler func(w http.ResponseWriter, r *http.Request)
-		eventID           string
+		eventKey          string
 		matches           []store.Match
 		expectErr         bool
 	}{
@@ -258,7 +258,7 @@ func TestGetMatches(t *testing.T) {
 			getMatchesHandler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
-			eventID:   "none",
+			eventKey:  "none",
 			matches:   nil,
 			expectErr: true,
 		},
@@ -308,11 +308,11 @@ func TestGetMatches(t *testing.T) {
 					t.Errorf("failed to write test data")
 				}
 			},
-			eventID: "2018alhu",
+			eventKey: "2018alhu",
 			matches: []store.Match{
 				{
-					ID:            "key1",
-					EventID:       "2018alhu",
+					Key:           "key1",
+					EventKey:      "2018alhu",
 					PredictedTime: newUnixPointer(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
 					ActualTime:    newUnixPointer(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
 					RedScore:      newInt(220),
@@ -321,8 +321,8 @@ func TestGetMatches(t *testing.T) {
 					BlueAlliance:  []string{"frc2733", "frc9876", "frc1"},
 				},
 				{
-					ID:            "key2",
-					EventID:       "2018alhu",
+					Key:           "key2",
+					EventKey:      "2018alhu",
 					PredictedTime: newUnixPointer(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
 					ActualTime:    newUnixPointer(time.Date(2018, 5, 2, 15, 13, 0, 0, time.UTC)),
 					RedScore:      newInt(120),
@@ -379,11 +379,11 @@ func TestGetMatches(t *testing.T) {
 					t.Errorf("failed to write test data")
 				}
 			},
-			eventID: "2018alhu",
+			eventKey: "2018alhu",
 			matches: []store.Match{
 				{
-					ID:            "key1",
-					EventID:       "2018alhu",
+					Key:           "key1",
+					EventKey:      "2018alhu",
 					PredictedTime: newUnixPointer(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
 					ActualTime:    newUnixPointer(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
 					RedScore:      nil,
@@ -392,8 +392,8 @@ func TestGetMatches(t *testing.T) {
 					BlueAlliance:  []string{"frc2733", "frc9876", "frc1"},
 				},
 				{
-					ID:            "key2",
-					EventID:       "2018alhu",
+					Key:           "key2",
+					EventKey:      "2018alhu",
 					PredictedTime: newUnixPointer(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
 					ActualTime:    nil,
 					RedScore:      nil,
@@ -409,7 +409,7 @@ func TestGetMatches(t *testing.T) {
 	for index, tt := range testCases {
 		server.getMatchesHandler = tt.getMatchesHandler
 
-		matches, err := s.GetMatches(tt.eventID)
+		matches, err := s.GetMatches(tt.eventKey)
 		if tt.expectErr != (err != nil) {
 			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
 		}
