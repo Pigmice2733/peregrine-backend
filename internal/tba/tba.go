@@ -185,13 +185,21 @@ func (s *Service) GetMatches(eventID string) ([]store.Match, error) {
 			actualTime = &timestamp
 		}
 
+		var redScore, blueScore *int
+		if tbaMatch.Alliances.Red.Score != nil && *tbaMatch.Alliances.Red.Score != -1 {
+			redScore = tbaMatch.Alliances.Red.Score
+		}
+		if tbaMatch.Alliances.Blue.Score != nil && *tbaMatch.Alliances.Blue.Score != -1 {
+			blueScore = tbaMatch.Alliances.Blue.Score
+		}
+
 		match := store.Match{
 			ID:            tbaMatch.Key,
 			EventID:       eventID,
 			PredictedTime: predictedTime,
 			ActualTime:    actualTime,
-			RedScore:      tbaMatch.Alliances.Red.Score,
-			BlueScore:     tbaMatch.Alliances.Blue.Score,
+			RedScore:      redScore,
+			BlueScore:     blueScore,
 			RedAlliance:   tbaMatch.Alliances.Red.TeamKeys,
 			BlueAlliance:  tbaMatch.Alliances.Blue.TeamKeys,
 		}

@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
+	"github.com/gorilla/mux"
 )
 
 type tbaServer struct {
 	*httptest.Server
-	getEventsHandler func(w http.ResponseWriter, r *http.Request)
+	getEventsHandler  func(w http.ResponseWriter, r *http.Request)
+	getMatchesHandler func(w http.ResponseWriter, r *http.Request)
 }
 
 const testingYear = 2018
@@ -26,14 +28,19 @@ func newString(s string) *string {
 	return &s
 }
 
+func newUnixPointer(time time.Time) *store.UnixTime {
+	unix := store.NewUnixFromTime(time)
+	return &unix
+}
+
 func newTBAServer() *tbaServer {
 	ts := new(tbaServer)
 
-	mux := http.NewServeMux()
+	r := mux.NewRouter()
+	r.HandleFunc("/events/"+strconv.Itoa(testingYear), func(w http.ResponseWriter, r *http.Request) { ts.getEventsHandler(w, r) })
+	r.HandleFunc("/event/{eventKey}/matches/simple", func(w http.ResponseWriter, r *http.Request) { ts.getMatchesHandler(w, r) })
 
-	mux.HandleFunc("/events/"+strconv.Itoa(testingYear), func(w http.ResponseWriter, r *http.Request) { ts.getEventsHandler(w, r) })
-
-	ts.Server = httptest.NewServer(mux)
+	ts.Server = httptest.NewServer(r)
 
 	return ts
 }
@@ -42,7 +49,9 @@ func TestGetEvents(t *testing.T) {
 	server := newTBAServer()
 	defer server.Close()
 
-	s := Service{URL: server.URL, APIKey: "notARealKey"}
+	APIKey := "notARealKey"
+
+	s := Service{URL: server.URL, APIKey: APIKey}
 
 	testCases := []struct {
 		getEventsHandler func(w http.ResponseWriter, r *http.Request)
@@ -58,7 +67,7 @@ func TestGetEvents(t *testing.T) {
 		},
 		{
 			getEventsHandler: func(w http.ResponseWriter, r *http.Request) {
-				if r.Header.Get("X-TBA-Auth-Key") != "notARealKey" {
+				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
@@ -227,6 +236,186 @@ func TestGetEvents(t *testing.T) {
 
 		if !reflect.DeepEqual(events, tt.events) {
 			t.Errorf("test #%v - got events: %#v\n    expected: %#v", index+1, events, tt.events)
+		}
+	}
+}
+
+func TestGetMatches(t *testing.T) {
+	server := newTBAServer()
+	defer server.Close()
+
+	APIKey := "alsoNotARealKey"
+
+	s := Service{URL: server.URL, APIKey: APIKey}
+
+	testCases := []struct {
+		getMatchesHandler func(w http.ResponseWriter, r *http.Request)
+		eventID           string
+		matches           []store.Match
+		expectErr         bool
+	}{
+		{
+			getMatchesHandler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			},
+			eventID:   "none",
+			matches:   nil,
+			expectErr: true,
+		},
+		{
+			getMatchesHandler: func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(`
+				[
+                    {
+						"key": "key1",
+						"alliances": {
+							"red": {
+								"score": 220,
+								"team_keys": ["frc254", "frc1234", "frc00"]
+							},
+							"blue": {
+								"score": 500,
+								"team_keys": ["frc2733", "frc9876", "frc1"]
+							}
+						},
+						"predicted_time": 1520272800,
+						"actual_time": 1520274000
+					},
+					{
+						"key": "key2",
+						"alliances": {
+							"red": {
+								"score": 120,
+								"team_keys": ["frc0", "frc1", "frc2"]
+							},
+							"blue": {
+								"score": 600,
+								"team_keys": ["frc2", "frc7", "frc3"]
+							}
+						},
+						"predicted_time": 1525272780,
+						"actual_time": 1525273980
+					}
+				]
+				`))
+
+				if err != nil {
+					t.Errorf("failed to write test data")
+				}
+			},
+			eventID: "2018alhu",
+			matches: []store.Match{
+				{
+					ID:            "key1",
+					EventID:       "2018alhu",
+					PredictedTime: newUnixPointer(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ActualTime:    newUnixPointer(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
+					RedScore:      newInt(220),
+					BlueScore:     newInt(500),
+					RedAlliance:   []string{"frc254", "frc1234", "frc00"},
+					BlueAlliance:  []string{"frc2733", "frc9876", "frc1"},
+				},
+				{
+					ID:            "key2",
+					EventID:       "2018alhu",
+					PredictedTime: newUnixPointer(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
+					ActualTime:    newUnixPointer(time.Date(2018, 5, 2, 15, 13, 0, 0, time.UTC)),
+					RedScore:      newInt(120),
+					BlueScore:     newInt(600),
+					RedAlliance:   []string{"frc0", "frc1", "frc2"},
+					BlueAlliance:  []string{"frc2", "frc7", "frc3"},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			getMatchesHandler: func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(`
+				[
+                    {
+						"key": "key1",
+						"alliances": {
+							"red": {
+								"score": -1,
+								"team_keys": ["frc254", "frc1234", "frc00"]
+							},
+							"blue": {
+								"score": -1,
+								"team_keys": ["frc2733", "frc9876", "frc1"]
+							}
+						},
+						"predicted_time": 1520272800,
+						"actual_time": 1520274000
+					},
+					{
+						"key": "key2",
+						"alliances": {
+							"red": {
+								"score": null,
+								"team_keys": ["frc0", "frc1", "frc2"]
+							},
+							"blue": {
+								"score": null,
+								"team_keys": ["frc2", "frc7", "frc3"]
+							}
+						},
+						"predicted_time": 1525272780,
+						"actual_time": null
+					}
+				]
+				`))
+
+				if err != nil {
+					t.Errorf("failed to write test data")
+				}
+			},
+			eventID: "2018alhu",
+			matches: []store.Match{
+				{
+					ID:            "key1",
+					EventID:       "2018alhu",
+					PredictedTime: newUnixPointer(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ActualTime:    newUnixPointer(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
+					RedScore:      nil,
+					BlueScore:     nil,
+					RedAlliance:   []string{"frc254", "frc1234", "frc00"},
+					BlueAlliance:  []string{"frc2733", "frc9876", "frc1"},
+				},
+				{
+					ID:            "key2",
+					EventID:       "2018alhu",
+					PredictedTime: newUnixPointer(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
+					ActualTime:    nil,
+					RedScore:      nil,
+					BlueScore:     nil,
+					RedAlliance:   []string{"frc0", "frc1", "frc2"},
+					BlueAlliance:  []string{"frc2", "frc7", "frc3"},
+				},
+			},
+			expectErr: false,
+		},
+	}
+
+	for index, tt := range testCases {
+		server.getMatchesHandler = tt.getMatchesHandler
+
+		matches, err := s.GetMatches(tt.eventID)
+		if tt.expectErr != (err != nil) {
+			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
+		}
+
+		if !reflect.DeepEqual(matches, tt.matches) {
+			t.Errorf("test #%v - got matches: %#v\n    expected: %#v", index+1, matches, tt.matches)
 		}
 	}
 }
