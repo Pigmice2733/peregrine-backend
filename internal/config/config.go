@@ -12,8 +12,11 @@ import (
 // Config holds information about how the peregrine backend is configured.
 type Config struct {
 	Server struct {
-		Address string `yaml:"address"`
-		Origin  string `yaml:"origin"`
+		HTTPAddress  string `yaml:"httpAddress"`
+		HTTPSAddress string `yaml:"httpsAddress"`
+		KeyFile      string `yaml:"keyFile"`
+		CertFile     string `yaml:"certFile"`
+		Origin       string `yaml:"origin"`
 	} `yaml:"server"`
 
 	TBA struct {
