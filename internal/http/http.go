@@ -24,7 +24,7 @@ func Error(w http.ResponseWriter, httpCode int) {
 
 // Respond encodes the data and ResponseError to JSON and responds with it and
 // the http code. If the encoding fails, sets an InternalServerError.
-func Respond(w http.ResponseWriter, data interface{}, respErr *ResponseError, httpCode int) error {
+func Respond(w http.ResponseWriter, data interface{}, respErr *ResponseError, httpCode int) {
 	response := Response{
 		Error: respErr,
 		Data:  data,
@@ -33,11 +33,9 @@ func Respond(w http.ResponseWriter, data interface{}, respErr *ResponseError, ht
 	jsonData, err := json.Marshal(response)
 	if err != nil {
 		Error(w, http.StatusInternalServerError)
-		return err
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpCode)
-	_, err = w.Write(jsonData)
-	return err
+	w.Write(jsonData)
 }
