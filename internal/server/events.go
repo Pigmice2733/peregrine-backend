@@ -11,15 +11,16 @@ import (
 )
 
 type event struct {
-	ID        string         `json:"id"`
-	Name      string         `json:"name"`
-	District  *string        `json:"district,omitempty"`
-	Week      *int           `json:"week,omitempty"`
-	StartDate store.UnixTime `json:"startDate"`
-	EndDate   store.UnixTime `json:"endDate"`
+	ID        string          `json:"id"`
+	Name      string          `json:"name"`
+	District  *string         `json:"district,omitempty"`
+	Week      *int            `json:"week,omitempty"`
+	StartDate *store.UnixTime `json:"startDate"`
+	EndDate   *store.UnixTime `json:"endDate"`
 	Location  struct {
-		Lat float64 `json:"lat"`
-		Lon float64 `json:"lon"`
+		Name *string `json:"name,omitempty"`
+		Lat  float64 `json:"lat"`
+		Lon  float64 `json:"lon"`
 	} `json:"location"`
 }
 
@@ -47,7 +48,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		fullEvents, err := s.store.GetEvents()
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Println(err)
+			s.logger.Printf("Error: retrieving event data: %v\n", err)
 			return
 		}
 
@@ -58,11 +59,12 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 				Name:      fullEvent.Name,
 				District:  fullEvent.District,
 				Week:      fullEvent.Week,
-				StartDate: fullEvent.StartDate,
-				EndDate:   fullEvent.EndDate,
+				StartDate: &fullEvent.StartDate,
+				EndDate:   &fullEvent.EndDate,
 				Location: struct {
-					Lat float64 `json:"lat"`
-					Lon float64 `json:"lon"`
+					Name *string `json:"name,omitempty"`
+					Lat  float64 `json:"lat"`
+					Lon  float64 `json:"lon"`
 				}{
 					Lat: fullEvent.Location.Lat,
 					Lon: fullEvent.Location.Lon,
@@ -94,7 +96,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 		fullEvent, err := s.store.GetEvent(eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Println(err)
+			s.logger.Printf("Error: retrieving event data: %v\n", err)
 			return
 		}
 
@@ -112,14 +114,16 @@ func (s *Server) eventHandler() http.HandlerFunc {
 				Name:      fullEvent.Name,
 				District:  fullEvent.District,
 				Week:      fullEvent.Week,
-				StartDate: fullEvent.StartDate,
-				EndDate:   fullEvent.EndDate,
+				StartDate: &fullEvent.StartDate,
+				EndDate:   &fullEvent.EndDate,
 				Location: struct {
-					Lat float64 `json:"lat"`
-					Lon float64 `json:"lon"`
+					Name *string `json:"name,omitempty"`
+					Lat  float64 `json:"lat"`
+					Lon  float64 `json:"lon"`
 				}{
-					Lat: fullEvent.Location.Lat,
-					Lon: fullEvent.Location.Lon,
+					Name: &fullEvent.Location.Name,
+					Lat:  fullEvent.Location.Lat,
+					Lon:  fullEvent.Location.Lon,
 				},
 			},
 			Webcasts: webcasts,

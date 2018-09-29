@@ -65,7 +65,6 @@ func (s *Service) GetEvent(eventID string) (Event, error) {
 		return event, err
 	}
 
-	var webcasts []Webcast
 	rows, err := s.db.Query("SELECT type, url FROM webcasts WHERE event_id = $1", eventID)
 	if err != nil {
 		return event, err
@@ -79,7 +78,7 @@ func (s *Service) GetEvent(eventID string) (Event, error) {
 			return event, err
 		}
 		webcast.Type = WebcastType(webcastType)
-		webcasts = append(webcasts, webcast)
+		event.Webcasts = append(event.Webcasts, webcast)
 	}
 
 	return event, rows.Err()

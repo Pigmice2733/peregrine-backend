@@ -23,10 +23,15 @@ func (s *Service) GetEventMatches(eventID string) ([]Match, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		match := Match{EventID: eventID}
-		if err := rows.Scan(&match.ID, match.PredictedTime, match.ActualTime, match.RedScore, match.BlueScore); err != nil {
+		match := Match{EventID: eventID, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
+		var redScore, blueScore int
+		if err := rows.Scan(&match.ID, match.PredictedTime, match.ActualTime, &redScore, &blueScore); err != nil {
 			return nil, err
 		}
+
+		match.BlueScore = &blueScore
+		match.RedScore = &redScore
+
 		match.BlueAlliance, err = s.GetMatchAlliance(match.ID, true)
 		if err != nil {
 			return nil, err
@@ -43,11 +48,15 @@ func (s *Service) GetEventMatches(eventID string) ([]Match, error) {
 
 // GetMatch returns a specfic match.
 func (s *Service) GetMatch(matchID string) (Match, error) {
-	match := Match{ID: matchID}
+	var redScore, blueScore int
+	match := Match{ID: matchID, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
 	if err := s.db.QueryRow("SELECT event_id, predicted_time, actual_time, red_score, blue_score FROM matches WHERE id = $1", matchID).
-		Scan(match.EventID, match.PredictedTime, match.ActualTime, match.RedScore, match.BlueScore); err != nil {
+		Scan(&match.EventID, match.PredictedTime, match.ActualTime, &redScore, &blueScore); err != nil {
 		return match, err
 	}
+
+	match.BlueScore = &blueScore
+	match.RedScore = &redScore
 
 	var err error
 	match.BlueAlliance, err = s.GetMatchAlliance(match.ID, true)

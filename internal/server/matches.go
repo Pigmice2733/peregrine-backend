@@ -35,7 +35,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 		fullMatches, err := s.store.GetEventMatches(eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Println(err)
+			s.logger.Printf("Error: retrieving match data: %v\n", err)
 			return
 		}
 
@@ -83,7 +83,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		fullMatch, err := s.store.GetMatch(matchKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Println(err)
+			s.logger.Printf("Error: retrieving match data: %v\n", err)
 			return
 		}
 

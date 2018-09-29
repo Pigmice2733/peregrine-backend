@@ -154,7 +154,7 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 
 // GetMatches retrieves all matches from a specific event.
 func (s *Service) GetMatches(eventID string) ([]store.Match, error) {
-	path := fmt.Sprintf("/events/%s/matches", eventID)
+	path := fmt.Sprintf("/event/%s/matches/simple", eventID)
 
 	response, err := s.makeRequest(path)
 	if err != nil {
