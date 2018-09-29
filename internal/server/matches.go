@@ -82,6 +82,10 @@ func (s *Server) matchHandler() http.HandlerFunc {
 
 		fullMatch, err := s.store.GetMatch(matchKey)
 		if err != nil {
+			if err == store.ErrNoResult {
+				ihttp.Error(w, http.StatusNotFound)
+				return
+			}
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.logger.Printf("Error: retrieving match data: %v\n", err)
 			return

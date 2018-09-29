@@ -1,5 +1,7 @@
 package store
 
+import "database/sql"
+
 // Match holds information about an FRC match at a specific event
 type Match struct {
 	ID            string
@@ -52,6 +54,9 @@ func (s *Service) GetMatch(matchID string) (Match, error) {
 	match := Match{ID: matchID, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
 	if err := s.db.QueryRow("SELECT event_id, predicted_time, actual_time, red_score, blue_score FROM matches WHERE id = $1", matchID).
 		Scan(&match.EventID, match.PredictedTime, match.ActualTime, &redScore, &blueScore); err != nil {
+		if err == sql.ErrNoRows {
+			return match, ErrNoResult
+		}
 		return match, err
 	}
 

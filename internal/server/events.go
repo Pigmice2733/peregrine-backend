@@ -95,6 +95,10 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 		fullEvent, err := s.store.GetEvent(eventKey)
 		if err != nil {
+			if err == store.ErrNoResult {
+				ihttp.Error(w, http.StatusNotFound)
+				return
+			}
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.logger.Printf("Error: retrieving event data: %v\n", err)
 			return

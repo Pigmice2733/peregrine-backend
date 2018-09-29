@@ -1,5 +1,7 @@
 package store
 
+import "database/sql"
+
 // Event holds information about an FRC event such as webcast associated with
 // it, the location, it's start date, and more.
 type Event struct {
@@ -62,6 +64,9 @@ func (s *Service) GetEvent(eventID string) (Event, error) {
 	event := Event{ID: eventID, Location: Location{}}
 	if err := s.db.QueryRow("SELECT name, district, week, start_date, end_date, location_name, lat, lon FROM events WHERE id = $1", eventID).
 		Scan(&event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
+		if err == sql.ErrNoRows {
+			return event, ErrNoResult
+		}
 		return event, err
 	}
 

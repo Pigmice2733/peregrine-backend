@@ -11,6 +11,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// ErrNoResult indicates that no data matching the query was found.
+var ErrNoResult = fmt.Errorf("no results found")
+
 // Service is an interface to manipulate the data store.
 type Service struct {
 	db *sql.DB
