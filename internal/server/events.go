@@ -104,7 +104,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 			return
 		}
 
-		var webcasts []webcast
+		webcasts := []webcast{}
 		for _, fullWebcast := range fullEvent.Webcasts {
 			webcasts = append(webcasts, webcast{
 				Type: string(fullWebcast.Type),
