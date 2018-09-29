@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
+	"github.com/gorilla/mux"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 )
@@ -22,7 +23,17 @@ type event struct {
 	} `json:"location"`
 }
 
-// eventsHandler returns a handler to get all events in a given year
+type webcast struct {
+	Type string `json:"type"`
+	URL  string `json:"url"`
+}
+
+type webcastEvent struct {
+	event
+	Webcasts []webcast `json:"webcasts"`
+}
+
+// eventsHandler returns a handler to get all events in a given year.
 func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get new event data from TBA if event data is over 24 hours old
@@ -60,6 +71,61 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		}
 
 		err = ihttp.Respond(w, events, nil, http.StatusOK)
+		if err != nil {
+			s.logger.Println(err)
+		}
+	}
+}
+
+// eventHandler returns a handler to get a specific event.
+func (s *Server) eventHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get new event data from TBA if event data is over 24 hours old
+		err := s.updateEvents()
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.logger.Printf("Error: updating event data: %v\n", err)
+			return
+		}
+
+		vars := mux.Vars(r)
+		eventKey := vars["eventKey"]
+
+		fullEvent, err := s.store.GetEvent(eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.logger.Println(err)
+			return
+		}
+
+		var webcasts []webcast
+		for _, fullWebcast := range fullEvent.Webcasts {
+			webcasts = append(webcasts, webcast{
+				Type: string(fullWebcast.Type),
+				URL:  fullWebcast.URL,
+			})
+		}
+
+		event := webcastEvent{
+			event: event{
+				ID:        fullEvent.ID,
+				Name:      fullEvent.Name,
+				District:  fullEvent.District,
+				Week:      fullEvent.Week,
+				StartDate: fullEvent.StartDate,
+				EndDate:   fullEvent.EndDate,
+				Location: struct {
+					Lat float64 `json:"lat"`
+					Lon float64 `json:"lon"`
+				}{
+					Lat: fullEvent.Location.Lat,
+					Lon: fullEvent.Location.Lon,
+				},
+			},
+			Webcasts: webcasts,
+		}
+
+		err = ihttp.Respond(w, event, nil, http.StatusOK)
 		if err != nil {
 			s.logger.Println(err)
 		}

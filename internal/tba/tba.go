@@ -17,27 +17,42 @@ type Service struct {
 	APIKey string
 }
 
-type tbaDistrict struct {
+type district struct {
 	Abbreviation string `json:"abbreviation"`
 }
 
-type tbaWebcast struct {
+type webcast struct {
 	Type    string `json:"type"`
 	Channel string `json:"channel"`
 }
 
-type tbaEvent struct {
-	Key          string       `json:"key"`
-	ShortName    string       `json:"short_name"`
-	District     *tbaDistrict `json:"district"`
-	Lat          float64      `json:"lat"`
-	Lng          float64      `json:"lng"`
-	LocationName string       `json:"location_name"`
-	Week         *int         `json:"week"`
-	StartDate    string       `json:"start_date"`
-	EndDate      string       `json:"end_date"`
-	TimeZone     string       `json:"timezone"`
-	Webcasts     []tbaWebcast `json:"webcasts"`
+type event struct {
+	Key          string    `json:"key"`
+	ShortName    string    `json:"short_name"`
+	District     *district `json:"district"`
+	Lat          float64   `json:"lat"`
+	Lng          float64   `json:"lng"`
+	LocationName string    `json:"location_name"`
+	Week         *int      `json:"week"`
+	StartDate    string    `json:"start_date"`
+	EndDate      string    `json:"end_date"`
+	Timezone     string    `json:"timezone"`
+	Webcasts     []webcast `json:"webcasts"`
+}
+
+type alliance struct {
+	Score    *int     `json:"score"`
+	TeamKeys []string `json:"team_keys"`
+}
+
+type match struct {
+	Key           string `json:"key"`
+	PredictedTime int64  `json:"predicted_time"`
+	ActualTime    int64  `json:"actual_time"`
+	Alliances     struct {
+		Red  alliance `json:"red"`
+		Blue alliance `json:"blue"`
+	} `json:"alliances"`
 }
 
 // Maximum size of response from the TBA API to read. This value is about 4x the
@@ -76,14 +91,14 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 
 	response, err := s.makeRequest(path)
 	if err != nil {
-		return nil, fmt.Errorf("TBA request failed: %v", err)
+		return nil, fmt.Errorf("TBA request to %s failed: %v", path, err)
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("TBA request failed with status code: %v", response.StatusCode)
+		return nil, fmt.Errorf("TBA request to %s failed with status code: %v", path, response.StatusCode)
 	}
 
-	var tbaEvents []tbaEvent
+	var tbaEvents []event
 	if err := json.NewDecoder(io.LimitReader(response.Body, maxResponseSize)).Decode(&tbaEvents); err != nil {
 		return nil, err
 	}
@@ -95,7 +110,7 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 			district = &tbaEvent.District.Abbreviation
 		}
 
-		timeZone, err := time.LoadLocation(tbaEvent.TimeZone)
+		timeZone, err := time.LoadLocation(tbaEvent.Timezone)
 		if err != nil {
 			return nil, err
 		}
@@ -123,8 +138,8 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 			Name:      tbaEvent.ShortName,
 			District:  district,
 			Week:      tbaEvent.Week,
-			StartDate: store.NewUnix(startDate),
-			EndDate:   store.NewUnix(endDate),
+			StartDate: store.NewUnixFromTime(startDate),
+			EndDate:   store.NewUnixFromTime(endDate),
 			Webcasts:  webcasts,
 			Location: store.Location{
 				Lat:  tbaEvent.Lat,
@@ -135,4 +150,53 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 	}
 
 	return events, nil
+}
+
+// GetMatches retrieves all matches from a specific event.
+func (s *Service) GetMatches(eventID string) ([]store.Match, error) {
+	path := fmt.Sprintf("/events/%s/matches", eventID)
+
+	response, err := s.makeRequest(path)
+	if err != nil {
+		return nil, fmt.Errorf("TBA request to %s failed: %v", path, err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TBA request to %s failed with status code: %v", path, response.StatusCode)
+	}
+
+	var tbaMatches []match
+	if err := json.NewDecoder(io.LimitReader(response.Body, maxResponseSize)).Decode(&tbaMatches); err != nil {
+		return nil, err
+	}
+
+	var matches []store.Match
+	for _, tbaMatch := range tbaMatches {
+		var predictedTime *store.UnixTime
+		var actualTime *store.UnixTime
+
+		if tbaMatch.PredictedTime != 0 {
+			timestamp := store.NewUnixFromInt(tbaMatch.PredictedTime)
+			predictedTime = &timestamp
+		}
+
+		if tbaMatch.ActualTime != 0 {
+			timestamp := store.NewUnixFromInt(tbaMatch.ActualTime)
+			actualTime = &timestamp
+		}
+
+		match := store.Match{
+			ID:            tbaMatch.Key,
+			EventID:       eventID,
+			PredictedTime: predictedTime,
+			ActualTime:    actualTime,
+			RedScore:      tbaMatch.Alliances.Red.Score,
+			BlueScore:     tbaMatch.Alliances.Blue.Score,
+			RedAlliance:   tbaMatch.Alliances.Red.TeamKeys,
+			BlueAlliance:  tbaMatch.Alliances.Blue.TeamKeys,
+		}
+		matches = append(matches, match)
+	}
+
+	return matches, nil
 }

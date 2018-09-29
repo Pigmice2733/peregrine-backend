@@ -48,10 +48,17 @@ type UnixTime struct {
 	unix int64
 }
 
-// NewUnix creates a new UnixTime timestamp from a time.Time.
-func NewUnix(time time.Time) UnixTime {
+// NewUnixFromTime creates a new UnixTime timestamp from a time.Time.
+func NewUnixFromTime(time time.Time) UnixTime {
 	return UnixTime{
 		unix: time.Unix(),
+	}
+}
+
+// NewUnixFromInt creates a new UnixTime timestamp from an int64.
+func NewUnixFromInt(time int64) UnixTime {
+	return UnixTime{
+		unix: time,
 	}
 }
 

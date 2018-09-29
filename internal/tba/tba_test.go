@@ -96,8 +96,8 @@ func TestGetEvents(t *testing.T) {
 					Name:      "event1",
 					Week:      nil,
 					District:  nil,
-					StartDate: store.NewUnix(time.Date(2018, 4, 2, 7, 0, 0, 0, time.UTC)),
-					EndDate:   store.NewUnix(time.Date(2018, 4, 4, 7, 0, 0, 0, time.UTC)),
+					StartDate: store.NewUnixFromTime(time.Date(2018, 4, 2, 7, 0, 0, 0, time.UTC)),
+					EndDate:   store.NewUnixFromTime(time.Date(2018, 4, 4, 7, 0, 0, 0, time.UTC)),
 					Location: store.Location{
 						Lat:  41.9911025,
 						Lon:  -70.993044,
@@ -182,8 +182,8 @@ func TestGetEvents(t *testing.T) {
 				Name:      "Event",
 				District:  newString("ABC"),
 				Week:      newInt(5),
-				StartDate: store.NewUnix(time.Date(2018, 5, 6, 0, 0, 0, 0, time.UTC)),
-				EndDate:   store.NewUnix(time.Date(2018, 5, 7, 0, 0, 0, 0, time.UTC)),
+				StartDate: store.NewUnixFromTime(time.Date(2018, 5, 6, 0, 0, 0, 0, time.UTC)),
+				EndDate:   store.NewUnixFromTime(time.Date(2018, 5, 7, 0, 0, 0, 0, time.UTC)),
 				Location: store.Location{
 					Lat:  42.0,
 					Lon:  0.0,
@@ -201,8 +201,8 @@ func TestGetEvents(t *testing.T) {
 				Name:      "PIGMICE_IS_BEST",
 				District:  newString("PNW"),
 				Week:      newInt(2),
-				StartDate: store.NewUnix(time.Date(2018, 11, 19, 8, 0, 0, 0, time.UTC)),
-				EndDate:   store.NewUnix(time.Date(2018, 11, 23, 8, 0, 0, 0, time.UTC)),
+				StartDate: store.NewUnixFromTime(time.Date(2018, 11, 19, 8, 0, 0, 0, time.UTC)),
+				EndDate:   store.NewUnixFromTime(time.Date(2018, 11, 23, 8, 0, 0, 0, time.UTC)),
 				Location: store.Location{
 					Lat:  45.52,
 					Lon:  -122.681944,
