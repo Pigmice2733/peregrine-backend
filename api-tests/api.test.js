@@ -55,7 +55,7 @@ expect.extend({
 })
 
 const config = jsyaml.safeLoad(
-  fs.readFileSync('./../etc/config.development.yaml', 'utf8'),
+  fs.readFileSync(`./../etc/config.${process.env.GO_ENV}.yaml`, 'utf8'),
 )
 
 const addr = `http://${config.server.address}/`

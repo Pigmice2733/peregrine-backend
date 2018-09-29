@@ -3,4 +3,5 @@
 /vendor/
 /.vscode
 /etc/config*.yaml
+!/etc/config.testing.yaml
 *.exe

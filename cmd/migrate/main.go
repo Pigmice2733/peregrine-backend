@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/config"
@@ -29,12 +28,7 @@ func main() {
 		return
 	}
 
-	env := "development"
-	if e, ok := os.LookupEnv("GO_ENV"); ok {
-		env = e
-	}
-
-	c, err := config.Open(*basePath, env)
+	c, err := config.Open(*basePath)
 	if err != nil {
 		fmt.Printf("Error: opening config: %v\n", err)
 		return
