@@ -10,18 +10,20 @@ import (
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 )
 
+type location struct {
+	Name *string `json:"name"`
+	Lat  float64 `json:"lat"`
+	Lon  float64 `json:"lon"`
+}
+
 type event struct {
-	Key       string          `json:"key"`
-	Name      string          `json:"name"`
-	District  *string         `json:"district,omitempty"`
-	Week      *int            `json:"week,omitempty"`
-	StartDate *store.UnixTime `json:"startDate"`
-	EndDate   *store.UnixTime `json:"endDate"`
-	Location  struct {
-		Name *string `json:"name,omitempty"`
-		Lat  float64 `json:"lat"`
-		Lon  float64 `json:"lon"`
-	} `json:"location"`
+	Key       string         `json:"key"`
+	Name      string         `json:"name"`
+	District  *string        `json:"district,omitempty"`
+	Week      *int           `json:"week,omitempty"`
+	StartDate store.UnixTime `json:"startDate"`
+	EndDate   store.UnixTime `json:"endDate"`
+	Location  location       `json:"location"`
 }
 
 type webcast struct {
@@ -38,8 +40,7 @@ type webcastEvent struct {
 func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get new event data from TBA if event data is over 24 hours old
-		err := s.updateEvents()
-		if err != nil {
+		if err := s.updateEvents(); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.logger.Printf("Error: updating event data: %v\n", err)
 			return
@@ -59,23 +60,16 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 				Name:      fullEvent.Name,
 				District:  fullEvent.District,
 				Week:      fullEvent.Week,
-				StartDate: &fullEvent.StartDate,
-				EndDate:   &fullEvent.EndDate,
-				Location: struct {
-					Name *string `json:"name,omitempty"`
-					Lat  float64 `json:"lat"`
-					Lon  float64 `json:"lon"`
-				}{
+				StartDate: fullEvent.StartDate,
+				EndDate:   fullEvent.EndDate,
+				Location: location{
 					Lat: fullEvent.Location.Lat,
 					Lon: fullEvent.Location.Lon,
 				},
 			})
 		}
 
-		err = ihttp.Respond(w, events, nil, http.StatusOK)
-		if err != nil {
-			s.logger.Println(err)
-		}
+		ihttp.Respond(w, events, nil, http.StatusOK)
 	}
 }
 
@@ -118,13 +112,9 @@ func (s *Server) eventHandler() http.HandlerFunc {
 				Name:      fullEvent.Name,
 				District:  fullEvent.District,
 				Week:      fullEvent.Week,
-				StartDate: &fullEvent.StartDate,
-				EndDate:   &fullEvent.EndDate,
-				Location: struct {
-					Name *string `json:"name,omitempty"`
-					Lat  float64 `json:"lat"`
-					Lon  float64 `json:"lon"`
-				}{
+				StartDate: fullEvent.StartDate,
+				EndDate:   fullEvent.EndDate,
+				Location: location{
 					Name: &fullEvent.Location.Name,
 					Lat:  fullEvent.Location.Lat,
 					Lon:  fullEvent.Location.Lon,
@@ -133,10 +123,8 @@ func (s *Server) eventHandler() http.HandlerFunc {
 			Webcasts: webcasts,
 		}
 
-		err = ihttp.Respond(w, event, nil, http.StatusOK)
-		if err != nil {
-			s.logger.Println(err)
-		}
+		// Using &event so that pointer receivers on embedded types get promoted
+		ihttp.Respond(w, &event, nil, http.StatusOK)
 	}
 }
 
@@ -144,16 +132,19 @@ func (s *Server) eventHandler() http.HandlerFunc {
 // Upsert event data into database.
 func (s *Server) updateEvents() error {
 	now := time.Now()
+
 	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > 24.0 {
 		fullEvents, err := s.tba.GetEvents(s.year)
 		if err != nil {
 			return err
 		}
-		err = s.store.EventsUpsert(fullEvents)
-		if err != nil {
+
+		if err := s.store.EventsUpsert(fullEvents); err != nil {
 			return err
 		}
+
 		s.eventsLastUpdate = &now
 	}
+
 	return nil
 }

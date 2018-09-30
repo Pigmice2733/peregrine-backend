@@ -1,5 +1,5 @@
 server:
-    address: localhost:8080
+    httpAddress: localhost:8080
     origin: "*"
 
 tba:

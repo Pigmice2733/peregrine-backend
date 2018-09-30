@@ -59,10 +59,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			})
 		}
 
-		err = ihttp.Respond(w, matches, nil, http.StatusOK)
-		if err != nil {
-			s.logger.Println(err)
-		}
+		ihttp.Respond(w, matches, nil, http.StatusOK)
 	}
 }
 
@@ -107,10 +104,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 			BlueAlliance: fullMatch.BlueAlliance,
 		}
 
-		err = ihttp.Respond(w, match, nil, http.StatusOK)
-		if err != nil {
-			s.logger.Println(err)
-		}
+		ihttp.Respond(w, match, nil, http.StatusOK)
 	}
 }
 

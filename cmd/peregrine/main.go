@@ -36,7 +36,16 @@ func main() {
 		return
 	}
 
-	server := server.New(tba, store, c.Server.Address, c.Server.Origin, year)
+	server := server.New(
+		tba,
+		store,
+		c.Server.HTTPAddress,
+		c.Server.HTTPSAddress,
+		c.Server.CertFile,
+		c.Server.KeyFile,
+		c.Server.Origin,
+		year,
+	)
 
 	if err := server.Run(); err != nil {
 		fmt.Printf("Error: server.Run: %v\n", err)

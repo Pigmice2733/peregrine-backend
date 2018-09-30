@@ -70,7 +70,7 @@ const config = jsyaml.safeLoad(
   fs.readFileSync(`./../etc/config.${process.env.GO_ENV}.yaml`, 'utf8'),
 )
 
-const addr = `http://${config.server.address}/`
+const addr = `http://${config.server.httpAddress}/`
 
 const youtubeOrTwitchRegex = /^(youtube|twitch)$/gm
 
