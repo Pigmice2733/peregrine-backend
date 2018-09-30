@@ -28,7 +28,7 @@ func newString(s string) *string {
 	return &s
 }
 
-func newUnixPointer(time time.Time) *store.UnixTime {
+func newUnixTime(time time.Time) *store.UnixTime {
 	unix := store.NewUnixFromTime(time)
 	return &unix
 }
@@ -314,8 +314,8 @@ func TestGetMatches(t *testing.T) {
 				{
 					Key:           "key1",
 					EventKey:      "2018alhu",
-					PredictedTime: newUnixPointer(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
-					ActualTime:    newUnixPointer(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
+					PredictedTime: newUnixTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ActualTime:    newUnixTime(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
 					RedScore:      newInt(220),
 					BlueScore:     newInt(500),
 					RedAlliance:   []string{"frc254", "frc1234", "frc00"},
@@ -324,8 +324,8 @@ func TestGetMatches(t *testing.T) {
 				{
 					Key:           "key2",
 					EventKey:      "2018alhu",
-					PredictedTime: newUnixPointer(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
-					ActualTime:    newUnixPointer(time.Date(2018, 5, 2, 15, 13, 0, 0, time.UTC)),
+					PredictedTime: newUnixTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
+					ActualTime:    newUnixTime(time.Date(2018, 5, 2, 15, 13, 0, 0, time.UTC)),
 					RedScore:      newInt(120),
 					BlueScore:     newInt(600),
 					RedAlliance:   []string{"frc0", "frc1", "frc2"},
@@ -385,8 +385,8 @@ func TestGetMatches(t *testing.T) {
 				{
 					Key:           "key1",
 					EventKey:      "2018alhu",
-					PredictedTime: newUnixPointer(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
-					ActualTime:    newUnixPointer(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
+					PredictedTime: newUnixTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ActualTime:    newUnixTime(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
 					RedScore:      nil,
 					BlueScore:     nil,
 					RedAlliance:   []string{"frc254", "frc1234", "frc00"},
@@ -395,7 +395,7 @@ func TestGetMatches(t *testing.T) {
 				{
 					Key:           "key2",
 					EventKey:      "2018alhu",
-					PredictedTime: newUnixPointer(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
+					PredictedTime: newUnixTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
 					ActualTime:    nil,
 					RedScore:      nil,
 					BlueScore:     nil,
