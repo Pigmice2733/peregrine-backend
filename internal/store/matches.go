@@ -20,7 +20,10 @@ func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 
 	rows, err := s.db.Query("SELECT key, predicted_time, actual_time, red_score, blue_score FROM matches WHERE event_key = $1", eventKey)
 	if err != nil {
-		return matches, err
+		if pqError, ok := isPQError(err); ok {
+			return nil, getPostgresError(pqError)
+		}
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -28,6 +31,9 @@ func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 		match := Match{EventKey: eventKey, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
 		var redScore, blueScore int
 		if err := rows.Scan(&match.Key, match.PredictedTime, match.ActualTime, &redScore, &blueScore); err != nil {
+			if pqError, ok := isPQError(err); ok {
+				return nil, getPostgresError(pqError)
+			}
 			return nil, err
 		}
 
@@ -36,10 +42,16 @@ func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 
 		match.BlueAlliance, err = s.GetMatchAlliance(match.Key, true)
 		if err != nil {
+			if pqError, ok := isPQError(err); ok {
+				return nil, getPostgresError(pqError)
+			}
 			return nil, err
 		}
 		match.RedAlliance, err = s.GetMatchAlliance(match.Key, false)
 		if err != nil {
+			if pqError, ok := isPQError(err); ok {
+				return nil, getPostgresError(pqError)
+			}
 			return nil, err
 		}
 		matches = append(matches, match)
@@ -55,7 +67,10 @@ func (s *Service) GetMatch(matchKey string) (Match, error) {
 	if err := s.db.QueryRow("SELECT event_key, predicted_time, actual_time, red_score, blue_score FROM matches WHERE key = $1", matchKey).
 		Scan(&match.EventKey, match.PredictedTime, match.ActualTime, &redScore, &blueScore); err != nil {
 		if err == sql.ErrNoRows {
-			return match, ErrNoResult
+			return match, NoResultError{err}
+		}
+		if pqError, ok := isPQError(err); ok {
+			return match, getPostgresError(pqError)
 		}
 		return match, err
 	}
@@ -66,9 +81,15 @@ func (s *Service) GetMatch(matchKey string) (Match, error) {
 	var err error
 	match.BlueAlliance, err = s.GetMatchAlliance(match.Key, true)
 	if err != nil {
+		if pqError, ok := isPQError(err); ok {
+			return match, getPostgresError(pqError)
+		}
 		return match, err
 	}
 	match.RedAlliance, err = s.GetMatchAlliance(match.Key, false)
+	if pqError, ok := isPQError(err); ok {
+		return match, getPostgresError(pqError)
+	}
 	return match, err
 }
 
@@ -95,15 +116,27 @@ func (s *Service) MatchesUpsert(matches []Match) (err error) {
 				SET event_key = $2, predicted_time = $3, actual_time = $4, red_score = $5, blue_score = $6
 	`)
 	if err != nil {
+		if pqError, ok := isPQError(err); ok {
+			err = getPostgresError(pqError)
+			return
+		}
 		return
 	}
 	defer matchStmt.Close()
 
 	for _, match := range matches {
 		if _, err = matchStmt.Exec(match.Key, match.EventKey, match.PredictedTime, match.ActualTime, match.RedScore, match.BlueScore); err != nil {
+			if pqError, ok := isPQError(err); ok {
+				err = getPostgresError(pqError)
+				return
+			}
 			return
 		}
 		if err = s.AlliancesUpsert(match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
+			if pqError, ok := isPQError(err); ok {
+				err = getPostgresError(pqError)
+				return
+			}
 			return
 		}
 	}

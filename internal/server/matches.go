@@ -76,7 +76,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 
 		fullMatch, err := s.store.GetMatch(matchKey)
 		if err != nil {
-			if err == store.ErrNoResult {
+			if ok := store.IsNoResultError(err); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}

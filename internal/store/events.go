@@ -45,7 +45,10 @@ func (s *Service) GetEvents() ([]Event, error) {
 	var events []Event
 	rows, err := s.db.Query("SELECT key, name, district, week, start_date, end_date, location_name, lat, lon FROM events")
 	if err != nil {
-		return events, err
+		if pqError, ok := isPQError(err); ok {
+			return nil, getPostgresError(pqError)
+		}
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -53,6 +56,9 @@ func (s *Service) GetEvents() ([]Event, error) {
 		var event Event
 		event.Location = Location{}
 		if err := rows.Scan(&event.Key, &event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
+			if pqError, ok := isPQError(err); ok {
+				return nil, getPostgresError(pqError)
+			}
 			return nil, err
 		}
 		events = append(events, event)
@@ -67,13 +73,19 @@ func (s *Service) GetEvent(eventKey string) (Event, error) {
 	if err := s.db.QueryRow("SELECT name, district, week, start_date, end_date, location_name, lat, lon FROM events WHERE key = $1", eventKey).
 		Scan(&event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
 		if err == sql.ErrNoRows {
-			return event, ErrNoResult
+			return event, NoResultError{err}
+		}
+		if pqError, ok := isPQError(err); ok {
+			return event, getPostgresError(pqError)
 		}
 		return event, err
 	}
 
 	rows, err := s.db.Query("SELECT type, url FROM webcasts WHERE event_key = $1", eventKey)
 	if err != nil {
+		if pqError, ok := isPQError(err); ok {
+			return event, getPostgresError(pqError)
+		}
 		return event, err
 	}
 	defer rows.Close()
@@ -82,6 +94,9 @@ func (s *Service) GetEvent(eventKey string) (Event, error) {
 		var webcast Webcast
 		var webcastType string
 		if err := rows.Scan(&webcastType, &webcast.URL); err != nil {
+			if pqError, ok := isPQError(err); ok {
+				return event, getPostgresError(pqError)
+			}
 			return event, err
 		}
 		webcast.Type = WebcastType(webcastType)
@@ -114,6 +129,10 @@ func (s *Service) EventsUpsert(events []Event) (err error) {
 				SET name = $2, district = $3, week = $4, start_date = $5, end_date = $6, location_name = $7, lat = $8, lon = $9
 	`)
 	if err != nil {
+		if pqError, ok := isPQError(err); ok {
+			err = getPostgresError(pqError)
+			return
+		}
 		return
 	}
 	defer eventStmt.Close()
@@ -122,6 +141,10 @@ func (s *Service) EventsUpsert(events []Event) (err error) {
 	    DELETE FROM webcasts WHERE event_key = $1
 	`)
 	if err != nil {
+		if pqError, ok := isPQError(err); ok {
+			err = getPostgresError(pqError)
+			return
+		}
 		return
 	}
 	defer deleteWebcastsStmt.Close()
@@ -131,6 +154,10 @@ func (s *Service) EventsUpsert(events []Event) (err error) {
 		VALUES ($1, $2, $3)
 	`)
 	if err != nil {
+		if pqError, ok := isPQError(err); ok {
+			err = getPostgresError(pqError)
+			return
+		}
 		return
 	}
 	defer webcastStmt.Close()
@@ -138,15 +165,24 @@ func (s *Service) EventsUpsert(events []Event) (err error) {
 	for _, event := range events {
 		if _, err = eventStmt.Exec(event.Key, event.Name, event.District, event.Week, &event.StartDate, &event.EndDate,
 			event.Location.Name, event.Location.Lat, event.Location.Lon); err != nil {
+			if pqError, ok := isPQError(err); ok {
+				return getPostgresError(pqError)
+			}
 			return
 		}
 
 		if _, err = deleteWebcastsStmt.Exec(event.Key); err != nil {
+			if pqError, ok := isPQError(err); ok {
+				return getPostgresError(pqError)
+			}
 			return
 		}
 
 		for _, webcast := range event.Webcasts {
 			if _, err = webcastStmt.Exec(event.Key, webcast.Type, webcast.URL); err != nil {
+				if pqError, ok := isPQError(err); ok {
+					return getPostgresError(pqError)
+				}
 				return
 			}
 		}

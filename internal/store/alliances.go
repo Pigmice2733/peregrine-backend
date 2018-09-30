@@ -14,7 +14,7 @@ func (s *Service) GetMatchAlliance(matchKey string, getBlue bool) ([]string, err
 	var alliance []string
 	err := s.db.QueryRow("SELECT team_keys FROM alliances WHERE match_key = $1 AND is_blue = $2", matchKey, getBlue).Scan(pq.Array(&alliance))
 	if err == sql.ErrNoRows {
-		return alliance, ErrNoResult
+		return alliance, NoResultError{err}
 	}
 	return alliance, err
 }

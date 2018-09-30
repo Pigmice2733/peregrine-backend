@@ -88,7 +88,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 		fullEvent, err := s.store.GetEvent(eventKey)
 		if err != nil {
-			if err == store.ErrNoResult {
+			if store.IsNoResultError(err) {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
