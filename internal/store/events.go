@@ -1,6 +1,8 @@
 package store
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
 // Event holds information about an FRC event such as webcast associated with
 // it, the location, it's start date, and more.
@@ -91,7 +93,12 @@ func (s *Service) GetEvent(eventKey string) (Event, error) {
 
 // EventsUpsert upserts multiple events into the database.
 func (s *Service) EventsUpsert(events []Event) error {
-	eventStmt, err := s.db.Prepare(`
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	eventStmt, err := tx.Prepare(`
 		INSERT INTO events (key, name, district, week, start_date, end_date, location_name, lat, lon)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (key)
@@ -100,23 +107,26 @@ func (s *Service) EventsUpsert(events []Event) error {
 				SET name = $2, district = $3, week = $4, start_date = $5, end_date = $6, location_name = $7, lat = $8, lon = $9
 	`)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	defer eventStmt.Close()
 
-	deleteWebcastsStmt, err := s.db.Prepare(`
+	deleteWebcastsStmt, err := tx.Prepare(`
 	    DELETE FROM webcasts WHERE event_key = $1
 	`)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	defer deleteWebcastsStmt.Close()
 
-	webcastStmt, err := s.db.Prepare(`
+	webcastStmt, err := tx.Prepare(`
 		INSERT INTO webcasts (event_key, type, url)
 		VALUES ($1, $2, $3)
 	`)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	defer webcastStmt.Close()
@@ -124,19 +134,22 @@ func (s *Service) EventsUpsert(events []Event) error {
 	for _, event := range events {
 		if _, err := eventStmt.Exec(event.Key, event.Name, event.District, event.Week, &event.StartDate, &event.EndDate,
 			event.Location.Name, event.Location.Lat, event.Location.Lon); err != nil {
+			tx.Rollback()
 			return err
 		}
 
 		if _, err := deleteWebcastsStmt.Exec(event.Key); err != nil {
+			tx.Rollback()
 			return err
 		}
 
 		for _, webcast := range event.Webcasts {
 			if _, err := webcastStmt.Exec(event.Key, webcast.Type, webcast.URL); err != nil {
+				tx.Rollback()
 				return err
 			}
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
