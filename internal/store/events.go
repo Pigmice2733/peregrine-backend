@@ -92,11 +92,18 @@ func (s *Service) GetEvent(eventKey string) (Event, error) {
 }
 
 // EventsUpsert upserts multiple events into the database.
-func (s *Service) EventsUpsert(events []Event) error {
+func (s *Service) EventsUpsert(events []Event) (err error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+	}()
 
 	eventStmt, err := tx.Prepare(`
 		INSERT INTO events (key, name, district, week, start_date, end_date, location_name, lat, lon)
@@ -107,8 +114,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 				SET name = $2, district = $3, week = $4, start_date = $5, end_date = $6, location_name = $7, lat = $8, lon = $9
 	`)
 	if err != nil {
-		tx.Rollback()
-		return err
+		return
 	}
 	defer eventStmt.Close()
 
@@ -116,8 +122,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 	    DELETE FROM webcasts WHERE event_key = $1
 	`)
 	if err != nil {
-		tx.Rollback()
-		return err
+		return
 	}
 	defer deleteWebcastsStmt.Close()
 
@@ -126,30 +131,26 @@ func (s *Service) EventsUpsert(events []Event) error {
 		VALUES ($1, $2, $3)
 	`)
 	if err != nil {
-		tx.Rollback()
-		return err
+		return
 	}
 	defer webcastStmt.Close()
 
 	for _, event := range events {
-		if _, err := eventStmt.Exec(event.Key, event.Name, event.District, event.Week, &event.StartDate, &event.EndDate,
+		if _, err = eventStmt.Exec(event.Key, event.Name, event.District, event.Week, &event.StartDate, &event.EndDate,
 			event.Location.Name, event.Location.Lat, event.Location.Lon); err != nil {
-			tx.Rollback()
-			return err
+			return
 		}
 
-		if _, err := deleteWebcastsStmt.Exec(event.Key); err != nil {
-			tx.Rollback()
-			return err
+		if _, err = deleteWebcastsStmt.Exec(event.Key); err != nil {
+			return
 		}
 
 		for _, webcast := range event.Webcasts {
-			if _, err := webcastStmt.Exec(event.Key, webcast.Type, webcast.URL); err != nil {
-				tx.Rollback()
-				return err
+			if _, err = webcastStmt.Exec(event.Key, webcast.Type, webcast.URL); err != nil {
+				return
 			}
 		}
 	}
 
-	return tx.Commit()
+	return
 }

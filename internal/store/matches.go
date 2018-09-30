@@ -73,11 +73,18 @@ func (s *Service) GetMatch(matchKey string) (Match, error) {
 }
 
 // MatchesUpsert upserts multiple matches and their alliances into the database.
-func (s *Service) MatchesUpsert(matches []Match) error {
+func (s *Service) MatchesUpsert(matches []Match) (err error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+		err = tx.Commit()
+	}()
 
 	matchStmt, err := tx.Prepare(`
 		INSERT INTO matches (key, event_key, predicted_time, actual_time, red_score, blue_score)
@@ -88,21 +95,18 @@ func (s *Service) MatchesUpsert(matches []Match) error {
 				SET event_key = $2, predicted_time = $3, actual_time = $4, red_score = $5, blue_score = $6
 	`)
 	if err != nil {
-		tx.Rollback()
-		return err
+		return
 	}
 	defer matchStmt.Close()
 
 	for _, match := range matches {
-		if _, err := matchStmt.Exec(match.Key, match.EventKey, match.PredictedTime, match.ActualTime, match.RedScore, match.BlueScore); err != nil {
-			tx.Rollback()
-			return err
+		if _, err = matchStmt.Exec(match.Key, match.EventKey, match.PredictedTime, match.ActualTime, match.RedScore, match.BlueScore); err != nil {
+			return
 		}
-		if err := s.AlliancesUpsert(match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
-			tx.Rollback()
-			return err
+		if err = s.AlliancesUpsert(match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
+			return
 		}
 	}
 
-	return tx.Commit()
+	return
 }

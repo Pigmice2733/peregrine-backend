@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -138,7 +139,7 @@ func (s *Server) updateEvents() error {
 		}
 
 		if err := s.store.EventsUpsert(fullEvents); err != nil {
-			return err
+			return fmt.Errorf("upserting events: %v", err)
 		}
 
 		s.eventsLastUpdate = &now
