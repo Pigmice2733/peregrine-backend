@@ -77,15 +77,13 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 func (s *Server) eventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get new event data from TBA if event data is over 24 hours old
-		err := s.updateEvents()
-		if err != nil {
+		if err := s.updateEvents(); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.logger.Printf("Error: updating event data: %v\n", err)
 			return
 		}
 
-		vars := mux.Vars(r)
-		eventKey := vars["eventKey"]
+		eventKey := mux.Vars(r)["eventKey"]
 
 		fullEvent, err := s.store.GetEvent(eventKey)
 		if err != nil {

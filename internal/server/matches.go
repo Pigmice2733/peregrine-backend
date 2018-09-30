@@ -21,12 +21,10 @@ type match struct {
 // matchesHandler returns a handler to get all matches at a given event.
 func (s *Server) matchesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		eventKey := vars["eventKey"]
+		eventKey := mux.Vars(r)["eventKey"]
 
 		// Get new match data from TBA
-		err := s.updateMatches(eventKey)
-		if err != nil {
+		if err := s.updateMatches(eventKey); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.logger.Printf("Error: updating match data: %v\n", err)
 			return
@@ -70,8 +68,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		eventKey, matchKey := vars["eventKey"], vars["matchKey"]
 
 		// Get new match data from TBA
-		err := s.updateMatches(eventKey)
-		if err != nil {
+		if err := s.updateMatches(eventKey); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.logger.Printf("Error: updating match data: %v\n", err)
 			return
