@@ -155,7 +155,8 @@ func TestGetEvents(t *testing.T) {
 					},
 					{
 						"key": "key3",
-						"short_name": "PIGMICE_IS_BEST",
+						"name": "PIGMICE_IS_BEST",
+						"short_name": "",
 						"district": {
 							"abbreviation": "PNW",
 							"display_name": "Display name, not abbreviation",

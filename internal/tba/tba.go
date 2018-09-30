@@ -28,6 +28,7 @@ type webcast struct {
 
 type event struct {
 	Key          string    `json:"key"`
+	Name         string    `json:"name"`
 	ShortName    string    `json:"short_name"`
 	District     *district `json:"district"`
 	Lat          float64   `json:"lat"`
@@ -133,9 +134,14 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 			}
 		}
 
+		name := tbaEvent.ShortName
+		if name == "" {
+			name = tbaEvent.Name
+		}
+
 		events = append(events, store.Event{
 			Key:       tbaEvent.Key,
-			Name:      tbaEvent.ShortName,
+			Name:      name,
 			District:  district,
 			Week:      tbaEvent.Week,
 			StartDate: store.NewUnixFromTime(startDate),
