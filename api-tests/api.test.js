@@ -31,8 +31,7 @@ expect.extend({
   },
   toBeATeamKey(received) {
     try {
-      expect(received.length).toBeGreaterThan(3)
-      expect(received.slice(0, 3)).toEqual('frc')
+      expect(received).toMatch(/^frc([1-9a-zA-Z])+/)
     } catch (error) {
       return {
         message: () => `expected ${received} to be a team key`,
@@ -72,7 +71,7 @@ const config = jsyaml.safeLoad(
 
 const addr = `http://${config.server.httpAddress}/`
 
-const youtubeOrTwitchRegex = /^(youtube|twitch)$/gm
+const youtubeOrTwitch = /^(youtube|twitch)$/
 
 test('the api is alive', () => {
   return fetch(addr)
@@ -120,10 +119,10 @@ test('/events/{eventKey}/info endpoint', async () => {
   expect(info.week).toBeUndefinedOr(Number)
   expect(info.webcasts).toEqual(expect.any(Array))
   info.webcasts.forEach(webcast => {
-    expect(webcast.url).toBeA(String)
-    expect(webcast.type).toBeA(String)
-    expect(webcast.type).toEqual(expect.stringMatching(youtubeOrTwitchRegex))
-    expect(Object.keys(webcast)).toBeASubsetOf(['type', 'url'])
+    expect(webcast).toEqual({
+      url: expect.any(String),
+      type: expect.stringMatching(youtubeOrTwitch),
+    })
   })
   expect(Object.keys(info)).toBeASubsetOf([
     'key',
@@ -147,10 +146,12 @@ test('/events/{eventKey}/matches endpoint', async () => {
     expect(match.redScore).toBeUndefinedOr(Number)
     expect(match.blueScore).toBeUndefinedOr(Number)
     expect(match.redAlliance).toEqual(expect.any(Array))
+    expect(match.redAlliance).toHaveLength(3)
     match.redAlliance.forEach(team => {
       expect(team).toBeATeamKey()
     })
     expect(match.blueAlliance).toEqual(expect.any(Array))
+    expect(match.blueAlliance).toHaveLength(3)
     match.blueAlliance.forEach(team => {
       expect(team).toBeATeamKey()
     })
@@ -175,12 +176,12 @@ test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
   expect(info.redScore).toBeUndefinedOr(Number)
   expect(info.blueScore).toBeUndefinedOr(Number)
   expect(info.redAlliance).toEqual(expect.any(Array))
-  expect(info.redAlliance.length).toEqual(3)
+  expect(info.redAlliance).toHaveLength(3)
   info.redAlliance.forEach(team => {
     expect(team).toBeATeamKey()
   })
   expect(info.blueAlliance).toEqual(expect.any(Array))
-  expect(info.blueAlliance.length).toEqual(3)
+  expect(info.blueAlliance).toHaveLength(3)
   info.blueAlliance.forEach(team => {
     expect(team).toBeATeamKey()
   })
