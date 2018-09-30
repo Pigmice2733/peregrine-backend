@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lib/pq"
-
 	// Register lib/pq PostreSQL driver
 	_ "github.com/lib/pq"
 )
@@ -22,45 +20,10 @@ func (nre NoResultError) Error() string {
 	return fmt.Sprintf("no results found: %v\n", nre.err)
 }
 
-type postgresError struct {
-	err      error
-	table    string
-	column   string
-	position string
-	message  string
-}
-
-func (pqe postgresError) Error() string {
-	msg := fmt.Sprintf("pq error at position %s", pqe.position)
-	if pqe.table != "" {
-		msg += fmt.Sprintf(", in table %s", pqe.table)
-	}
-	if pqe.column != "" {
-		msg += fmt.Sprintf(", at column %s", pqe.column)
-	}
-	msg += fmt.Sprintf(", message: %s", pqe.message)
-	return msg
-}
-
 // IsNoResultError checks if an error is of type NoResultError.
 func IsNoResultError(err error) bool {
 	_, ok := err.(NoResultError)
 	return ok
-}
-
-func isPQError(err error) (*pq.Error, bool) {
-	pqErr, ok := err.(*pq.Error)
-	return pqErr, ok
-}
-
-func getPostgresError(err *pq.Error) postgresError {
-	return postgresError{
-		err:      err,
-		position: err.Position,
-		table:    err.Table,
-		column:   err.Table,
-		message:  err.Message,
-	}
 }
 
 // Service is an interface to manipulate the data store.
