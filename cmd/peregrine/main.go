@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -35,8 +34,8 @@ func main() {
 		return
 	}
 
-	year, err := strconv.Atoi(c.Server.Year)
-	if err != nil {
+	year := c.Server.Year
+	if year == 0 {
 		year = time.Now().Year()
 	}
 
