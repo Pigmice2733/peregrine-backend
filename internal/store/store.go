@@ -11,6 +11,21 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// A NoResultError indicates that no data matching the query was found.
+type NoResultError struct {
+	err error
+}
+
+func (nre NoResultError) Error() string {
+	return fmt.Sprintf("no results found: %v\n", nre.err)
+}
+
+// IsNoResultError checks if an error is of type NoResultError.
+func IsNoResultError(err error) bool {
+	_, ok := err.(NoResultError)
+	return ok
+}
+
 // Service is an interface to manipulate the data store.
 type Service struct {
 	db *sql.DB
@@ -48,10 +63,17 @@ type UnixTime struct {
 	unix int64
 }
 
-// NewUnix creates a new UnixTime timestamp from a time.Time.
-func NewUnix(time time.Time) UnixTime {
+// NewUnixFromTime creates a new UnixTime timestamp from a time.Time.
+func NewUnixFromTime(time time.Time) UnixTime {
 	return UnixTime{
 		unix: time.Unix(),
+	}
+}
+
+// NewUnixFromInt creates a new UnixTime timestamp from an int64.
+func NewUnixFromInt(time int64) UnixTime {
+	return UnixTime{
+		unix: time,
 	}
 }
 

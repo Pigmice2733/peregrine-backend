@@ -1,14 +1,15 @@
 server:
-    httpAddress: localhost:8080
-    origin: "*"
+  httpAddress: localhost:8080
+  origin: "*"
+  year: 2018
 
 tba:
-    URL: https://www.thebluealliance.com/api/v3
+  URL: https://www.thebluealliance.com/api/v3
 
 database:
-    user: peregrine
-    password:
-    host: localhost
-    port: 5432
-    name: peregrine
-    sslMode: disable
+  user: peregrine
+  password:
+  host: localhost
+  port: 5432
+  name: peregrine
+  sslMode: disable

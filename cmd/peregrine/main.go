@@ -12,8 +12,6 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/server"
 )
 
-var year = time.Now().Year()
-
 func main() {
 	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
 
@@ -34,6 +32,11 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error: unable to connect to postgres server: %v\n", err)
 		return
+	}
+
+	year := c.Server.Year
+	if year == 0 {
+		year = time.Now().Year()
 	}
 
 	server := server.New(

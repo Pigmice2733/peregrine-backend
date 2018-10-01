@@ -17,6 +17,7 @@ type Config struct {
 		KeyFile      string `yaml:"keyFile"`
 		CertFile     string `yaml:"certFile"`
 		Origin       string `yaml:"origin"`
+		Year         int    `yaml:"year"`
 	} `yaml:"server"`
 
 	TBA struct {
