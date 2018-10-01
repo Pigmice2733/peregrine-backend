@@ -51,6 +51,7 @@ Copy `./etc/config.json.template` to `./etc/config.development.json` as a starti
 
 You must set the field `tba.apiKey` to your TBA API key. If you don't have one, go to The Blue Alliance and signup/login. From the account overview page you should be able to request a read-only API key.
 You must also configure the `database` section with the credentials and details of the database you are using. If you've just setup postgres the config file will likely work without any modifications.
+If the `TBA_API_KEY` environment variable is set, it will override the one in the config file. This is mostly just used for CI, you shouldn't need to use it in development. To see the full config schema, you can run `go doc "peregrine-backend/internal/config".Config`
 
 # Environment Variables and Flags
 

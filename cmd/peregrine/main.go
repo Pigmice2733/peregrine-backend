@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -13,19 +12,12 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/server"
 )
 
-var year = time.Now().Year()
-
 func main() {
 	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
 
 	flag.Parse()
 
-	env := "development"
-	if e, ok := os.LookupEnv("GO_ENV"); ok {
-		env = e
-	}
-
-	c, err := config.Open(*basePath, env)
+	c, err := config.Open(*basePath)
 	if err != nil {
 		fmt.Printf("Error: opening config: %v\n", err)
 		return
@@ -42,7 +34,21 @@ func main() {
 		return
 	}
 
-	server := server.New(tba, store, c.Server.Address, c.Server.Origin, year)
+	year := c.Server.Year
+	if year == 0 {
+		year = time.Now().Year()
+	}
+
+	server := server.New(
+		tba,
+		store,
+		c.Server.HTTPAddress,
+		c.Server.HTTPSAddress,
+		c.Server.CertFile,
+		c.Server.KeyFile,
+		c.Server.Origin,
+		year,
+	)
 
 	if err := server.Run(); err != nil {
 		fmt.Printf("Error: server.Run: %v\n", err)

@@ -1,8 +1,0 @@
-CREATE TABLE IF NOT EXISTS webcasts (
-    id SERIAL PRIMARY KEY,
-    eventID TEXT NOT NULL,
-    type TEXT NOT NULL,
-    url TEXT NOT NULL,
-
-    FOREIGN KEY(eventID) REFERENCES events(id)
-)
