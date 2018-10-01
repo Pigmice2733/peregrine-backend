@@ -54,7 +54,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 			return
 		}
 
-		var events []event
+		events := []event{}
 		for _, fullEvent := range fullEvents {
 			events = append(events, event{
 				Key:       fullEvent.Key,

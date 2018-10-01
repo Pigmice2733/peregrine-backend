@@ -37,7 +37,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			return
 		}
 
-		var matches []match
+		matches := []match{}
 		for _, fullMatch := range fullMatches {
 			var time *store.UnixTime
 

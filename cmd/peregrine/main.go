@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -11,8 +12,6 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/config"
 	"github.com/Pigmice2733/peregrine-backend/internal/server"
 )
-
-var year = time.Now().Year()
 
 func main() {
 	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
@@ -34,6 +33,11 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error: unable to connect to postgres server: %v\n", err)
 		return
+	}
+
+	year, err := strconv.Atoi(c.Server.Year)
+	if err != nil {
+		year = time.Now().Year()
 	}
 
 	server := server.New(
