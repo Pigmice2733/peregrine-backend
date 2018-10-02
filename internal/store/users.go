@@ -28,7 +28,7 @@ func (s *Service) GetUser(username string) (User, error) {
 
 	err := s.db.QueryRow(
 		`SELECT 
-			id, username, hashedPassword, firstName, lastName, roles
+			id, username, hashed_password, first_name, last_name, roles
 			FROM
 				users WHERE username = $1`,
 		username,
@@ -49,7 +49,7 @@ func (s *Service) CreateUser(u User) error {
 	_, err := s.db.Exec(`
 	INSERT
 		INTO
-			users (username, hashedPassword, firstName, lastName, roles)
+			users (username, hashed_password, first_name, last_name, roles)
 		VALUES ($1, $2, $3, $4, $5)
 	`, u.Username, u.HashedPassword, u.FirstName, u.LastName, pq.Array(u.Roles))
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"time"
@@ -15,6 +16,7 @@ import (
 
 func main() {
 	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
+	var seedUserJSON = flag.String("seedUser", "", "JSON encoded seed user.")
 
 	flag.Parse()
 
@@ -29,10 +31,27 @@ func main() {
 		APIKey: c.TBA.APIKey,
 	}
 
-	store, err := store.New(c.Database)
+	sto, err := store.New(c.Database)
 	if err != nil {
 		fmt.Printf("Error: unable to connect to postgres server: %v\n", err)
 		return
+	}
+
+	if *seedUserJSON != "" {
+		var seedUser store.User
+
+		if err := json.Unmarshal([]byte(*seedUserJSON), &seedUser); err != nil {
+			fmt.Printf("Error: unable to unmarshal seed user: %v\n", err)
+			return
+		}
+
+		err := sto.CreateUser(seedUser)
+		if err == store.ErrExists {
+			fmt.Printf("Error: seed user already exists")
+		} else if err != nil {
+			fmt.Printf("Error: unable to create seed user: %v\n", err)
+			return
+		}
 	}
 
 	year := c.Server.Year
@@ -48,7 +67,7 @@ func main() {
 
 	server := server.New(
 		tba,
-		store,
+		sto,
 		c.Server.HTTPAddress,
 		c.Server.HTTPSAddress,
 		c.Server.CertFile,

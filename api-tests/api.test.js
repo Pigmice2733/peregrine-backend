@@ -194,3 +194,7 @@ test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
     'blueScore',
   ])
 })
+
+test('/authenticate route', async () => {
+
+})
