@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"flag"
 	"fmt"
 	"time"
@@ -39,6 +40,12 @@ func main() {
 		year = time.Now().Year()
 	}
 
+	jwtSecret := make([]byte, 64)
+	if _, err := rand.Read(jwtSecret); err != nil {
+		fmt.Printf("Error: generating jwt secret: %v\n", err)
+		return
+	}
+
 	server := server.New(
 		tba,
 		store,
@@ -47,6 +54,7 @@ func main() {
 		c.Server.CertFile,
 		c.Server.KeyFile,
 		c.Server.Origin,
+		jwtSecret,
 		year,
 	)
 

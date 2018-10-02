@@ -1,12 +1,16 @@
 package server
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
+	jwt "github.com/dgrijalva/jwt-go"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -22,13 +26,14 @@ type Server struct {
 	httpsAddress     string
 	certFile         string
 	keyFile          string
+	jwtSecret        []byte
 	year             int
 	logger           *log.Logger
 	eventsLastUpdate *time.Time
 }
 
 // New creates a new Peregrine API server
-func New(tba tba.Service, store store.Service, httpAddress, httpsAddress, certFile, keyFile, origin string, year int) Server {
+func New(tba tba.Service, store store.Service, httpAddress, httpsAddress, certFile, keyFile, origin string, jwtSecret []byte, year int) Server {
 	s := Server{
 		tba:          tba,
 		store:        store,
@@ -37,6 +42,7 @@ func New(tba tba.Service, store store.Service, httpAddress, httpsAddress, certFi
 		certFile:     certFile,
 		keyFile:      keyFile,
 		year:         year,
+		jwtSecret:    jwtSecret,
 	}
 
 	router := s.registerRoutes()
@@ -91,4 +97,59 @@ func (s *Server) Run() error {
 	}
 
 	return <-errs
+}
+
+type claims struct {
+	Roles []string `json:"roles"`
+	jwt.StandardClaims
+}
+
+const (
+	// adminRole defines the role for an administrator user.
+	adminRole = "admin"
+	// verifiedRole defines the role for a user that has a verified account.
+	verifiedRole = "verified"
+)
+
+func (s *Server) authMiddleware(next http.HandlerFunc, optional, requireAdmin bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if optional && r.Header.Get("Authentication") == "" {
+			next(w, r)
+			return
+		}
+
+		ss := strings.TrimPrefix(r.Header.Get("Authentication"), "Bearer ")
+		token, err := jwt.ParseWithClaims(ss, &claims{}, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+
+			return s.jwtSecret, nil
+		})
+		if err != nil {
+			ihttp.Error(w, http.StatusUnauthorized)
+			return
+		}
+
+		if !token.Valid {
+			ihttp.Error(w, http.StatusUnauthorized)
+			return
+		}
+
+		claims, ok := token.Claims.(*claims)
+		if !ok {
+			ihttp.Error(w, http.StatusUnauthorized)
+			return
+		}
+
+		if requireAdmin && !contains(claims.Roles, adminRole) {
+			ihttp.Error(w, http.StatusUnauthorized)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), keyRolesContext, claims.Roles)
+		ctx = context.WithValue(ctx, keySubjectContext, claims.Subject)
+
+		next(w, r.WithContext(ctx))
+	}
 }
