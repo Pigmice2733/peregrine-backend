@@ -66,7 +66,10 @@ expect.extend({
 })
 
 const config = jsyaml.safeLoad(
-  fs.readFileSync(`./../etc/config.${process.env.GO_ENV || "development"}.yaml`, 'utf8'),
+  fs.readFileSync(
+    `./../etc/config.${process.env.GO_ENV || 'development'}.yaml`,
+    'utf8',
+  ),
 )
 
 const addr = `http://${config.server.httpAddress}`
@@ -200,13 +203,26 @@ test('/authenticate route', async () => {
     method: 'POST',
     body: JSON.stringify({
       username: config.seedUser.username,
-      password: config.seedUser.password
+      password: config.seedUser.password,
     }),
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
   })
 
   expect(response.status).toBe(200)
 
   const d = await response.json()
-  expect(d.data.jwt).toBeA(String);
+  expect(d.data.jwt).toBeA(String)
+})
+
+test('/authenticate route with incorrect auth info', async () => {
+  const response = await fetch(addr + '/authenticate', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: config.seedUser.username,
+      password: config.seedUser.password + 'a',
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  expect(response.status).toBe(401)
 })
