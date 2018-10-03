@@ -127,23 +127,26 @@ func (s *Server) authMiddleware(next http.HandlerFunc, optional, requireAdmin bo
 			return s.jwtSecret, nil
 		})
 		if err != nil {
-			ihttp.Error(w, http.StatusUnauthorized)
+			s.logger.Printf("Error: parsing jwt: %v\n", err)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
 		if !token.Valid {
-			ihttp.Error(w, http.StatusUnauthorized)
+			s.logger.Printf("Error: got invalid token: %v\n", err)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
 		claims, ok := token.Claims.(*claims)
 		if !ok {
-			ihttp.Error(w, http.StatusUnauthorized)
+			s.logger.Printf("Error: got incorrect claims type: %v\n", err)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
 		if requireAdmin && !contains(claims.Roles, adminRole) {
-			ihttp.Error(w, http.StatusUnauthorized)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 

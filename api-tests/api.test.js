@@ -226,3 +226,34 @@ test('/authenticate route with incorrect auth info', async () => {
 
   expect(response.status).toBe(401)
 })
+
+const getJWT = async () => {
+  const d = await fetch(addr + '/authenticate', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: config.seedUser.username,
+      password: config.seedUser.password,
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  }).then(d => d.json())
+
+  return d.data.jwt
+}
+
+test('/users create route', async () => {
+  const response = await fetch(addr + '/users', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: 'users-create' + Number(new Date()),
+      password: 'password',
+      firstName: 'test',
+      lastName: 'test',
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      Authentication: 'Bearer ' + (await getJWT()),
+    },
+  })
+
+  expect(response.status).toBe(201)
+})

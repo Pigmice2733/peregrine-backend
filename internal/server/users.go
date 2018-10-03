@@ -149,5 +149,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
+
+		ihttp.Respond(w, nil, http.StatusCreated)
 	}
 }
