@@ -2,10 +2,11 @@ package main
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
@@ -16,7 +17,6 @@ import (
 
 func main() {
 	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
-	var seedUserJSON = flag.String("seedUser", "", "JSON encoded seed user.")
 
 	flag.Parse()
 
@@ -37,15 +37,22 @@ func main() {
 		return
 	}
 
-	if *seedUserJSON != "" {
-		var seedUser store.User
-
-		if err := json.Unmarshal([]byte(*seedUserJSON), &seedUser); err != nil {
-			fmt.Printf("Error: unable to unmarshal seed user: %v\n", err)
+	if c.SeedUser != nil {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(c.SeedUser.Password), bcrypt.DefaultCost)
+		if err != nil {
+			fmt.Printf("Error: creating hashed password")
 			return
 		}
 
-		err := sto.CreateUser(seedUser)
+		u := store.User{
+			Username:       c.SeedUser.Username,
+			HashedPassword: string(hashedPassword),
+			FirstName:      c.SeedUser.FirstName,
+			LastName:       c.SeedUser.LastName,
+			Roles:          c.SeedUser.Roles,
+		}
+
+		err = sto.CreateUser(u)
 		if err == store.ErrExists {
 			fmt.Printf("Error: seed user already exists\n")
 		} else if err != nil {

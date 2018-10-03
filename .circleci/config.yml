@@ -8,14 +8,6 @@ jobs:
       - image: circleci/golang:1.10-node
         environment:
           GO_ENV: testing
-          SEED_USER: >
-            {
-              "username": "test",
-              "hashedPassword": "$2a$04$gB3OSwNg.ZHAuQuDHcVolONVtiHwq5GibyiBmLvdi6D1iqlycvAl2",
-              "firstName": "Johnny",
-              "lastName": "Test",
-              "roles": ["verified", "admin"]
-            }
       - image: circleci/postgres:10-alpine
         environment:
             POSTGRES_USER: peregrine
@@ -30,7 +22,7 @@ jobs:
       - run: go build -o peregrine cmd/peregrine/main.go
       - run: ./migrate -up
       - run: 
-          command: ./peregrine -seedUser "$SEED_USER"
+          command: ./peregrine
           background: true
       - run: cd api-tests && npm i
       - run: while ! nc -z localhost 8080; do sleep 0.1; done

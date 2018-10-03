@@ -66,7 +66,7 @@ expect.extend({
 })
 
 const config = jsyaml.safeLoad(
-  fs.readFileSync(`./../etc/config.${process.env.GO_ENV}.yaml`, 'utf8'),
+  fs.readFileSync(`./../etc/config.${process.env.GO_ENV || "development"}.yaml`, 'utf8'),
 )
 
 const seedUser = JSON.parse(process.env.SEED_USER);
