@@ -47,7 +47,7 @@ func main() {
 
 		err := sto.CreateUser(seedUser)
 		if err == store.ErrExists {
-			fmt.Printf("Error: seed user already exists")
+			fmt.Printf("Error: seed user already exists\n")
 		} else if err != nil {
 			fmt.Printf("Error: unable to create seed user: %v\n", err)
 			return

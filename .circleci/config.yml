@@ -30,7 +30,7 @@ jobs:
       - run: go build -o peregrine cmd/peregrine/main.go
       - run: ./migrate -up
       - run: 
-          command: ./peregrine -seedUser $SEED_USER
+          command: ./peregrine -seedUser "$SEED_USER"
           background: true
       - run: cd api-tests && npm i
       - run: while ! nc -z localhost 8080; do sleep 0.1; done
