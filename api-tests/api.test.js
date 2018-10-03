@@ -1,6 +1,6 @@
-import fetch from 'node-fetch'
-import jsyaml from 'js-yaml'
-import fs from 'fs'
+const fetch = require('node-fetch')
+const jsyaml = require('js-yaml')
+const fs = require('fs')
 
 expect.extend({
   toBeAnInt(received) {
@@ -195,6 +195,4 @@ test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
   ])
 })
 
-test('/authenticate route', async () => {
-
-})
+test('/authenticate route', async () => {})
