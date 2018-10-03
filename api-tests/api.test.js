@@ -69,6 +69,8 @@ const config = jsyaml.safeLoad(
   fs.readFileSync(`./../etc/config.${process.env.GO_ENV}.yaml`, 'utf8'),
 )
 
+const seedUser = JSON.parse(process.env.SEED_USER);
+
 const addr = `http://${config.server.httpAddress}/`
 
 const youtubeOrTwitch = /^(youtube|twitch)$/
@@ -195,4 +197,19 @@ test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
   ])
 })
 
-test('/authenticate route', async () => {})
+test('/authenticate route', async () => {
+  const d = await fetch(addr + '/authenticate', {
+    username: seedUser.username,
+    password: seedUser.password
+  }).then(d => d.json())
+  expect(d.jwt).toBeA(String);
+})
+
+test('/authenticate route with bad auth', async () => {
+  const response = await fetch(addr + '/authenticate', {
+    username: seedUser.username,
+    password: seedUser.password + 'a'
+  })
+
+  expect(response.code).toBe(403)
+})
