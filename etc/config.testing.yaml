@@ -16,7 +16,7 @@ database:
 
 seedUser:
   username: test
-  password: test
+  password: testpassword
   firstName: John
   lastName: Doe
   roles:
