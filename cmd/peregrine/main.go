@@ -31,7 +31,7 @@ func main() {
 		APIKey: c.TBA.APIKey,
 	}
 
-	sto, err := store.New(c.Database)
+	s, err := store.New(c.Database)
 	if err != nil {
 		fmt.Printf("Error: unable to connect to postgres server: %v\n", err)
 		return
@@ -52,7 +52,7 @@ func main() {
 			Roles:          c.SeedUser.Roles,
 		}
 
-		err = sto.CreateUser(u)
+		err = s.CreateUser(u)
 		if err == store.ErrExists {
 			fmt.Printf("Error: seed user already exists\n")
 		} else if err != nil {
@@ -74,7 +74,7 @@ func main() {
 
 	server := server.New(
 		tba,
-		sto,
+		s,
 		c.Server.HTTPAddress,
 		c.Server.HTTPSAddress,
 		c.Server.CertFile,
