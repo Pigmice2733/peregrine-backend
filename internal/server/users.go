@@ -48,7 +48,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		if !contains(user.Roles, verifiedRole) {
+		if !user.Roles.IsVerified {
 			ihttp.Respond(w, fmt.Errorf("user has not yet been verified"), http.StatusUnauthorized)
 			return
 		}
@@ -80,25 +80,15 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 	}
 }
 
-func contains(arr []string, a string) bool {
-	for _, v := range arr {
-		if v == a {
-			return true
-		}
-	}
-
-	return false
-}
-
-func getRoles(r *http.Request) []string {
+func getRoles(r *http.Request) store.Roles {
 	contextRoles := r.Context().Value(keyRolesContext)
 	if contextRoles == nil {
-		return []string{}
+		return store.Roles{}
 	}
 
-	roles, ok := contextRoles.([]string)
+	roles, ok := contextRoles.(store.Roles)
 	if !ok {
-		return []string{}
+		return store.Roles{}
 	}
 
 	return roles
@@ -107,9 +97,9 @@ func getRoles(r *http.Request) []string {
 func (s *Server) createUserHandler() http.HandlerFunc {
 	type requestUser struct {
 		baseUser
-		FirstName string   `json:"firstName" validate:"required"`
-		LastName  string   `json:"lastName" validate:"required"`
-		Roles     []string `json:"roles"`
+		FirstName string      `json:"firstName" validate:"required"`
+		LastName  string      `json:"lastName" validate:"required"`
+		Roles     store.Roles `json:"roles"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -120,8 +110,8 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 		}
 
 		// If the creator user isn't an admin, reset their roles
-		if !contains(getRoles(r), adminRole) {
-			ru.Roles = make([]string, 0)
+		if !getRoles(r).IsAdmin {
+			ru.Roles = store.Roles{}
 		}
 
 		if err := validator.New().Struct(ru); err != nil {
@@ -129,7 +119,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			return
 		}
 
-		u := store.User{Username: ru.Username, Roles: ru.Roles}
+		u := store.User{Username: ru.Username, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcrypt.DefaultCost)
 		if err != nil {
