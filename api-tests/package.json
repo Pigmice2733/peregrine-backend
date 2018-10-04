@@ -4,9 +4,6 @@
     "test:watch": "jest --watch"
   },
   "devDependencies": {
-    "@babel/core": "7.1.0",
-    "@babel/plugin-transform-modules-commonjs": "7.1.0",
-    "babel-core": "7.0.0-bridge.0",
     "eslint": "5.6.0",
     "eslint-plugin-caleb": "1.6.0",
     "jest": "23.6.0",
@@ -18,11 +15,6 @@
     "extends": [
       "plugin:caleb/recommended",
       "plugin:caleb/jest"
-    ]
-  },
-  "babel": {
-    "plugins": [
-      "@babel/plugin-transform-modules-commonjs"
     ]
   },
   "prettier": {

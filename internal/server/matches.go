@@ -57,7 +57,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			})
 		}
 
-		ihttp.Respond(w, matches, nil, http.StatusOK)
+		ihttp.Respond(w, matches, http.StatusOK)
 	}
 }
 
@@ -101,7 +101,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 			BlueAlliance: fullMatch.BlueAlliance,
 		}
 
-		ihttp.Respond(w, match, nil, http.StatusOK)
+		ihttp.Respond(w, match, http.StatusOK)
 	}
 }
 
