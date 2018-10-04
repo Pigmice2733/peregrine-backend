@@ -40,7 +40,7 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, teamKeys, nil, http.StatusOK)
+		ihttp.Respond(w, teamKeys, http.StatusOK)
 	}
 }
 
@@ -114,7 +114,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 			RankingScore: fullTeam.RankingScore,
 		}
 
-		ihttp.Respond(w, team, nil, http.StatusOK)
+		ihttp.Respond(w, team, http.StatusOK)
 	}
 }
 

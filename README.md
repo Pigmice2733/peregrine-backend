@@ -68,9 +68,9 @@ After building:
 
 # Development
 
-All new development should be done in a branch named `<initials>/<description>`
+All new development should be done in a branch named `<description>`
 
-    git checkout -b <initials>/<description>
+    git checkout -b <description>
 
 When the feature is complete, tests pass, and you are ready for it to be merged, create a PR.
 

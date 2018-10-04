@@ -70,7 +70,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 			})
 		}
 
-		ihttp.Respond(w, events, nil, http.StatusOK)
+		ihttp.Respond(w, events, http.StatusOK)
 	}
 }
 
@@ -123,7 +123,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 		}
 
 		// Using &event so that pointer receivers on embedded types get promoted
-		ihttp.Respond(w, &event, nil, http.StatusOK)
+		ihttp.Respond(w, &event, http.StatusOK)
 	}
 }
 
