@@ -81,5 +81,9 @@ func run(steps int, up, down bool, migrationsTable, basePath string) error {
 		err = m.Steps(steps)
 	}
 
-	return errors.Wrap(err, "running migrations")
+	if err != nil && err != migrate.ErrNoChange {
+		return errors.Wrap(err, "running migrations")
+	}
+
+	return nil
 }
