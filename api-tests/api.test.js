@@ -1,6 +1,6 @@
-import fetch from 'node-fetch'
-import jsyaml from 'js-yaml'
-import fs from 'fs'
+const fetch = require('node-fetch')
+const jsyaml = require('js-yaml')
+const fs = require('fs')
 
 expect.extend({
   toBeAnInt(received) {
@@ -66,15 +66,18 @@ expect.extend({
 })
 
 const config = jsyaml.safeLoad(
-  fs.readFileSync(`./../etc/config.${process.env.GO_ENV}.yaml`, 'utf8'),
+  fs.readFileSync(
+    `./../etc/config.${process.env.GO_ENV || 'development'}.yaml`,
+    'utf8',
+  ),
 )
 
-const addr = `http://${config.server.httpAddress}/`
+const addr = `http://${config.server.httpAddress}`
 
 const youtubeOrTwitch = /^(youtube|twitch)$/
 
 test('the api is alive', () => {
-  return fetch(addr)
+  return fetch(addr + '/')
 })
 
 test('/events endpoint', async () => {
@@ -193,4 +196,64 @@ test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
     'redScore',
     'blueScore',
   ])
+})
+
+test('/authenticate route', async () => {
+  const response = await fetch(addr + '/authenticate', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: config.seedUser.username,
+      password: config.seedUser.password,
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  expect(response.status).toBe(200)
+
+  const d = await response.json()
+  expect(d.data.jwt).toBeA(String)
+})
+
+test('/authenticate route with incorrect auth info', async () => {
+  const response = await fetch(addr + '/authenticate', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: config.seedUser.username,
+      password: config.seedUser.password + 'a',
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  expect(response.status).toBe(401)
+})
+
+const getJWT = async () => {
+  const d = await fetch(addr + '/authenticate', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: config.seedUser.username,
+      password: config.seedUser.password,
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  }).then(d => d.json())
+
+  return d.data.jwt
+}
+
+test('/users create route', async () => {
+  const response = await fetch(addr + '/users', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: 'users-create' + Number(new Date()),
+      password: 'password',
+      firstName: 'test',
+      lastName: 'test',
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      Authentication: 'Bearer ' + (await getJWT()),
+    },
+  })
+
+  expect(response.status).toBe(201)
 })

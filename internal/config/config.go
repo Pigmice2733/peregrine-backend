@@ -25,6 +25,14 @@ type Config struct {
 		APIKey string `yaml:"apiKey"`
 	} `yaml:"tba"`
 
+	SeedUser *struct {
+		Username  string   `yaml:"username"`
+		Password  string   `yaml:"password"`
+		FirstName string   `yaml:"firstName"`
+		LastName  string   `yaml:"lastName"`
+		Roles     []string `yaml:"roles"`
+	} `yaml:"seedUser"`
+
 	Database store.Options `yaml:"database"`
 }
 
