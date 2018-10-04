@@ -41,7 +41,7 @@ func run(basePath string) error {
 
 	s, err := store.New(c.Database)
 	if err != nil {
-		errors.Wrap(err, "opening postgres server")
+		return errors.Wrap(err, "opening postgres server")
 	}
 
 	if c.SeedUser != nil {
