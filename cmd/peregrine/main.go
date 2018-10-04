@@ -4,12 +4,14 @@ import (
 	"crypto/rand"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
+	"github.com/pkg/errors"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/config"
 	"github.com/Pigmice2733/peregrine-backend/internal/server"
@@ -20,10 +22,16 @@ func main() {
 
 	flag.Parse()
 
-	c, err := config.Open(*basePath)
+	if err := run(*basePath); err != nil {
+		fmt.Printf("got error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(basePath string) error {
+	c, err := config.Open(basePath)
 	if err != nil {
-		fmt.Printf("Error: opening config: %v\n", err)
-		return
+		return errors.Wrap(err, "opening config")
 	}
 
 	tba := tba.Service{
@@ -33,15 +41,13 @@ func main() {
 
 	s, err := store.New(c.Database)
 	if err != nil {
-		fmt.Printf("Error: unable to connect to postgres server: %v\n", err)
-		return
+		return errors.Wrap(err, "opening postgres server")
 	}
 
 	if c.SeedUser != nil {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(c.SeedUser.Password), bcrypt.DefaultCost)
 		if err != nil {
-			fmt.Printf("Error: creating hashed password")
-			return
+			return errors.Wrap(err, "creating seed user hashed password")
 		}
 
 		u := store.User{
@@ -53,11 +59,8 @@ func main() {
 		}
 
 		err = s.CreateUser(u)
-		if err == store.ErrExists {
-			fmt.Printf("Error: seed user already exists\n")
-		} else if err != nil {
-			fmt.Printf("Error: unable to create seed user: %v\n", err)
-			return
+		if err != nil && err != store.ErrExists {
+			return errors.Wrap(err, "creating seed user")
 		}
 	}
 
@@ -68,8 +71,7 @@ func main() {
 
 	jwtSecret := make([]byte, 64)
 	if _, err := rand.Read(jwtSecret); err != nil {
-		fmt.Printf("Error: generating jwt secret: %v\n", err)
-		return
+		return errors.Wrap(err, "generating jwt secret")
 	}
 
 	server := server.New(
@@ -84,7 +86,5 @@ func main() {
 		year,
 	)
 
-	if err := server.Run(); err != nil {
-		fmt.Printf("Error: server.Run: %v\n", err)
-	}
+	return errors.Wrap(server.Run(), "running server")
 }
