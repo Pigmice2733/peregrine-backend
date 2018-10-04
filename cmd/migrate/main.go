@@ -81,17 +81,5 @@ func run(steps int, up, down bool, migrationsTable, basePath string) error {
 		err = m.Steps(steps)
 	}
 
-	if err != nil && err != migrate.ErrNoChange {
-		return errors.Wrap(err, "running migrations")
-	}
-
-	srcErr, dbErr := m.Close()
-	if srcErr != nil {
-		return errors.Wrap(srcErr, "closing migrations source")
-	}
-	if dbErr != nil {
-		return errors.Wrap(dbErr, "closing connection to database")
-	}
-
-	return nil
+	return errors.Wrap(err, "running migrations")
 }
