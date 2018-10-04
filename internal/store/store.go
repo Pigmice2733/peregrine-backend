@@ -95,7 +95,10 @@ func (ut *UnixTime) Scan(src interface{}) error {
 // Value returns a driver.Value that is always a time.Time that represents the
 // internally stored unix time.
 func (ut *UnixTime) Value() (driver.Value, error) {
-	return time.Unix(ut.Unix, 0), nil
+	if ut != nil {
+		return time.Unix(ut.Unix, 0), nil
+	}
+	return nil, nil
 }
 
 // MarshalJSON returns a []byte that represents this UnixTime in RFC 3339 format.

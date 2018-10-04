@@ -35,7 +35,7 @@ func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 
 	for rows.Next() {
 		match := Match{EventKey: eventKey, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
-		if err := rows.Scan(&match.Key, match.PredictedTime, match.ActualTime, &match.RedScore, &match.BlueScore); err != nil {
+		if err := rows.Scan(&match.Key, &match.PredictedTime, &match.ActualTime, &match.RedScore, &match.BlueScore); err != nil {
 			return nil, err
 		}
 
@@ -70,7 +70,7 @@ func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, erro
 
 	for rows.Next() {
 		match := Match{EventKey: eventKey, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
-		if err := rows.Scan(&match.Key, match.PredictedTime, match.ActualTime, &match.RedScore, &match.BlueScore); err != nil {
+		if err := rows.Scan(&match.Key, &match.PredictedTime, &match.ActualTime, &match.RedScore, &match.BlueScore); err != nil {
 			return nil, err
 		}
 
@@ -90,18 +90,18 @@ func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, erro
 
 // GetMatch returns a specfic match.
 func (s *Service) GetMatch(matchKey string) (Match, error) {
-	var redScore, blueScore int
+	var redScore, blueScore *int
 	match := Match{Key: matchKey, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
 	if err := s.db.QueryRow("SELECT event_key, predicted_time, actual_time, red_score, blue_score FROM matches WHERE key = $1", matchKey).
-		Scan(&match.EventKey, match.PredictedTime, match.ActualTime, &redScore, &blueScore); err != nil {
+		Scan(&match.EventKey, &match.PredictedTime, &match.ActualTime, &redScore, &blueScore); err != nil {
 		if err == sql.ErrNoRows {
 			return match, NoResultError{err}
 		}
 		return match, err
 	}
 
-	match.BlueScore = &blueScore
-	match.RedScore = &redScore
+	match.BlueScore = blueScore
+	match.RedScore = redScore
 
 	var err error
 	match.BlueAlliance, err = s.GetMatchAlliance(match.Key, true)
