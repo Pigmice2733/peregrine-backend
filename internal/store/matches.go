@@ -1,6 +1,8 @@
 package store
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
 // Match holds information about an FRC match at a specific event
 type Match struct {
@@ -14,10 +16,53 @@ type Match struct {
 	BlueAlliance  []string
 }
 
+// GetTime returns the actual match time if available, and if not, predicted time
+func (m *Match) GetTime() *UnixTime {
+	if m.ActualTime != nil {
+		return m.ActualTime
+	}
+	return m.PredictedTime
+}
+
 // GetEventMatches returns all matches from a specfic event.
 func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 	matches := []Match{}
 	rows, err := s.db.Query("SELECT key, predicted_time, actual_time, red_score, blue_score FROM matches WHERE event_key = $1", eventKey)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		match := Match{EventKey: eventKey, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
+		if err := rows.Scan(&match.Key, match.PredictedTime, match.ActualTime, &match.RedScore, &match.BlueScore); err != nil {
+			return nil, err
+		}
+
+		match.BlueAlliance, err = s.GetMatchAlliance(match.Key, true)
+		if err != nil {
+			return nil, err
+		}
+		match.RedAlliance, err = s.GetMatchAlliance(match.Key, false)
+		if err != nil {
+			return nil, err
+		}
+		matches = append(matches, match)
+	}
+
+	return matches, rows.Err()
+}
+
+// GetTeamMatches returns all matches from a specfic event that include a specific team.
+func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, error) {
+	matches := []Match{}
+	rows, err := s.db.Query(`
+		SELECT
+		    key, predicted_time, actual_time, red_score, blue_score
+		FROM matches
+		INNER JOIN alliances
+			ON matches.key = alliances.match_key
+		WHERE matches.event_key = $1 AND $2 = ANY(alliances.team_keys)`, eventKey, teamKey)
 	if err != nil {
 		return nil, err
 	}

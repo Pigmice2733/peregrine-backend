@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
@@ -10,6 +11,7 @@ import (
 )
 
 type team struct {
+	NextMatch    *match   `json:"nextMatch,omitempty"`
 	Rank         *int     `json:"rank,omitempty"`
 	RankingScore *float64 `json:"rankingScore,omitempty"`
 }
@@ -71,7 +73,43 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 			return
 		}
 
+		fullMatches, err := s.store.GetTeamMatches(eventKey, teamKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.logger.Printf("Error: retrieving team match data: %v\n", err)
+			return
+		}
+
+		now := time.Now().Unix()
+		var fullNextMatch *store.Match
+		for i, fullMatch := range fullMatches {
+			matchTime := fullMatch.GetTime()
+			if fullNextMatch != nil {
+				nextMatchTime := fullNextMatch.GetTime()
+				if matchTime != nil && matchTime.Unix > now && matchTime.Unix < nextMatchTime.Unix {
+					fullNextMatch = &fullMatches[i]
+				}
+			} else {
+				if matchTime != nil && matchTime.Unix > now {
+					fullNextMatch = &fullMatches[i]
+				}
+			}
+		}
+
+		var nextMatch *match
+		if fullNextMatch != nil {
+			nextMatch = &match{
+				Key:          fullNextMatch.Key,
+				Time:         fullNextMatch.GetTime(),
+				RedScore:     fullNextMatch.RedScore,
+				BlueScore:    fullNextMatch.BlueScore,
+				RedAlliance:  fullNextMatch.RedAlliance,
+				BlueAlliance: fullNextMatch.BlueAlliance,
+			}
+		}
+
 		team := team{
+			NextMatch:    nextMatch,
 			Rank:         fullTeam.Rank,
 			RankingScore: fullTeam.RankingScore,
 		}

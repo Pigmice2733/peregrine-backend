@@ -60,20 +60,20 @@ func New(o Options) (Service, error) {
 // database drivers and JSON marshallers/unmarshallers but are internally
 // represented as unix timestamps for easier comparison.
 type UnixTime struct {
-	unix int64
+	Unix int64
 }
 
 // NewUnixFromTime creates a new UnixTime timestamp from a time.Time.
 func NewUnixFromTime(time time.Time) UnixTime {
 	return UnixTime{
-		unix: time.Unix(),
+		Unix: time.Unix(),
 	}
 }
 
 // NewUnixFromInt creates a new UnixTime timestamp from an int64.
 func NewUnixFromInt(time int64) UnixTime {
 	return UnixTime{
-		unix: time,
+		Unix: time,
 	}
 }
 
@@ -82,9 +82,9 @@ func NewUnixFromInt(time int64) UnixTime {
 func (ut *UnixTime) Scan(src interface{}) error {
 	switch v := src.(type) {
 	case time.Time:
-		ut.unix = v.Unix()
+		ut.Unix = v.Unix()
 	case int64:
-		ut.unix = v
+		ut.Unix = v
 	default:
 		return fmt.Errorf("got invalid type for time: %T", src)
 	}
@@ -95,12 +95,12 @@ func (ut *UnixTime) Scan(src interface{}) error {
 // Value returns a driver.Value that is always a time.Time that represents the
 // internally stored unix time.
 func (ut *UnixTime) Value() (driver.Value, error) {
-	return time.Unix(ut.unix, 0), nil
+	return time.Unix(ut.Unix, 0), nil
 }
 
 // MarshalJSON returns a []byte that represents this UnixTime in RFC 3339 format.
 func (ut *UnixTime) MarshalJSON() ([]byte, error) {
-	return time.Unix(ut.unix, 0).MarshalJSON()
+	return time.Unix(ut.Unix, 0).MarshalJSON()
 }
 
 // UnmarshalJSON accepts a []byte representing a time.Time value, and unmarshals
@@ -112,7 +112,7 @@ func (ut *UnixTime) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	ut.unix = time.Unix()
+	ut.Unix = time.Unix()
 
 	return nil
 }

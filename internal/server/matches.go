@@ -44,17 +44,9 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 
 		matches := []match{}
 		for _, fullMatch := range fullMatches {
-			var time *store.UnixTime
-
-			if fullMatch.ActualTime != nil {
-				time = fullMatch.ActualTime
-			} else {
-				time = fullMatch.PredictedTime
-			}
-
 			matches = append(matches, match{
 				Key:          fullMatch.Key,
-				Time:         time,
+				Time:         fullMatch.GetTime(),
 				RedScore:     fullMatch.RedScore,
 				BlueScore:    fullMatch.BlueScore,
 				RedAlliance:  fullMatch.RedAlliance,
@@ -95,16 +87,9 @@ func (s *Server) matchHandler() http.HandlerFunc {
 			return
 		}
 
-		var time *store.UnixTime
-		if fullMatch.ActualTime != nil {
-			time = fullMatch.ActualTime
-		} else {
-			time = fullMatch.PredictedTime
-		}
-
 		match := match{
 			Key:          fullMatch.Key,
-			Time:         time,
+			Time:         fullMatch.GetTime(),
 			RedScore:     fullMatch.RedScore,
 			BlueScore:    fullMatch.BlueScore,
 			RedAlliance:  fullMatch.RedAlliance,
