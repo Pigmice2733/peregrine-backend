@@ -56,6 +56,21 @@ type match struct {
 	} `json:"alliances"`
 }
 
+type rankings struct {
+	Rankings      []rank          `json:"rankings"`
+	SortOrderInfo []sortOrderInfo `json:"sort_order_info"`
+}
+
+type rank struct {
+	Rank       int       `json:"rank"`
+	TeamKey    string    `json:"team_key"`
+	SortOrders []float64 `json:"sort_orders"`
+}
+
+type sortOrderInfo struct {
+	Name string `json:"name"`
+}
+
 // Maximum size of response from the TBA API to read. This value is about 4x the
 // size of a typical /events/{year} response from TBA.
 const maxResponseSize int64 = 1.2e+6
@@ -187,7 +202,7 @@ func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
 		}
 
 		if tbaMatch.ActualTime != 0 {
-			timestamp := store.NewUnixFromInt(tbaMatch.ActualTime)
+			timestamp := store.NewUnixFromInt(int64(tbaMatch.ActualTime))
 			actualTime = &timestamp
 		}
 
@@ -213,4 +228,71 @@ func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
 	}
 
 	return matches, nil
+}
+
+// GetTeamKeys retrieves all team keys from a specific event
+func (s *Service) GetTeamKeys(eventKey string) ([]string, error) {
+	path := fmt.Sprintf("/event/%s/teams/keys", eventKey)
+
+	response, err := s.makeRequest(path)
+	if err != nil {
+		return nil, fmt.Errorf("TBA request to %s failed: %v", path, err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TBA request to %s failed with status code: %v", path, response.StatusCode)
+	}
+
+	var teamKeys []string
+	err = json.NewDecoder(io.LimitReader(response.Body, maxResponseSize)).Decode(&teamKeys)
+	return teamKeys, err
+}
+
+// GetTeamRankings retrieves all team rankings from a specific event.
+func (s *Service) GetTeamRankings(eventKey string) ([]store.Team, error) {
+	path := fmt.Sprintf("/event/%s/rankings", eventKey)
+
+	response, err := s.makeRequest(path)
+	if err != nil {
+		return nil, fmt.Errorf("TBA request to %s failed: %v", path, err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TBA request to %s failed with status code: %v", path, response.StatusCode)
+	}
+
+	teamRankings := rankings{
+		Rankings:      []rank{},
+		SortOrderInfo: []sortOrderInfo{},
+	}
+	if err := json.NewDecoder(io.LimitReader(response.Body, maxResponseSize)).Decode(&teamRankings); err != nil {
+		return nil, err
+	}
+
+	rankingScoreIndex := -1
+	for i, sortOrder := range teamRankings.SortOrderInfo {
+		if sortOrder.Name == "Ranking Score" {
+			rankingScoreIndex = i
+			break
+		}
+	}
+
+	var teams []store.Team
+	for _, teamRank := range teamRankings.Rankings {
+		var rankingScore *float64
+		if rankingScoreIndex != -1 {
+			rankingScore = &teamRank.SortOrders[rankingScoreIndex]
+		}
+
+		rank := teamRank.Rank
+		team := store.Team{
+			Key:          teamRank.TeamKey,
+			EventKey:     eventKey,
+			Rank:         &rank,
+			RankingScore: rankingScore,
+		}
+		teams = append(teams, team)
+	}
+
+	return teams, nil
 }

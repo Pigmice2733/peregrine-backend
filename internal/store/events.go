@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 )
 
 // Event holds information about an FRC event such as webcast associated with
@@ -42,7 +43,7 @@ type Location struct {
 
 // GetEvents returns all events from the database. event.Webcasts will be nil for every event.
 func (s *Service) GetEvents() ([]Event, error) {
-	var events []Event
+	events := []Event{}
 	rows, err := s.db.Query("SELECT key, name, district, week, start_date, end_date, location_name, lat, lon FROM events")
 	if err != nil {
 		return nil, err
@@ -55,10 +56,23 @@ func (s *Service) GetEvents() ([]Event, error) {
 		if err := rows.Scan(&event.Key, &event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
 			return nil, err
 		}
+
 		events = append(events, event)
 	}
 
 	return events, rows.Err()
+}
+
+// CheckEventKey checks whether a specific event key exists.
+func (s *Service) CheckEventKey(eventKey string) error {
+	var exists bool
+	if err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM events WHERE key = $1)", eventKey).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return NoResultError{fmt.Errorf("event key %s does not exist", eventKey)}
+	}
+	return nil
 }
 
 // GetEvent retrieves a specific event.

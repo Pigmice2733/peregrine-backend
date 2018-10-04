@@ -14,14 +14,20 @@ import (
 
 type tbaServer struct {
 	*httptest.Server
-	getEventsHandler  func(w http.ResponseWriter, r *http.Request)
-	getMatchesHandler func(w http.ResponseWriter, r *http.Request)
+	getEventsHandler       func(w http.ResponseWriter, r *http.Request)
+	getMatchesHandler      func(w http.ResponseWriter, r *http.Request)
+	getTeamKeysHandler     func(w http.ResponseWriter, r *http.Request)
+	getTeamRankingsHandler func(w http.ResponseWriter, r *http.Request)
 }
 
 const testingYear = 2018
 
 func newInt(a int) *int {
 	return &a
+}
+
+func newFloat64(f float64) *float64 {
+	return &f
 }
 
 func newString(s string) *string {
@@ -39,6 +45,8 @@ func newTBAServer() *tbaServer {
 	r := mux.NewRouter()
 	r.HandleFunc("/events/"+strconv.Itoa(testingYear), func(w http.ResponseWriter, r *http.Request) { ts.getEventsHandler(w, r) })
 	r.HandleFunc("/event/{eventKey}/matches/simple", func(w http.ResponseWriter, r *http.Request) { ts.getMatchesHandler(w, r) })
+	r.HandleFunc("/event/{eventKey}/teams/keys", func(w http.ResponseWriter, r *http.Request) { ts.getTeamKeysHandler(w, r) })
+	r.HandleFunc("/event/{eventKey}/rankings", func(w http.ResponseWriter, r *http.Request) { ts.getTeamRankingsHandler(w, r) })
 
 	ts.Server = httptest.NewServer(r)
 
@@ -417,6 +425,233 @@ func TestGetMatches(t *testing.T) {
 
 		if !reflect.DeepEqual(matches, tt.matches) {
 			t.Errorf("test #%v - got matches: %#v\n    expected: %#v", index+1, matches, tt.matches)
+		}
+	}
+}
+
+func TestGetTeamKeys(t *testing.T) {
+	server := newTBAServer()
+	defer server.Close()
+
+	APIKey := "notARealKey"
+
+	s := Service{URL: server.URL, APIKey: APIKey}
+
+	testCases := []struct {
+		getTeamKeysHandler func(w http.ResponseWriter, r *http.Request)
+		keys               []string
+		expectErr          bool
+	}{
+		{
+			getTeamKeysHandler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			},
+			keys:      nil,
+			expectErr: true,
+		},
+		{
+			getTeamKeysHandler: func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("X-TBA-Auth-Key") != "notARealKey" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(`
+				[
+                    "frc2733", "frc254", "frc0", "frc2471", "frc118", "frc1", "frc2"
+				]
+				`))
+
+				if err != nil {
+					t.Errorf("failed to write test data")
+				}
+			},
+			keys: []string{
+				"frc2733", "frc254", "frc0", "frc2471", "frc118", "frc1", "frc2",
+			},
+		},
+	}
+
+	for index, tt := range testCases {
+		server.getTeamKeysHandler = tt.getTeamKeysHandler
+
+		teamKeys, err := s.GetTeamKeys("2018abca")
+		if tt.expectErr != (err != nil) {
+			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
+		}
+
+		if !reflect.DeepEqual(teamKeys, tt.keys) {
+			t.Errorf("test #%v - got team keys: %#v\n    expected: %#v", index+1, teamKeys, tt.keys)
+		}
+	}
+}
+
+func TestGetTeamRankings(t *testing.T) {
+	server := newTBAServer()
+	defer server.Close()
+
+	APIKey := "notARealKey"
+
+	s := Service{URL: server.URL, APIKey: APIKey}
+
+	testCases := []struct {
+		getTeamRankingsHandler func(w http.ResponseWriter, r *http.Request)
+		teams                  []store.Team
+		expectErr              bool
+	}{
+		{
+			getTeamRankingsHandler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			},
+			teams:     nil,
+			expectErr: true,
+		},
+		{
+			getTeamRankingsHandler: func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(`
+				{
+				    "rankings": [
+						{
+							"rank": 1,
+							"team_key": "frc2733",
+							"sort_orders": [
+								3243,
+								5.25
+							]
+						},
+						{
+							"rank": 2,
+							"team_key": "frc254",
+							"sort_orders": [
+								2453,
+								2.00
+							]
+						}
+					],
+					"sort_order_info": [
+						{
+							"name": "Irrelevant Score",
+							"precision": 0
+						},
+						{
+							"name": "Ranking Score",
+							"precision": 2
+						}
+					]
+				}
+				`))
+
+				if err != nil {
+					t.Errorf("failed to write test data")
+				}
+			},
+			teams: []store.Team{
+				{
+					Key:          "frc2733",
+					EventKey:     "2018abca",
+					Rank:         newInt(1),
+					RankingScore: newFloat64(5.25),
+				},
+				{
+					Key:          "frc254",
+					EventKey:     "2018abca",
+					Rank:         newInt(2),
+					RankingScore: newFloat64(2.00),
+				},
+			},
+			expectErr: false,
+		},
+		{
+			getTeamRankingsHandler: func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("X-TBA-Auth-Key") != "notARealKey" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				w.WriteHeader(http.StatusOK)
+				_, err := w.Write([]byte(`
+				{
+				    "rankings": [
+						{
+							"rank": 1,
+							"team_key": "frc2733",
+							"sort_orders": [
+								3243,
+								5.25000000
+							]
+						},
+						{
+							"rank": 2,
+							"team_key": "frc254",
+							"sort_orders": [
+								23,
+								2.000100
+							]
+						},
+						{
+							"rank": 12,
+							"team_key": "frc24",
+							"sort_orders": [
+								0,
+								2.000001
+							]
+						}
+					],
+					"sort_order_info": [
+						{
+							"name": "Irrelevant Score",
+							"precision": 0
+						},
+						{
+							"name": "Random Score",
+							"precision": 12
+						}
+					]
+				}
+				`))
+
+				if err != nil {
+					t.Errorf("failed to write test data")
+				}
+			},
+			teams: []store.Team{
+				{
+					Key:          "frc2733",
+					EventKey:     "2018abca",
+					Rank:         newInt(1),
+					RankingScore: nil,
+				},
+				{
+					Key:          "frc254",
+					EventKey:     "2018abca",
+					Rank:         newInt(2),
+					RankingScore: nil,
+				},
+				{
+					Key:          "frc24",
+					EventKey:     "2018abca",
+					Rank:         newInt(12),
+					RankingScore: nil,
+				},
+			},
+			expectErr: false,
+		},
+	}
+
+	for index, tt := range testCases {
+		server.getTeamRankingsHandler = tt.getTeamRankingsHandler
+
+		teams, err := s.GetTeamRankings("2018abca")
+		if tt.expectErr != (err != nil) {
+			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
+		}
+
+		if !reflect.DeepEqual(teams, tt.teams) {
+			t.Errorf("test #%v - got teams: %#v\n    expected: %#v", index+1, teams, tt.teams)
 		}
 	}
 }

@@ -16,8 +16,7 @@ type Match struct {
 
 // GetEventMatches returns all matches from a specfic event.
 func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
-	var matches []Match
-
+	matches := []Match{}
 	rows, err := s.db.Query("SELECT key, predicted_time, actual_time, red_score, blue_score FROM matches WHERE event_key = $1", eventKey)
 	if err != nil {
 		return nil, err
@@ -26,13 +25,9 @@ func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 
 	for rows.Next() {
 		match := Match{EventKey: eventKey, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
-		var redScore, blueScore int
-		if err := rows.Scan(&match.Key, match.PredictedTime, match.ActualTime, &redScore, &blueScore); err != nil {
+		if err := rows.Scan(&match.Key, match.PredictedTime, match.ActualTime, &match.RedScore, &match.BlueScore); err != nil {
 			return nil, err
 		}
-
-		match.BlueScore = &blueScore
-		match.RedScore = &redScore
 
 		match.BlueAlliance, err = s.GetMatchAlliance(match.Key, true)
 		if err != nil {
@@ -79,7 +74,7 @@ func (s *Service) MatchesUpsert(matches []Match) error {
 		return err
 	}
 
-	matchStmt, err := tx.Prepare(`
+	stmt, err := tx.Prepare(`
 		INSERT INTO matches (key, event_key, predicted_time, actual_time, red_score, blue_score)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (key)
@@ -91,10 +86,10 @@ func (s *Service) MatchesUpsert(matches []Match) error {
 		_ = tx.Rollback()
 		return err
 	}
-	defer matchStmt.Close()
+	defer stmt.Close()
 
 	for _, match := range matches {
-		if _, err = matchStmt.Exec(match.Key, match.EventKey, match.PredictedTime, match.ActualTime, match.RedScore, match.BlueScore); err != nil {
+		if _, err = stmt.Exec(match.Key, match.EventKey, match.PredictedTime, match.ActualTime, match.RedScore, match.BlueScore); err != nil {
 			_ = tx.Rollback()
 			return err
 		}
