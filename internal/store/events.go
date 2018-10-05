@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 )
 
 // Event holds information about an FRC event such as webcast associated with
@@ -55,10 +56,23 @@ func (s *Service) GetEvents() ([]Event, error) {
 		if err := rows.Scan(&event.Key, &event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
 			return nil, err
 		}
+
 		events = append(events, event)
 	}
 
 	return events, rows.Err()
+}
+
+// CheckEventKeyExists checks whether a specific event key exists.
+func (s *Service) CheckEventKeyExists(eventKey string) error {
+	var exists bool
+	if err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM events WHERE key = $1)", eventKey).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return ErrNoResults(fmt.Errorf("event key %s does not exist", eventKey))
+	}
+	return nil
 }
 
 // GetEvent retrieves a specific event.
@@ -67,7 +81,7 @@ func (s *Service) GetEvent(eventKey string) (Event, error) {
 	if err := s.db.QueryRow("SELECT name, district, week, start_date, end_date, location_name, lat, lon FROM events WHERE key = $1", eventKey).
 		Scan(&event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
 		if err == sql.ErrNoRows {
-			return event, NoResultError{err}
+			return event, ErrNoResults(err)
 		}
 		return event, err
 	}
