@@ -66,7 +66,7 @@ expect.extend({
       ])
     } catch (error) {
       return {
-        message: () => `expected ${received} to be a match`,
+        message: () => `expected to get a match. failed:\n ${error}`,
         pass: false,
       }
     }
