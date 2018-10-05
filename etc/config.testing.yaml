@@ -8,7 +8,7 @@ tba:
 
 database:
   user: peregrine
-  password:
+  password: ""
   host: localhost
   port: 5432
   name: peregrine
@@ -20,5 +20,5 @@ seedUser:
   firstName: John
   lastName: Doe
   roles:
-    - verified
-    - admin
+    isVerified: true
+    isAdmin: true

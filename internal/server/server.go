@@ -100,16 +100,9 @@ func (s *Server) Run() error {
 }
 
 type claims struct {
-	Roles []string `json:"roles"`
+	Roles store.Roles `json:"pigmiceRoles"`
 	jwt.StandardClaims
 }
-
-const (
-	// adminRole defines the role for an administrator user.
-	adminRole = "admin"
-	// verifiedRole defines the role for a user that has a verified account.
-	verifiedRole = "verified"
-)
 
 func (s *Server) authMiddleware(next http.HandlerFunc, optional, requireAdmin bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -127,25 +120,24 @@ func (s *Server) authMiddleware(next http.HandlerFunc, optional, requireAdmin bo
 			return s.jwtSecret, nil
 		})
 		if err != nil {
-			s.logger.Printf("Error: parsing jwt: %v\n", err)
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
 		if !token.Valid {
-			s.logger.Printf("Error: got invalid token: %v\n", err)
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
 		claims, ok := token.Claims.(*claims)
 		if !ok {
+			// this shouldn't happen, so we log it
 			s.logger.Printf("Error: got incorrect claims type: %v\n", err)
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
-		if requireAdmin && !contains(claims.Roles, adminRole) {
+		if requireAdmin && !claims.Roles.IsAdmin {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
