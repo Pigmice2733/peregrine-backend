@@ -26,7 +26,7 @@ func (m *Match) GetTime() *UnixTime {
 
 // GetEventMatches returns all matches from a specfic event.
 func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
-	matches := []Match{}
+	var matches []Match
 	rows, err := s.db.Query("SELECT key, predicted_time, actual_time, red_score, blue_score FROM matches WHERE event_key = $1", eventKey)
 	if err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 
 // GetTeamMatches returns all matches from a specfic event that include a specific team.
 func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, error) {
-	matches := []Match{}
+	var matches []Match
 	rows, err := s.db.Query(`
 		SELECT
 		    key, predicted_time, actual_time, red_score, blue_score
@@ -95,7 +95,7 @@ func (s *Service) GetMatch(matchKey string) (Match, error) {
 	if err := s.db.QueryRow("SELECT event_key, predicted_time, actual_time, red_score, blue_score FROM matches WHERE key = $1", matchKey).
 		Scan(&match.EventKey, &match.PredictedTime, &match.ActualTime, &redScore, &blueScore); err != nil {
 		if err == sql.ErrNoRows {
-			return match, NoResultError{err}
+			return match, ErrNoResults(err)
 		}
 		return match, err
 	}

@@ -11,20 +11,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// A NoResultError indicates that no data matching the query was found.
-type NoResultError struct {
-	err error
-}
-
-func (nre NoResultError) Error() string {
-	return fmt.Sprintf("no results found: %v\n", nre.err)
-}
-
-// IsNoResultError checks if an error is of type NoResultError.
-func IsNoResultError(err error) bool {
-	_, ok := err.(NoResultError)
-	return ok
-}
+// ErrNoResults indicates that no data matching the query was found.
+type ErrNoResults error
 
 // Service is an interface to manipulate the data store.
 type Service struct {

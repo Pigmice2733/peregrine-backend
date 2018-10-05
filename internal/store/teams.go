@@ -20,7 +20,7 @@ func (s *Service) GetTeamKeys(eventKey string) ([]string, error) {
 	}
 	defer rows.Close()
 
-	teamKeys := []string{}
+	var teamKeys []string
 	for rows.Next() {
 		var teamKey string
 		if err := rows.Scan(&teamKey); err != nil {
@@ -39,7 +39,7 @@ func (s *Service) GetTeam(teamKey string, eventKey string) (Team, error) {
 	var team Team
 	err := s.db.QueryRow("SELECT rank, ranking_score FROM teams WHERE key = $1 AND event_key = $2", teamKey, eventKey).Scan(&rank, &rankingScore)
 	if err == sql.ErrNoRows {
-		return team, NoResultError{err}
+		return team, ErrNoResults(err)
 	}
 	team.Key = teamKey
 	team.EventKey = eventKey

@@ -26,7 +26,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if ok := store.IsNoResultError(err); ok {
+			if _, ok := err.(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -67,7 +67,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if ok := store.IsNoResultError(err); ok {
+			if _, ok := err.(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -78,7 +78,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 
 		fullMatch, err := s.store.GetMatch(matchKey)
 		if err != nil {
-			if ok := store.IsNoResultError(err); ok {
+			if _, ok := err.(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -103,7 +103,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 // Get new match data from TBA for a particular event. Upsert match data into database.
 func (s *Server) updateMatches(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.store.CheckEventKey(eventKey)
+	err := s.store.CheckEventKeyExists(eventKey)
 	if err != nil {
 		return err
 	}

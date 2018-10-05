@@ -43,7 +43,7 @@ type Location struct {
 
 // GetEvents returns all events from the database. event.Webcasts will be nil for every event.
 func (s *Service) GetEvents() ([]Event, error) {
-	events := []Event{}
+	var events []Event
 	rows, err := s.db.Query("SELECT key, name, district, week, start_date, end_date, location_name, lat, lon FROM events")
 	if err != nil {
 		return nil, err
@@ -63,14 +63,14 @@ func (s *Service) GetEvents() ([]Event, error) {
 	return events, rows.Err()
 }
 
-// CheckEventKey checks whether a specific event key exists.
-func (s *Service) CheckEventKey(eventKey string) error {
+// CheckEventKeyExists checks whether a specific event key exists.
+func (s *Service) CheckEventKeyExists(eventKey string) error {
 	var exists bool
 	if err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM events WHERE key = $1)", eventKey).Scan(&exists); err != nil {
 		return err
 	}
 	if !exists {
-		return NoResultError{fmt.Errorf("event key %s does not exist", eventKey)}
+		return ErrNoResults(fmt.Errorf("event key %s does not exist", eventKey))
 	}
 	return nil
 }
@@ -81,7 +81,7 @@ func (s *Service) GetEvent(eventKey string) (Event, error) {
 	if err := s.db.QueryRow("SELECT name, district, week, start_date, end_date, location_name, lat, lon FROM events WHERE key = $1", eventKey).
 		Scan(&event.Name, &event.District, &event.Week, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
 		if err == sql.ErrNoRows {
-			return event, NoResultError{err}
+			return event, ErrNoResults(err)
 		}
 		return event, err
 	}

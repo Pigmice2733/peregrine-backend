@@ -24,7 +24,7 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 		// Get new team data from TBA
 		if err := s.updateTeamKeys(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if ok := store.IsNoResultError(err); ok {
+			if _, ok := err.(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -40,6 +40,10 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 			return
 		}
 
+		if teamKeys == nil {
+			teamKeys = []string{}
+		}
+
 		ihttp.Respond(w, teamKeys, http.StatusOK)
 	}
 }
@@ -53,7 +57,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 		// Get new team rankings data from TBA
 		if err := s.updateTeamRankings(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if ok := store.IsNoResultError(err); ok {
+			if _, ok := err.(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -64,7 +68,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 
 		fullTeam, err := s.store.GetTeam(teamKey, eventKey)
 		if err != nil {
-			if ok := store.IsNoResultError(err); ok {
+			if _, ok := err.(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -121,7 +125,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 // Get new team key data from TBA for a particular event. Upsert data into database.
 func (s *Server) updateTeamKeys(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.store.CheckEventKey(eventKey)
+	err := s.store.CheckEventKeyExists(eventKey)
 	if err != nil {
 		return err
 	}
@@ -136,7 +140,7 @@ func (s *Server) updateTeamKeys(eventKey string) error {
 // Get new team rankings data from TBA for a particular event. Upsert data into database.
 func (s *Server) updateTeamRankings(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.store.CheckEventKey(eventKey)
+	err := s.store.CheckEventKeyExists(eventKey)
 	if err != nil {
 		return err
 	}
