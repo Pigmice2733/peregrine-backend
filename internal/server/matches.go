@@ -1,7 +1,9 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
@@ -44,8 +46,11 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 
 		matches := []match{}
 		for _, fullMatch := range fullMatches {
+			// Match keys are stored in TBA format, with a leading event key
+			// prefix that which needs to be removed before use.
+			key := strings.TrimPrefix(fullMatch.Key, eventKey+"_")
 			matches = append(matches, match{
-				Key:          fullMatch.Key,
+				Key:          key,
 				Time:         fullMatch.GetTime(),
 				RedScore:     fullMatch.RedScore,
 				BlueScore:    fullMatch.BlueScore,
@@ -63,6 +68,10 @@ func (s *Server) matchHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		eventKey, matchKey := vars["eventKey"], vars["matchKey"]
+
+		// Add eventKey as prefix to matchKey so that matchKey is globally
+		// unique and consistent with TBA match keys.
+		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
 
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
@@ -87,8 +96,11 @@ func (s *Server) matchHandler() http.HandlerFunc {
 			return
 		}
 
+		// Match keys are stored in TBA format, with a leading event key
+		// prefix that which needs to be removed before use.
+		key := strings.TrimPrefix(fullMatch.Key, eventKey+"_")
 		match := match{
-			Key:          fullMatch.Key,
+			Key:          key,
 			Time:         fullMatch.GetTime(),
 			RedScore:     fullMatch.RedScore,
 			BlueScore:    fullMatch.BlueScore,

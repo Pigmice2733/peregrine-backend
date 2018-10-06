@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -102,8 +103,11 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 
 		var nextMatch *match
 		if fullNextMatch != nil {
+			// Match keys are stored in TBA format, with leading event key
+			// prefix, which needs to be removed before use.
+			key := strings.TrimPrefix(fullNextMatch.Key, eventKey+"_")
 			nextMatch = &match{
-				Key:          fullNextMatch.Key,
+				Key:          key,
 				Time:         fullNextMatch.GetTime(),
 				RedScore:     fullNextMatch.RedScore,
 				BlueScore:    fullNextMatch.BlueScore,

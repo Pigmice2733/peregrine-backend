@@ -182,7 +182,7 @@ test('/events/{eventKey}/matches endpoint', async () => {
 
 test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
   const d = await fetch(
-    addr + '/events/2018flor/matches/2018flor_qm28/info',
+    addr + '/events/2018flor/matches/qm28/info',
   ).then(d => d.json())
   const info = d.data
   expect(info).toBeAMatch()
