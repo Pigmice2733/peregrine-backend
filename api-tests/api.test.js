@@ -21,6 +21,14 @@ expect.extend({
       : () => `expected ${received} to be a valid date string`
     return { pass, message }
   },
+  similarDate(recieved, expected) {
+    const parsedRecievedDate = new Date(recieved)
+    const parsedExpectedDate = new Date(expected)
+    return {
+      pass: Number(parsedRecievedDate) == Number(parsedExpectedDate),
+      message: `expected ${recieved} to equal ${expected}`,
+    }
+  },
   toBeA(received, type) {
     try {
       expect(received).toEqual(expect.any(type))
@@ -174,7 +182,16 @@ test('/events create endpoint', async () => {
 
   const d = await fetch(addr + `/events/${event.key}/info`).then(d => d.json())
 
-  expect(d.data).toEqual(event)
+  expect(d.data).toEqual({
+    key: event.key,
+    name: event.name,
+    district: event.district,
+    week: event.week,
+    startDate: expect.similarDate(event.startDate),
+    endDate: expect.similarDate(event.endDate),
+    location: event.location,
+    webcasts: event.webcasts,
+  })
 })
 
 test('/events/{eventKey}/info endpoint', async () => {
@@ -246,9 +263,9 @@ test('/matches create endpoint', async () => {
     addr + `/events/2018flor/matches/${match.key}/info`,
   ).then(d => d.json())
 
-  expect(d.data).toStrictEqual({
+  expect(d.data).toEqual({
     key: match.key,
-    time: match.predictedTime,
+    time: expect.similarDate(match.predictedTime),
     redScore: match.redScore,
     blueScore: match.blueScore,
     redAlliance: match.redAlliance,
