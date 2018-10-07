@@ -138,6 +138,45 @@ test('/events endpoint', async () => {
   })
 })
 
+test('/events create endpoint', async () => {
+  expect(config.seedUser.roles.isAdmin).toBe(true)
+
+  const event = {
+    key: '1970flir',
+    name: 'FLIR x Daimler',
+    district: 'pnw',
+    week: 4,
+    startDate: '1970-01-01T19:46:40-08:00',
+    endDate: '1970-01-02T09:40:00-08:00',
+    location: {
+      name: 'Cleveland High School',
+      lat: 45.498555,
+      lon: -122.6385231,
+    },
+    webcasts: [
+      {
+        type: 'twitch',
+        url: 'https://www.twitch.tv/firstwa_red',
+      },
+    ],
+  }
+
+  const response = await fetch(addr + '/events', {
+    method: 'POST',
+    body: JSON.stringify(event),
+    headers: {
+      'Content-Type': 'application/json',
+      Authentication: 'Bearer ' + (await getJWT()),
+    },
+  })
+
+  expect(response.status).toBe(201)
+
+  const d = await fetch(addr + `/events/${event.key}/info`).then(d => d.json())
+
+  expect(d.data).toEqual(event)
+})
+
 test('/events/{eventKey}/info endpoint', async () => {
   const d = await fetch(addr + '/events/2018flor/info').then(d => d.json())
   const info = d.data
@@ -180,10 +219,47 @@ test('/events/{eventKey}/matches endpoint', async () => {
   })
 })
 
-test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
+test('/matches create endpoint', async () => {
+  expect(config.seedUser.roles.isAdmin).toBe(true)
+
+  const match = {
+    key: 'foo123',
+    predictedTime: '2018-03-09T11:00:13-08:00',
+    redScore: 368,
+    blueScore: 74,
+    redAlliance: ['frc1592', 'frc5722', 'frc1421'],
+    blueAlliance: ['frc6322', 'frc4024', 'frc5283'],
+  }
+
+  const response = await fetch(addr + '/events/2018flor/matches', {
+    method: 'POST',
+    body: JSON.stringify(match),
+    headers: {
+      'Content-Type': 'application/json',
+      Authentication: 'Bearer ' + (await getJWT()),
+    },
+  })
+
+  expect(response.status).toBe(201)
+
   const d = await fetch(
-    addr + '/events/2018flor/matches/qm28/info',
+    addr + `/events/2018flor/matches/${match.key}/info`,
   ).then(d => d.json())
+
+  expect(d.data).toStrictEqual({
+    key: match.key,
+    time: match.predictedTime,
+    redScore: match.redScore,
+    blueScore: match.blueScore,
+    redAlliance: match.redAlliance,
+    blueAlliance: match.blueAlliance,
+  })
+})
+
+test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
+  const d = await fetch(addr + '/events/2018flor/matches/qm28/info').then(d =>
+    d.json(),
+  )
   const info = d.data
   expect(info).toBeAMatch()
 })

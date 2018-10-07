@@ -8,14 +8,14 @@ import (
 // Event holds information about an FRC event such as webcast associated with
 // it, the location, it's start date, and more.
 type Event struct {
-	Key       string
-	Name      string
-	District  *string
-	Week      *int
-	StartDate UnixTime
-	EndDate   UnixTime
-	Webcasts  []Webcast
-	Location  Location
+	Key       string    `json:"key"`
+	Name      string    `json:"name"`
+	District  *string   `json:"district"`
+	Week      *int      `json:"week"`
+	StartDate UnixTime  `json:"startDate"`
+	EndDate   UnixTime  `json:"endDate"`
+	Webcasts  []Webcast `json:"webcasts"`
+	Location  Location  `json:"location"`
 }
 
 // WebcastType represents a data source for a webcast such as twitch or youtube.
@@ -30,15 +30,15 @@ const (
 
 // Webcast represents a webcast of an events.
 type Webcast struct {
-	Type WebcastType
-	URL  string
+	Type WebcastType `json:"type"`
+	URL  string      `json:"url"`
 }
 
 // Location holds a location for events: a name, and a latlong.
 type Location struct {
-	Name string
-	Lat  float64
-	Lon  float64
+	Name string  `json:"name"`
+	Lat  float64 `json:"lat"`
+	Lon  float64 `json:"lon"`
 }
 
 // GetEvents returns all events from the database. event.Webcasts will be nil for every event.

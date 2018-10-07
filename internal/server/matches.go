@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -109,6 +110,35 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		}
 
 		ihttp.Respond(w, match, http.StatusOK)
+	}
+}
+
+func (s *Server) createMatchHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var e store.Match
+		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+			ihttp.Error(w, http.StatusUnprocessableEntity)
+			return
+		}
+
+		e.EventKey = mux.Vars(r)["eventKey"]
+
+		// Add eventKey as prefix to matchKey so that matchKey is globally
+		// unique and consistent with TBA match keys.
+		e.Key = fmt.Sprintf("%s_%s", e.EventKey, e.Key)
+
+		// this is redundant since the route should be admin-protected anyways
+		if !getRoles(r).IsAdmin {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
+		if err := s.store.MatchesUpsert([]store.Match{e}); err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		ihttp.Respond(w, nil, http.StatusCreated)
 	}
 }
 
