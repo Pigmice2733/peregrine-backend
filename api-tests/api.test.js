@@ -241,7 +241,7 @@ test('/matches create endpoint', async () => {
 
   const match = {
     key: 'foo123',
-    predictedTime: '2018-03-09T11:00:13-08:00',
+    time: '2018-03-09T11:00:13-08:00',
     redScore: 368,
     blueScore: 74,
     redAlliance: ['frc1592', 'frc5722', 'frc1421'],
@@ -265,7 +265,7 @@ test('/matches create endpoint', async () => {
 
   expect(d.data).toEqual({
     key: match.key,
-    time: expect.similarDate(match.predictedTime),
+    time: expect.similarDate(match.time),
     redScore: match.redScore,
     blueScore: match.blueScore,
     redAlliance: match.redAlliance,

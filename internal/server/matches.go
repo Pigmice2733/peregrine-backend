@@ -115,17 +115,17 @@ func (s *Server) matchHandler() http.HandlerFunc {
 
 func (s *Server) createMatchHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var e store.Match
-		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+		var m match
+		if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
 			return
 		}
 
-		e.EventKey = mux.Vars(r)["eventKey"]
+		eventKey := mux.Vars(r)["eventKey"]
 
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
-		e.Key = fmt.Sprintf("%s_%s", e.EventKey, e.Key)
+		m.Key = fmt.Sprintf("%s_%s", eventKey, m.Key)
 
 		// this is redundant since the route should be admin-protected anyways
 		if !getRoles(r).IsAdmin {
@@ -133,7 +133,17 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 			return
 		}
 
-		if err := s.store.MatchesUpsert([]store.Match{e}); err != nil {
+		sm := store.Match{
+			Key:          m.Key,
+			EventKey:     eventKey,
+			ActualTime:   m.Time,
+			RedScore:     m.RedScore,
+			BlueScore:    m.BlueScore,
+			RedAlliance:  m.RedAlliance,
+			BlueAlliance: m.BlueAlliance,
+		}
+
+		if err := s.store.MatchesUpsert([]store.Match{sm}); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
