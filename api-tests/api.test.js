@@ -170,7 +170,7 @@ test('/events create endpoint', async () => {
   }
 
   const response = await fetch(addr + '/events', {
-    method: 'POST',
+    method: 'PUT',
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',
@@ -249,7 +249,7 @@ test('/matches create endpoint', async () => {
   }
 
   const response = await fetch(addr + '/events/2018flor/matches', {
-    method: 'POST',
+    method: 'PUT',
     body: JSON.stringify(match),
     headers: {
       'Content-Type': 'application/json',
