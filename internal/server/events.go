@@ -140,6 +140,7 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 
 		// this is redundant since the route should be admin-protected anyways
 		if !getRoles(r).IsAdmin {
+			s.logger.Printf("Error: got non-admin user on admin-protected route")
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
