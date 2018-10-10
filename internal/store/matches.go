@@ -6,14 +6,14 @@ import (
 
 // Match holds information about an FRC match at a specific event
 type Match struct {
-	Key           string
-	EventKey      string
-	PredictedTime *UnixTime
-	ActualTime    *UnixTime
-	RedScore      *int
-	BlueScore     *int
-	RedAlliance   []string
-	BlueAlliance  []string
+	Key           string    `json:"key"`
+	EventKey      string    `json:"eventKey"`
+	PredictedTime *UnixTime `json:"predictedTime"`
+	ActualTime    *UnixTime `json:"actualTime"`
+	RedScore      *int      `json:"redScore"`
+	BlueScore     *int      `json:"blueScore"`
+	RedAlliance   []string  `json:"redAlliance"`
+	BlueAlliance  []string  `json:"blueAlliance"`
 }
 
 // GetTime returns the actual match time if available, and if not, predicted time

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -112,11 +113,52 @@ func (s *Server) matchHandler() http.HandlerFunc {
 	}
 }
 
+func (s *Server) createMatchHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var m match
+		if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+			ihttp.Error(w, http.StatusUnprocessableEntity)
+			return
+		}
+
+		eventKey := mux.Vars(r)["eventKey"]
+
+		// Add eventKey as prefix to matchKey so that matchKey is globally
+		// unique and consistent with TBA match keys.
+		m.Key = fmt.Sprintf("%s_%s", eventKey, m.Key)
+
+		// this is redundant since the route should be admin-protected anyways
+		if !getRoles(r).IsAdmin {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
+		sm := store.Match{
+			Key:          m.Key,
+			EventKey:     eventKey,
+			ActualTime:   m.Time,
+			RedScore:     m.RedScore,
+			BlueScore:    m.BlueScore,
+			RedAlliance:  m.RedAlliance,
+			BlueAlliance: m.BlueAlliance,
+		}
+
+		if err := s.store.MatchesUpsert([]store.Match{sm}); err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		ihttp.Respond(w, nil, http.StatusCreated)
+	}
+}
+
 // Get new match data from TBA for a particular event. Upsert match data into database.
 func (s *Server) updateMatches(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.store.CheckEventKeyExists(eventKey)
-	if err != nil {
+	err := s.store.CheckTBAEventKeyExists(eventKey)
+	if err == store.ErrManuallyAdded {
+		return nil
+	} else if err != nil {
 		return err
 	}
 
@@ -124,5 +166,6 @@ func (s *Server) updateMatches(eventKey string) error {
 	if err != nil {
 		return err
 	}
+
 	return s.store.MatchesUpsert(fullMatches)
 }
