@@ -21,7 +21,7 @@ expect.extend({
       : () => `expected ${received} to be a valid date string`
     return { pass, message }
   },
-  toBeEqualDates(recieved, expected) {
+  toEqualDate(recieved, expected) {
     const parsedRecievedDate = new Date(recieved)
     const parsedExpectedDate = new Date(expected)
     return {
@@ -187,8 +187,8 @@ test('/events create endpoint', async () => {
     name: event.name,
     district: event.district,
     week: event.week,
-    startDate: expect.toBeEqualDates(event.startDate),
-    endDate: expect.toBeEqualDates(event.endDate),
+    startDate: expect.toEqualDate(event.startDate),
+    endDate: expect.toEqualDate(event.endDate),
     location: event.location,
     webcasts: event.webcasts,
   })
@@ -265,7 +265,7 @@ test('/matches create endpoint', async () => {
 
   expect(d.data).toEqual({
     key: match.key,
-    time: expect.toBeEqualDates(match.time),
+    time: expect.toEqualDate(match.time),
     redScore: match.redScore,
     blueScore: match.blueScore,
     redAlliance: match.redAlliance,

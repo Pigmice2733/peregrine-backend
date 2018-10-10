@@ -6,7 +6,7 @@ import (
 )
 
 // Event holds information about an FRC event such as webcast associated with
-// it, the location, it's start date, and more.
+// it, the location, its start date, and more.
 type Event struct {
 	Key           string    `json:"key"`
 	Name          string    `json:"name"`
