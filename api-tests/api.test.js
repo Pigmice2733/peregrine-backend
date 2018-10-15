@@ -1,6 +1,6 @@
-import fetch from 'node-fetch'
-import jsyaml from 'js-yaml'
-import fs from 'fs'
+const fetch = require('node-fetch')
+const jsyaml = require('js-yaml')
+const fs = require('fs')
 
 expect.extend({
   toBeAnInt(received) {
@@ -21,6 +21,14 @@ expect.extend({
       : () => `expected ${received} to be a valid date string`
     return { pass, message }
   },
+  toEqualDate(recieved, expected) {
+    const parsedRecievedDate = new Date(recieved)
+    const parsedExpectedDate = new Date(expected)
+    return {
+      pass: Number(parsedRecievedDate) === Number(parsedExpectedDate),
+      message: `expected ${recieved} to equal ${expected}`,
+    }
+  },
   toBeA(received, type) {
     try {
       expect(received).toEqual(expect.any(type))
@@ -35,6 +43,38 @@ expect.extend({
     } catch (error) {
       return {
         message: () => `expected ${received} to be a team key`,
+        pass: false,
+      }
+    }
+    return { pass: true }
+  },
+  toBeAMatch(received) {
+    try {
+      expect(received.key).toBeA(String)
+      expect(received.time).toBeADateString()
+      expect(received.redScore).toBeUndefinedOr(Number)
+      expect(received.blueScore).toBeUndefinedOr(Number)
+      expect(received.redAlliance).toEqual(expect.any(Array))
+      expect(received.redAlliance).toHaveLength(3)
+      received.redAlliance.forEach(team => {
+        expect(team).toBeATeamKey()
+      })
+      expect(received.blueAlliance).toEqual(expect.any(Array))
+      expect(received.blueAlliance).toHaveLength(3)
+      received.blueAlliance.forEach(team => {
+        expect(team).toBeATeamKey()
+      })
+      expect(Object.keys(received)).toBeASubsetOf([
+        'key',
+        'time',
+        'redAlliance',
+        'blueAlliance',
+        'redScore',
+        'blueScore',
+      ])
+    } catch (error) {
+      return {
+        message: () => `expected to get a match. failed:\n ${error}`,
         pass: false,
       }
     }
@@ -66,15 +106,18 @@ expect.extend({
 })
 
 const config = jsyaml.safeLoad(
-  fs.readFileSync(`./../etc/config.${process.env.GO_ENV}.yaml`, 'utf8'),
+  fs.readFileSync(
+    `./../etc/config.${process.env.GO_ENV || 'development'}.yaml`,
+    'utf8',
+  ),
 )
 
-const addr = `http://${config.server.httpAddress}/`
+const addr = `http://${config.server.httpAddress}`
 
 const youtubeOrTwitch = /^(youtube|twitch)$/
 
 test('the api is alive', () => {
-  return fetch(addr)
+  return fetch(addr + '/')
 })
 
 test('/events endpoint', async () => {
@@ -100,6 +143,54 @@ test('/events endpoint', async () => {
       'location',
       'district',
     ])
+  })
+})
+
+test('/events create endpoint', async () => {
+  expect(config.seedUser.roles.isAdmin).toBe(true)
+
+  const event = {
+    key: '1970flir',
+    name: 'FLIR x Daimler',
+    district: 'pnw',
+    week: 4,
+    startDate: '1970-01-01T19:46:40-08:00',
+    endDate: '1970-01-02T09:40:00-08:00',
+    location: {
+      name: 'Cleveland High School',
+      lat: 45.498555,
+      lon: -122.6385231,
+    },
+    webcasts: [
+      {
+        type: 'twitch',
+        url: 'https://www.twitch.tv/firstwa_red',
+      },
+    ],
+  }
+
+  const response = await fetch(addr + '/events', {
+    method: 'PUT',
+    body: JSON.stringify(event),
+    headers: {
+      'Content-Type': 'application/json',
+      Authentication: 'Bearer ' + (await getJWT()),
+    },
+  })
+
+  expect(response.status).toBe(201)
+
+  const d = await fetch(addr + `/events/${event.key}/info`).then(d => d.json())
+
+  expect(d.data).toEqual({
+    key: event.key,
+    name: event.name,
+    district: event.district,
+    week: event.week,
+    startDate: expect.toEqualDate(event.startDate),
+    endDate: expect.toEqualDate(event.endDate),
+    location: event.location,
+    webcasts: event.webcasts,
   })
 })
 
@@ -141,56 +232,133 @@ test('/events/{eventKey}/matches endpoint', async () => {
   expect(d).toEqual({ data: expect.any(Array) })
   expect(d.data.length).toBeGreaterThan(1)
   d.data.forEach(match => {
-    expect(match.key).toBeA(String)
-    expect(match.time).toBeADateString()
-    expect(match.redScore).toBeUndefinedOr(Number)
-    expect(match.blueScore).toBeUndefinedOr(Number)
-    expect(match.redAlliance).toEqual(expect.any(Array))
-    expect(match.redAlliance).toHaveLength(3)
-    match.redAlliance.forEach(team => {
-      expect(team).toBeATeamKey()
-    })
-    expect(match.blueAlliance).toEqual(expect.any(Array))
-    expect(match.blueAlliance).toHaveLength(3)
-    match.blueAlliance.forEach(team => {
-      expect(team).toBeATeamKey()
-    })
-    expect(Object.keys(match)).toBeASubsetOf([
-      'key',
-      'time',
-      'redAlliance',
-      'blueAlliance',
-      'redScore',
-      'blueScore',
-    ])
+    expect(match).toBeAMatch()
+  })
+})
+
+test('/matches create endpoint', async () => {
+  expect(config.seedUser.roles.isAdmin).toBe(true)
+
+  const match = {
+    key: 'foo123',
+    time: '2018-03-09T11:00:13-08:00',
+    redScore: 368,
+    blueScore: 74,
+    redAlliance: ['frc1592', 'frc5722', 'frc1421'],
+    blueAlliance: ['frc6322', 'frc4024', 'frc5283'],
+  }
+
+  const response = await fetch(addr + '/events/2018flor/matches', {
+    method: 'PUT',
+    body: JSON.stringify(match),
+    headers: {
+      'Content-Type': 'application/json',
+      Authentication: 'Bearer ' + (await getJWT()),
+    },
+  })
+
+  expect(response.status).toBe(201)
+
+  const d = await fetch(
+    addr + `/events/2018flor/matches/${match.key}/info`,
+  ).then(d => d.json())
+
+  expect(d.data).toEqual({
+    key: match.key,
+    time: expect.toEqualDate(match.time),
+    redScore: match.redScore,
+    blueScore: match.blueScore,
+    redAlliance: match.redAlliance,
+    blueAlliance: match.blueAlliance,
   })
 })
 
 test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
-  const d = await fetch(
-    addr + '/events/2018flor/matches/2018flor_qm28/info',
-  ).then(d => d.json())
+  const d = await fetch(addr + '/events/2018flor/matches/qm28/info').then(d =>
+    d.json(),
+  )
   const info = d.data
-  expect(info.key).toEqual('2018flor_qm28')
-  expect(info.time).toBeADateString()
-  expect(info.redScore).toBeUndefinedOr(Number)
-  expect(info.blueScore).toBeUndefinedOr(Number)
-  expect(info.redAlliance).toEqual(expect.any(Array))
-  expect(info.redAlliance).toHaveLength(3)
-  info.redAlliance.forEach(team => {
-    expect(team).toBeATeamKey()
+  expect(info).toBeAMatch()
+})
+
+test('/events/{eventKey}/teams endpoint', async () => {
+  const d = await fetch(addr + '/events/2018flor/teams').then(d => d.json())
+  const teams = d.data
+  expect(teams.length).toBeGreaterThan(0)
+  expect(teams).toEqual(expect.any(Array))
+  expect(teams[0]).toEqual(expect.any(String))
+})
+
+test('/events/{eventKey}/teams/{teamKey}/info endpoint', async () => {
+  const d = await fetch(addr + '/events/2018flor/teams/frc1065/info').then(d =>
+    d.json(),
+  )
+  const info = d.data
+  expect(info.rank).toBeUndefinedOr(Number)
+  expect(info.rankingScore).toBeUndefinedOr(Number)
+  expect(info.nextMatch).toBeUndefinedOr(Object)
+  if (info.nextMatch !== undefined) {
+    expect(info.nextMatch).toBeAMatch()
+  }
+  expect(Object.keys(info)).toBeASubsetOf(['nextMatch', 'rank', 'rankingScore'])
+})
+
+test('/authenticate route', async () => {
+  const response = await fetch(addr + '/authenticate', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: config.seedUser.username,
+      password: config.seedUser.password,
+    }),
+    headers: { 'Content-Type': 'application/json' },
   })
-  expect(info.blueAlliance).toEqual(expect.any(Array))
-  expect(info.blueAlliance).toHaveLength(3)
-  info.blueAlliance.forEach(team => {
-    expect(team).toBeATeamKey()
+
+  expect(response.status).toBe(200)
+
+  const d = await response.json()
+  expect(d.data.jwt).toBeA(String)
+})
+
+test('/authenticate route with incorrect auth info', async () => {
+  const response = await fetch(addr + '/authenticate', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: config.seedUser.username,
+      password: config.seedUser.password + 'a',
+    }),
+    headers: { 'Content-Type': 'application/json' },
   })
-  expect(Object.keys(info)).toBeASubsetOf([
-    'key',
-    'time',
-    'redAlliance',
-    'blueAlliance',
-    'redScore',
-    'blueScore',
-  ])
+
+  expect(response.status).toBe(401)
+})
+
+const getJWT = async () => {
+  const d = await fetch(addr + '/authenticate', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: config.seedUser.username,
+      password: config.seedUser.password,
+    }),
+    headers: { 'Content-Type': 'application/json' },
+  }).then(d => d.json())
+
+  return d.data.jwt
+}
+
+test('/users create route', async () => {
+  const response = await fetch(addr + '/users', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: 'users-create' + Number(new Date()),
+      password: 'password',
+      firstName: 'test',
+      lastName: 'test',
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+      Authentication: 'Bearer ' + (await getJWT()),
+    },
+  })
+
+  expect(response.status).toBe(201)
 })

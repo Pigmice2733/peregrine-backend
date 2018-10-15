@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -70,7 +71,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 			})
 		}
 
-		ihttp.Respond(w, events, nil, http.StatusOK)
+		ihttp.Respond(w, events, http.StatusOK)
 	}
 }
 
@@ -88,7 +89,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 		fullEvent, err := s.store.GetEvent(eventKey)
 		if err != nil {
-			if store.IsNoResultError(err) {
+			if _, ok := err.(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -123,7 +124,33 @@ func (s *Server) eventHandler() http.HandlerFunc {
 		}
 
 		// Using &event so that pointer receivers on embedded types get promoted
-		ihttp.Respond(w, &event, nil, http.StatusOK)
+		ihttp.Respond(w, &event, http.StatusOK)
+	}
+}
+
+func (s *Server) createEventHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var e store.Event
+		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+			ihttp.Error(w, http.StatusUnprocessableEntity)
+			return
+		}
+
+		e.ManuallyAdded = true
+
+		// this is redundant since the route should be admin-protected anyways
+		if !getRoles(r).IsAdmin {
+			s.logger.Printf("Error: got non-admin user on admin-protected route")
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
+		if err := s.store.EventsUpsert([]store.Event{e}); err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		ihttp.Respond(w, nil, http.StatusCreated)
 	}
 }
 
