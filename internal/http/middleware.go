@@ -1,6 +1,9 @@
 package http
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+)
 
 // CORS is a middleware for setting Cross Origin Resource Sharing headers.
 func CORS(next http.Handler, origin string) http.Handler {
@@ -18,6 +21,15 @@ func CORS(next http.Handler, origin string) http.Handler {
 func LimitBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 1000000) // 1 MB
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Log logs information about incoming HTTP requests.
+func Log(next http.Handler, l *log.Logger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		l.Printf("Info: %s request from %s to %s", r.Method, r.RemoteAddr, r.URL.String())
+
 		next.ServeHTTP(w, r)
 	})
 }
