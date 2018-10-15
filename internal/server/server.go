@@ -45,10 +45,10 @@ func New(tba tba.Service, store store.Service, httpAddress, httpsAddress, certFi
 		jwtSecret:    jwtSecret,
 	}
 
-	router := s.registerRoutes()
-	s.handler = gziphandler.GzipHandler(ihttp.CORS(ihttp.LimitBody(router), origin))
-
 	s.logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
+
+	router := s.registerRoutes()
+	s.handler = gziphandler.GzipHandler(ihttp.Log(ihttp.CORS(ihttp.LimitBody(router), origin), s.logger))
 
 	return s
 }
