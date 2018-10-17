@@ -52,6 +52,7 @@ expect.extend({
     try {
       expect(received.key).toBeA(String)
       expect(received.time).toBeADateString()
+      expect(received.scheduledTime).toBeADateString()
       expect(received.redScore).toBeUndefinedOr(Number)
       expect(received.blueScore).toBeUndefinedOr(Number)
       expect(received.redAlliance).toEqual(expect.any(Array))
@@ -67,6 +68,7 @@ expect.extend({
       expect(Object.keys(received)).toBeASubsetOf([
         'key',
         'time',
+        'scheduledTime',
         'redAlliance',
         'blueAlliance',
         'redScore',
@@ -263,9 +265,11 @@ test('/matches create endpoint', async () => {
     addr + `/events/2018flor/matches/${match.key}/info`,
   ).then(d => d.json())
 
+  expect(d.data).toBeAMatch()
   expect(d.data).toEqual({
     key: match.key,
     time: expect.toEqualDate(match.time),
+    scheduledTime: expect.toEqualDate(match.time),
     redScore: match.redScore,
     blueScore: match.blueScore,
     redAlliance: match.redAlliance,

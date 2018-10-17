@@ -293,6 +293,7 @@ func TestGetMatches(t *testing.T) {
 							}
 						},
 						"predicted_time": 1520272800,
+						"time": 1520272800,
 						"actual_time": 1520274000
 					},
 					{
@@ -308,6 +309,7 @@ func TestGetMatches(t *testing.T) {
 							}
 						},
 						"predicted_time": 1525272780,
+						"time": 1525272780,
 						"actual_time": 1525273980
 					}
 				]
@@ -323,6 +325,7 @@ func TestGetMatches(t *testing.T) {
 					Key:           "key1",
 					EventKey:      "2018alhu",
 					PredictedTime: newUnixTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ScheduledTime: newUnixTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
 					ActualTime:    newUnixTime(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
 					RedScore:      newInt(220),
 					BlueScore:     newInt(500),
@@ -333,6 +336,7 @@ func TestGetMatches(t *testing.T) {
 					Key:           "key2",
 					EventKey:      "2018alhu",
 					PredictedTime: newUnixTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
+					ScheduledTime: newUnixTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
 					ActualTime:    newUnixTime(time.Date(2018, 5, 2, 15, 13, 0, 0, time.UTC)),
 					RedScore:      newInt(120),
 					BlueScore:     newInt(600),
@@ -364,6 +368,7 @@ func TestGetMatches(t *testing.T) {
 							}
 						},
 						"predicted_time": 1520272800,
+						"time": 1520272800,
 						"actual_time": 1520274000
 					},
 					{
@@ -378,7 +383,8 @@ func TestGetMatches(t *testing.T) {
 								"team_keys": ["frc2", "frc7", "frc3"]
 							}
 						},
-						"predicted_time": 1525272780,
+						"predicted_time": null,
+						"time": 1525272780,
 						"actual_time": null
 					}
 				]
@@ -394,6 +400,7 @@ func TestGetMatches(t *testing.T) {
 					Key:           "key1",
 					EventKey:      "2018alhu",
 					PredictedTime: newUnixTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ScheduledTime: newUnixTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
 					ActualTime:    newUnixTime(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
 					RedScore:      nil,
 					BlueScore:     nil,
@@ -403,7 +410,8 @@ func TestGetMatches(t *testing.T) {
 				{
 					Key:           "key2",
 					EventKey:      "2018alhu",
-					PredictedTime: newUnixTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
+					PredictedTime: nil,
+					ScheduledTime: newUnixTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
 					ActualTime:    nil,
 					RedScore:      nil,
 					BlueScore:     nil,
