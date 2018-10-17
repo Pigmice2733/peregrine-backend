@@ -19,13 +19,14 @@ type location struct {
 }
 
 type event struct {
-	Key       string         `json:"key"`
-	Name      string         `json:"name"`
-	District  *string        `json:"district,omitempty"`
-	Week      *int           `json:"week,omitempty"`
-	StartDate store.UnixTime `json:"startDate"`
-	EndDate   store.UnixTime `json:"endDate"`
-	Location  location       `json:"location"`
+	Key          string         `json:"key"`
+	Name         string         `json:"name"`
+	District     *string        `json:"district,omitempty"`
+	FullDistrict *string        `json:"fullDistrict,omitempty"`
+	Week         *int           `json:"week,omitempty"`
+	StartDate    store.UnixTime `json:"startDate"`
+	EndDate      store.UnixTime `json:"endDate"`
+	Location     location       `json:"location"`
 }
 
 type webcast struct {
@@ -58,12 +59,13 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		events := []event{}
 		for _, fullEvent := range fullEvents {
 			events = append(events, event{
-				Key:       fullEvent.Key,
-				Name:      fullEvent.Name,
-				District:  fullEvent.District,
-				Week:      fullEvent.Week,
-				StartDate: fullEvent.StartDate,
-				EndDate:   fullEvent.EndDate,
+				Key:          fullEvent.Key,
+				Name:         fullEvent.Name,
+				District:     fullEvent.District,
+				FullDistrict: fullEvent.FullDistrict,
+				Week:         fullEvent.Week,
+				StartDate:    fullEvent.StartDate,
+				EndDate:      fullEvent.EndDate,
 				Location: location{
 					Lat: fullEvent.Location.Lat,
 					Lon: fullEvent.Location.Lon,
@@ -108,12 +110,13 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 		event := webcastEvent{
 			event: event{
-				Key:       fullEvent.Key,
-				Name:      fullEvent.Name,
-				District:  fullEvent.District,
-				Week:      fullEvent.Week,
-				StartDate: fullEvent.StartDate,
-				EndDate:   fullEvent.EndDate,
+				Key:          fullEvent.Key,
+				Name:         fullEvent.Name,
+				District:     fullEvent.District,
+				FullDistrict: fullEvent.FullDistrict,
+				Week:         fullEvent.Week,
+				StartDate:    fullEvent.StartDate,
+				EndDate:      fullEvent.EndDate,
 				Location: location{
 					Name: &fullEvent.Location.Name,
 					Lat:  fullEvent.Location.Lat,

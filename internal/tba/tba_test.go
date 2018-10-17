@@ -109,12 +109,13 @@ func TestGetEvents(t *testing.T) {
 			},
 			events: []store.Event{
 				{
-					Key:       "key1",
-					Name:      "event1",
-					Week:      nil,
-					District:  nil,
-					StartDate: store.NewUnixFromTime(time.Date(2018, 4, 2, 7, 0, 0, 0, time.UTC)),
-					EndDate:   store.NewUnixFromTime(time.Date(2018, 4, 4, 7, 0, 0, 0, time.UTC)),
+					Key:          "key1",
+					Name:         "event1",
+					Week:         nil,
+					District:     nil,
+					FullDistrict: nil,
+					StartDate:    store.NewUnixFromTime(time.Date(2018, 4, 2, 7, 0, 0, 0, time.UTC)),
+					EndDate:      store.NewUnixFromTime(time.Date(2018, 4, 4, 7, 0, 0, 0, time.UTC)),
 					Location: store.Location{
 						Lat:  41.9911025,
 						Lon:  -70.993044,
@@ -142,7 +143,7 @@ func TestGetEvents(t *testing.T) {
 						"short_name": "Event",
 						"district": {
 							"abbreviation": "ABC",
-							"display_name": "Display name, not abbreviation",
+							"display_name": "Full ABC",
 							"key": "a_key",
 							"year": 2018
 						},
@@ -167,7 +168,7 @@ func TestGetEvents(t *testing.T) {
 						"short_name": "",
 						"district": {
 							"abbreviation": "PNW",
-							"display_name": "Display name, not abbreviation",
+							"display_name": "Full PNW",
 							"key": "a_key",
 							"year": 2018
 						},
@@ -196,12 +197,13 @@ func TestGetEvents(t *testing.T) {
 				}
 			},
 			events: []store.Event{{
-				Key:       "key2",
-				Name:      "Event",
-				District:  newString("ABC"),
-				Week:      newInt(5),
-				StartDate: store.NewUnixFromTime(time.Date(2018, 5, 6, 0, 0, 0, 0, time.UTC)),
-				EndDate:   store.NewUnixFromTime(time.Date(2018, 5, 7, 0, 0, 0, 0, time.UTC)),
+				Key:          "key2",
+				Name:         "Event",
+				District:     newString("ABC"),
+				FullDistrict: newString("Full ABC"),
+				Week:         newInt(5),
+				StartDate:    store.NewUnixFromTime(time.Date(2018, 5, 6, 0, 0, 0, 0, time.UTC)),
+				EndDate:      store.NewUnixFromTime(time.Date(2018, 5, 7, 0, 0, 0, 0, time.UTC)),
 				Location: store.Location{
 					Lat:  42.0,
 					Lon:  0.0,
@@ -215,12 +217,13 @@ func TestGetEvents(t *testing.T) {
 					URL:  "https://www.twitch.tv/firstinspires12",
 				}},
 			}, {
-				Key:       "key3",
-				Name:      "PIGMICE_IS_BEST",
-				District:  newString("PNW"),
-				Week:      newInt(2),
-				StartDate: store.NewUnixFromTime(time.Date(2018, 11, 19, 8, 0, 0, 0, time.UTC)),
-				EndDate:   store.NewUnixFromTime(time.Date(2018, 11, 23, 8, 0, 0, 0, time.UTC)),
+				Key:          "key3",
+				Name:         "PIGMICE_IS_BEST",
+				District:     newString("PNW"),
+				FullDistrict: newString("Full PNW"),
+				Week:         newInt(2),
+				StartDate:    store.NewUnixFromTime(time.Date(2018, 11, 19, 8, 0, 0, 0, time.UTC)),
+				EndDate:      store.NewUnixFromTime(time.Date(2018, 11, 23, 8, 0, 0, 0, time.UTC)),
 				Location: store.Location{
 					Lat:  45.52,
 					Lon:  -122.681944,
