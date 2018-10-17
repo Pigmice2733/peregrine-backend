@@ -15,7 +15,7 @@ import (
 type match struct {
 	Key           string          `json:"key"`
 	Time          *store.UnixTime `json:"time"`
-	ScheduledTime *store.UnixTime `json:"scheduledTime"`
+	ScheduledTime *store.UnixTime `json:"scheduledTime,omitempty"`
 	RedScore      *int            `json:"redScore,omitempty"`
 	BlueScore     *int            `json:"blueScore,omitempty"`
 	RedAlliance   []string        `json:"redAlliance"`
@@ -103,13 +103,12 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		// prefix that which needs to be removed before use.
 		key := strings.TrimPrefix(fullMatch.Key, eventKey+"_")
 		match := match{
-			Key:           key,
-			Time:          fullMatch.GetTime(),
-			ScheduledTime: fullMatch.ScheduledTime,
-			RedScore:      fullMatch.RedScore,
-			BlueScore:     fullMatch.BlueScore,
-			RedAlliance:   fullMatch.RedAlliance,
-			BlueAlliance:  fullMatch.BlueAlliance,
+			Key:          key,
+			Time:         fullMatch.GetTime(),
+			RedScore:     fullMatch.RedScore,
+			BlueScore:    fullMatch.BlueScore,
+			RedAlliance:  fullMatch.RedAlliance,
+			BlueAlliance: fullMatch.BlueAlliance,
 		}
 
 		ihttp.Respond(w, match, http.StatusOK)
