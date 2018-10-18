@@ -28,7 +28,7 @@ func (m *Match) GetTime() *UnixTime {
 	return m.ScheduledTime
 }
 
-// GetEventMatches returns all matches from a specfic event. The matches are sorted by ScheduledTime, in increasing order.
+// GetEventMatches returns all matches from a specfic event.
 func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 	var matches []Match
 	rows, err := s.db.Query(`
