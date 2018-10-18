@@ -19,6 +19,7 @@ type Service struct {
 
 type district struct {
 	Abbreviation string `json:"abbreviation"`
+	FullName     string `json:"display_name"`
 }
 
 type webcast struct {
@@ -122,9 +123,10 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 
 	var events []store.Event
 	for _, tbaEvent := range tbaEvents {
-		var district *string
+		var districtAbbreviation, districtFullName *string
 		if tbaEvent.District != nil {
-			district = &tbaEvent.District.Abbreviation
+			districtAbbreviation = &tbaEvent.District.Abbreviation
+			districtFullName = &tbaEvent.District.FullName
 		}
 
 		timeZone, err := time.LoadLocation(tbaEvent.Timezone)
@@ -156,13 +158,14 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 		}
 
 		events = append(events, store.Event{
-			Key:       tbaEvent.Key,
-			Name:      name,
-			District:  district,
-			Week:      tbaEvent.Week,
-			StartDate: store.NewUnixFromTime(startDate),
-			EndDate:   store.NewUnixFromTime(endDate),
-			Webcasts:  webcasts,
+			Key:          tbaEvent.Key,
+			Name:         name,
+			District:     districtAbbreviation,
+			FullDistrict: districtFullName,
+			Week:         tbaEvent.Week,
+			StartDate:    store.NewUnixFromTime(startDate),
+			EndDate:      store.NewUnixFromTime(endDate),
+			Webcasts:     webcasts,
 			Location: store.Location{
 				Lat:  tbaEvent.Lat,
 				Lon:  tbaEvent.Lng,

@@ -134,6 +134,7 @@ test('/events endpoint', async () => {
     expect(event.location.lon).toBeA(Number)
     expect(event.key).toBeA(String)
     expect(event.district).toBeUndefinedOr(String)
+    expect(event.fullDistrict).toBeUndefinedOr(String)
     expect(event.week).toBeUndefinedOr(Number)
     expect(Object.keys(event)).toBeASubsetOf([
       'key',
@@ -143,6 +144,7 @@ test('/events endpoint', async () => {
       'endDate',
       'location',
       'district',
+      'fullDistrict',
     ])
   })
 })
@@ -154,6 +156,7 @@ test('/events create endpoint', async () => {
     key: '1970flir',
     name: 'FLIR x Daimler',
     district: 'pnw',
+    fullDistrict: 'Pacific Northwest',
     week: 4,
     startDate: '1970-01-01T19:46:40-08:00',
     endDate: '1970-01-02T09:40:00-08:00',
@@ -187,6 +190,7 @@ test('/events create endpoint', async () => {
     key: event.key,
     name: event.name,
     district: event.district,
+    fullDistrict: event.fullDistrict,
     week: event.week,
     startDate: expect.toEqualDate(event.startDate),
     endDate: expect.toEqualDate(event.endDate),
@@ -208,6 +212,7 @@ test('/events/{eventKey}/info endpoint', async () => {
   expect(info.location.lon).toBeA(Number)
   expect(info.key).toBeA(String)
   expect(info.district).toBeUndefinedOr(String)
+  expect(info.fullDistrict).toBeUndefinedOr(String)
   expect(info.week).toBeUndefinedOr(Number)
   expect(info.webcasts).toEqual(expect.any(Array))
   info.webcasts.forEach(webcast => {
@@ -224,6 +229,7 @@ test('/events/{eventKey}/info endpoint', async () => {
     'endDate',
     'location',
     'district',
+    'fullDistrict',
     'webcasts',
   ])
 })

@@ -11,6 +11,7 @@ type Event struct {
 	Key           string    `json:"key"`
 	Name          string    `json:"name"`
 	District      *string   `json:"district"`
+	FullDistrict  *string   `json:"fullDistrict"`
 	Week          *int      `json:"week"`
 	ManuallyAdded bool      `json:"manuallyAdded"`
 	StartDate     UnixTime  `json:"startDate"`
@@ -45,7 +46,7 @@ type Location struct {
 // GetEvents returns all events from the database. event.Webcasts will be nil for every event.
 func (s *Service) GetEvents() ([]Event, error) {
 	var events []Event
-	rows, err := s.db.Query("SELECT key, name, district, week, manually_added, start_date, end_date, location_name, lat, lon FROM events")
+	rows, err := s.db.Query("SELECT key, name, district, full_district, week, manually_added, start_date, end_date, location_name, lat, lon FROM events")
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +55,7 @@ func (s *Service) GetEvents() ([]Event, error) {
 	for rows.Next() {
 		var event Event
 		event.Location = Location{}
-		if err := rows.Scan(&event.Key, &event.Name, &event.District, &event.Week, &event.ManuallyAdded, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
+		if err := rows.Scan(&event.Key, &event.Name, &event.District, &event.FullDistrict, &event.Week, &event.ManuallyAdded, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
 			return nil, err
 		}
 
@@ -90,8 +91,8 @@ func (s *Service) CheckTBAEventKeyExists(eventKey string) error {
 // GetEvent retrieves a specific event.
 func (s *Service) GetEvent(eventKey string) (Event, error) {
 	event := Event{Key: eventKey, Location: Location{}}
-	if err := s.db.QueryRow("SELECT name, district, week, manually_added, start_date, end_date, location_name, lat, lon FROM events WHERE key = $1", eventKey).
-		Scan(&event.Name, &event.District, &event.Week, &event.ManuallyAdded, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
+	if err := s.db.QueryRow("SELECT name, district, full_district, week, manually_added, start_date, end_date, location_name, lat, lon FROM events WHERE key = $1", eventKey).
+		Scan(&event.Name, &event.District, &event.FullDistrict, &event.Week, &event.ManuallyAdded, &event.StartDate, &event.EndDate, &event.Location.Name, &event.Location.Lat, &event.Location.Lon); err != nil {
 		if err == sql.ErrNoRows {
 			return event, ErrNoResults(err)
 		}
@@ -125,12 +126,12 @@ func (s *Service) EventsUpsert(events []Event) error {
 	}
 
 	eventStmt, err := tx.Prepare(`
-		INSERT INTO events (key, name, district, week, manually_added, start_date, end_date, location_name, lat, lon)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO events (key, name, district, full_district, week, manually_added, start_date, end_date, location_name, lat, lon)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		ON CONFLICT (key)
 		DO
 			UPDATE
-				SET name = $2, district = $3, week = $4, manually_added = $5, start_date = $6, end_date = $7, location_name = $8, lat = $9, lon = $10
+				SET name = $2, district = $3, full_district = $4, week = $5, manually_added = $6, start_date = $7, end_date = $8, location_name = $9, lat = $10, lon = $11
 	`)
 	if err != nil {
 		_ = tx.Rollback()
@@ -158,7 +159,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 	defer webcastStmt.Close()
 
 	for _, event := range events {
-		if _, err = eventStmt.Exec(event.Key, event.Name, event.District, event.Week, event.ManuallyAdded, &event.StartDate, &event.EndDate,
+		if _, err = eventStmt.Exec(event.Key, event.Name, event.District, event.FullDistrict, event.Week, event.ManuallyAdded, &event.StartDate, &event.EndDate,
 			event.Location.Name, event.Location.Lat, event.Location.Lon); err != nil {
 			_ = tx.Rollback()
 			return err
