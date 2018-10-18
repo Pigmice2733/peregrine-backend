@@ -51,6 +51,7 @@ type match struct {
 	Key           string `json:"key"`
 	PredictedTime int64  `json:"predicted_time"`
 	ActualTime    int64  `json:"actual_time"`
+	ScheduledTime int64  `json:"time"`
 	Alliances     struct {
 		Red  alliance `json:"red"`
 		Blue alliance `json:"blue"`
@@ -198,6 +199,7 @@ func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
 	for _, tbaMatch := range tbaMatches {
 		var predictedTime *store.UnixTime
 		var actualTime *store.UnixTime
+		var scheduledTime *store.UnixTime
 
 		if tbaMatch.PredictedTime != 0 {
 			timestamp := store.NewUnixFromInt(tbaMatch.PredictedTime)
@@ -207,6 +209,11 @@ func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
 		if tbaMatch.ActualTime != 0 {
 			timestamp := store.NewUnixFromInt(int64(tbaMatch.ActualTime))
 			actualTime = &timestamp
+		}
+
+		if tbaMatch.ScheduledTime != 0 {
+			timestamp := store.NewUnixFromInt(int64(tbaMatch.ScheduledTime))
+			scheduledTime = &timestamp
 		}
 
 		var redScore, blueScore *int
@@ -222,6 +229,7 @@ func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
 			EventKey:      eventKey,
 			PredictedTime: predictedTime,
 			ActualTime:    actualTime,
+			ScheduledTime: scheduledTime,
 			RedScore:      redScore,
 			BlueScore:     blueScore,
 			RedAlliance:   tbaMatch.Alliances.Red.TeamKeys,

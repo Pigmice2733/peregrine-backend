@@ -13,12 +13,13 @@ import (
 )
 
 type match struct {
-	Key          string          `json:"key"`
-	Time         *store.UnixTime `json:"time"`
-	RedScore     *int            `json:"redScore,omitempty"`
-	BlueScore    *int            `json:"blueScore,omitempty"`
-	RedAlliance  []string        `json:"redAlliance"`
-	BlueAlliance []string        `json:"blueAlliance"`
+	Key           string          `json:"key"`
+	Time          *store.UnixTime `json:"time"`
+	ScheduledTime *store.UnixTime `json:"scheduledTime,omitempty"`
+	RedScore      *int            `json:"redScore,omitempty"`
+	BlueScore     *int            `json:"blueScore,omitempty"`
+	RedAlliance   []string        `json:"redAlliance"`
+	BlueAlliance  []string        `json:"blueAlliance"`
 }
 
 // matchesHandler returns a handler to get all matches at a given event.
@@ -51,12 +52,13 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			// prefix that which needs to be removed before use.
 			key := strings.TrimPrefix(fullMatch.Key, eventKey+"_")
 			matches = append(matches, match{
-				Key:          key,
-				Time:         fullMatch.GetTime(),
-				RedScore:     fullMatch.RedScore,
-				BlueScore:    fullMatch.BlueScore,
-				RedAlliance:  fullMatch.RedAlliance,
-				BlueAlliance: fullMatch.BlueAlliance,
+				Key:           key,
+				Time:          fullMatch.GetTime(),
+				ScheduledTime: fullMatch.ScheduledTime,
+				RedScore:      fullMatch.RedScore,
+				BlueScore:     fullMatch.BlueScore,
+				RedAlliance:   fullMatch.RedAlliance,
+				BlueAlliance:  fullMatch.BlueAlliance,
 			})
 		}
 
@@ -134,13 +136,14 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 		}
 
 		sm := store.Match{
-			Key:          m.Key,
-			EventKey:     eventKey,
-			ActualTime:   m.Time,
-			RedScore:     m.RedScore,
-			BlueScore:    m.BlueScore,
-			RedAlliance:  m.RedAlliance,
-			BlueAlliance: m.BlueAlliance,
+			Key:           m.Key,
+			EventKey:      eventKey,
+			ActualTime:    m.Time,
+			ScheduledTime: m.Time,
+			RedScore:      m.RedScore,
+			BlueScore:     m.BlueScore,
+			RedAlliance:   m.RedAlliance,
+			BlueAlliance:  m.BlueAlliance,
 		}
 
 		if err := s.store.MatchesUpsert([]store.Match{sm}); err != nil {
