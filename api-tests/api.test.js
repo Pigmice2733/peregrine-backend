@@ -67,6 +67,7 @@ expect.extend({
       expect(Object.keys(received)).toBeASubsetOf([
         'key',
         'time',
+        'scheduledTime',
         'redAlliance',
         'blueAlliance',
         'redScore',
@@ -233,6 +234,7 @@ test('/events/{eventKey}/matches endpoint', async () => {
   expect(d.data.length).toBeGreaterThan(1)
   d.data.forEach(match => {
     expect(match).toBeAMatch()
+    expect(match.scheduledTime).toBeADateString()
   })
 })
 
@@ -263,6 +265,8 @@ test('/matches create endpoint', async () => {
     addr + `/events/2018flor/matches/${match.key}/info`,
   ).then(d => d.json())
 
+  expect(d.data).toBeAMatch()
+  expect(d.data.scheduledTime).toBeUndefined()
   expect(d.data).toEqual({
     key: match.key,
     time: expect.toEqualDate(match.time),
@@ -278,6 +282,7 @@ test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
     d.json(),
   )
   const info = d.data
+  expect(info.scheduledTime).toBeUndefined()
   expect(info).toBeAMatch()
 })
 
@@ -298,6 +303,7 @@ test('/events/{eventKey}/teams/{teamKey}/info endpoint', async () => {
   expect(info.rankingScore).toBeUndefinedOr(Number)
   expect(info.nextMatch).toBeUndefinedOr(Object)
   if (info.nextMatch !== undefined) {
+    expect(info.nextMatch.scheduledTime).toBeUndefined()
     expect(info.nextMatch).toBeAMatch()
   }
   expect(Object.keys(info)).toBeASubsetOf(['nextMatch', 'rank', 'rankingScore'])
