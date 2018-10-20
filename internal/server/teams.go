@@ -5,10 +5,9 @@ import (
 	"strings"
 	"time"
 
+	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
-
-	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 )
 
 type team struct {
@@ -30,14 +29,14 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: updating team key data: %v\n", err)
+			go s.logger.WithError(err).Error("updating team key data")
 			return
 		}
 
 		teamKeys, err := s.store.GetTeamKeys(eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: retrieving team key data: %v\n", err)
+			go s.logger.WithError(err).Error("retrieving team key data")
 			return
 		}
 
@@ -63,7 +62,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: updating team rankings data: %v\n", err)
+			go s.logger.WithError(err).Error("updating team rankings data")
 			return
 		}
 
@@ -74,14 +73,14 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: retrieving team rankings data: %v\n", err)
+			go s.logger.WithError(err).Error("retrieving team rankings data")
 			return
 		}
 
 		fullMatches, err := s.store.GetTeamMatches(eventKey, teamKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: retrieving team match data: %v\n", err)
+			go s.logger.WithError(err).Error("retrieving team match data")
 			return
 		}
 

@@ -7,14 +7,12 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
+	"github.com/Pigmice2733/peregrine-backend/internal/config"
+	"github.com/Pigmice2733/peregrine-backend/internal/server"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/pkg/errors"
-
-	"github.com/Pigmice2733/peregrine-backend/internal/config"
-	"github.com/Pigmice2733/peregrine-backend/internal/server"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
@@ -77,6 +75,8 @@ func run(basePath string) error {
 	server := server.New(
 		tba,
 		s,
+		os.Stdout,
+		c.Server.LogJSON,
 		c.Server.HTTPAddress,
 		c.Server.HTTPSAddress,
 		c.Server.CertFile,

@@ -6,10 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
-
-	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 )
 
 type match struct {
@@ -35,14 +34,14 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: updating match data: %v\n", err)
+			go s.logger.WithError(err).Error("updating match data")
 			return
 		}
 
 		fullMatches, err := s.store.GetEventMatches(eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: retrieving match data: %v\n", err)
+			go s.logger.WithError(err).Error("retrieving event matches")
 			return
 		}
 
@@ -84,7 +83,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: updating match data: %v\n", err)
+			go s.logger.WithError(err).Error("updating match data")
 			return
 		}
 
@@ -95,7 +94,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: retrieving match data: %v\n", err)
+			go s.logger.WithError(err).Error("retrieving match")
 			return
 		}
 
@@ -130,8 +129,9 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 		m.Key = fmt.Sprintf("%s_%s", eventKey, m.Key)
 
 		// this is redundant since the route should be admin-protected anyways
-		if !getRoles(r).IsAdmin {
+		if !ihttp.GetRoles(r).IsAdmin {
 			ihttp.Error(w, http.StatusForbidden)
+			go s.logger.Error("got non-admin user on admin-protected route")
 			return
 		}
 
@@ -148,6 +148,7 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 
 		if err := s.store.MatchesUpsert([]store.Match{sm}); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
+			go s.logger.WithError(err).Error("upserting match")
 			return
 		}
 
