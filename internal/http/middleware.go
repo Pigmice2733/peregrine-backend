@@ -88,18 +88,18 @@ func Auth(next http.HandlerFunc, jwtSecret []byte) http.HandlerFunc {
 			return jwtSecret, nil
 		})
 		if err != nil {
-			Error(w, http.StatusForbidden)
+			Error(w, http.StatusUnauthorized)
 			return
 		}
 
 		if !token.Valid {
-			Error(w, http.StatusForbidden)
+			Error(w, http.StatusUnauthorized)
 			return
 		}
 
 		claims, ok := token.Claims.(*Claims)
 		if !ok {
-			Error(w, http.StatusForbidden)
+			Error(w, http.StatusUnauthorized)
 			return
 		}
 
