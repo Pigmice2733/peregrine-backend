@@ -98,3 +98,38 @@ func (s *Server) Run() error {
 
 	return <-errs
 }
+
+type listen struct {
+	HTTP  string `json:"http,omitempty"`
+	HTTPS string `json:"https,omitempty"`
+}
+
+type services struct {
+	TBA        bool `json:"tba"`
+	PostgreSQL bool `json:"postgresql"`
+}
+
+type status struct {
+	Listen   listen   `json:"listen"`
+	Services services `json:"services"`
+	Ok       bool     `json:"ok"`
+}
+
+func (s *Server) healthHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tbaHealthy := s.tba.Ping() == nil
+		pgHappy := s.store.Ping() == nil
+
+		ihttp.Respond(w, status{
+			Listen: listen{
+				HTTP:  s.httpAddress,
+				HTTPS: s.httpsAddress,
+			},
+			Services: services{
+				TBA:        tbaHealthy,
+				PostgreSQL: pgHappy,
+			},
+			Ok: tbaHealthy && pgHappy,
+		}, http.StatusOK)
+	}
+}

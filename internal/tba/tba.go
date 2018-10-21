@@ -103,6 +103,12 @@ func webcastURL(webcastType store.WebcastType, channel string) (string, error) {
 	return "", fmt.Errorf("got invalid webcast url")
 }
 
+// Ping pings the TBA /status endpoint
+func (s *Service) Ping() error {
+	_, err := s.makeRequest("/status")
+	return err
+}
+
 // GetEvents retreives all events from the given year (e.g. 2018).
 func (s *Service) GetEvents(year int) ([]store.Event, error) {
 	path := fmt.Sprintf("/events/%d", year)
