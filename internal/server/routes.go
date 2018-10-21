@@ -8,6 +8,8 @@ import (
 func (s *Server) registerRoutes() *mux.Router {
 	r := mux.NewRouter()
 
+	r.Handle("/", s.healthHandler()).Methods("GET")
+
 	r.Handle("/authenticate", s.authenticateHandler()).Methods("POST")
 	r.Handle("/users", ihttp.ACL(s.createUserHandler(), true, false)).Methods("POST")
 

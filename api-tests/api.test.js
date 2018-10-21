@@ -117,8 +117,16 @@ const addr = `http://${config.server.httpAddress}`
 
 const youtubeOrTwitch = /^(youtube|twitch)$/
 
-test('the api is alive', () => {
+test('the api is listening', () => {
   return fetch(addr + '/')
+})
+
+test('the api is healthy', async () => {
+  const d = await fetch(addr + '/').then(d => d.json())
+  expect(d.data.ok).toBe(true)
+  expect(d.data.listen.http).toBe(config.server.httpAddress)
+  expect(d.data.services.tba).toBe(true)
+  expect(d.data.services.postgresql).toBe(true)
 })
 
 test('/events endpoint', async () => {

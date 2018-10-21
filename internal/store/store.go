@@ -43,6 +43,17 @@ func New(o Options) (Service, error) {
 	return Service{db: db}, db.Ping()
 }
 
+// Ping pings the underlying postgresql database. You would think we would call
+// db.Ping() here, but that doesn't actually Ping the database because reasons.
+func (s *Service) Ping() error {
+	if s.db != nil {
+		_, err := s.db.Query("SELECT 1")
+		return err
+	}
+
+	return fmt.Errorf("not connected to postgresql")
+}
+
 // UnixTime exists so that we can have times that look like time.Time's to
 // database drivers and JSON marshallers/unmarshallers but are internally
 // represented as unix timestamps for easier comparison.
