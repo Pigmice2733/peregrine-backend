@@ -39,44 +39,29 @@ func (r *Roles) Scan(src interface{}) error {
 // User holds information about a user such as their id, username, and hashed
 // password.
 type User struct {
-	ID             int64  `json:"id"`
-	Username       string `json:"username"`
-	HashedPassword string `json:"hashedPassword"`
-	FirstName      string `json:"firstName"`
-	LastName       string `json:"lastName"`
-	Roles          Roles  `json:"roles"`
+	ID             int64  `json:"id" db:"id"`
+	Username       string `json:"username" db:"username"`
+	HashedPassword string `json:"hashedPassword" db:"hashed_password"`
+	FirstName      string `json:"firstName" db:"first_name"`
+	LastName       string `json:"lastName" db:"last_name"`
+	Roles          Roles  `json:"roles" db:"roles"`
 }
 
 // GetUser retrieves a user by username.
 func (s *Service) GetUser(username string) (User, error) {
 	var u User
 
-	err := s.db.QueryRow(
-		`SELECT 
-			id, username, hashed_password, first_name, last_name, roles
-			FROM
-				users WHERE username = $1`,
-		username,
-	).Scan(
-		&u.ID,
-		&u.Username,
-		&u.HashedPassword,
-		&u.FirstName,
-		&u.LastName,
-		&u.Roles,
-	)
-
-	return u, err
+	return u, s.db.Get(&u, "SELECT * FROM users WHERE username = $1", username)
 }
 
 // CreateUser creates a given user.
 func (s *Service) CreateUser(u User) error {
-	_, err := s.db.Exec(`
+	_, err := s.db.NamedQuery(`
 	INSERT
 		INTO
 			users (username, hashed_password, first_name, last_name, roles)
-		VALUES ($1, $2, $3, $4, $5)
-	`, u.Username, u.HashedPassword, u.FirstName, u.LastName, u.Roles)
+		VALUES (:username, :hashed_password, :first_name, :last_name, :roles)
+	`, u)
 
 	if err, ok := err.(*pq.Error); ok {
 		if err.Code == pgExists {
