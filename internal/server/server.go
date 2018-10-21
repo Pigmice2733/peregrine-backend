@@ -1,20 +1,15 @@
 package server
 
 import (
-	"context"
-	"fmt"
-	"log"
+	"io"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
-	jwt "github.com/dgrijalva/jwt-go"
-
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
+	"github.com/sirupsen/logrus"
 )
 
 // Server is the scouting API server
@@ -28,12 +23,12 @@ type Server struct {
 	keyFile          string
 	jwtSecret        []byte
 	year             int
-	logger           *log.Logger
+	logger           *logrus.Logger
 	eventsLastUpdate *time.Time
 }
 
 // New creates a new Peregrine API server
-func New(tba tba.Service, store store.Service, httpAddress, httpsAddress, certFile, keyFile, origin string, jwtSecret []byte, year int) Server {
+func New(tba tba.Service, store store.Service, logWriter io.Writer, logJSON bool, httpAddress, httpsAddress, certFile, keyFile, origin string, jwtSecret []byte, year int) Server {
 	s := Server{
 		tba:          tba,
 		store:        store,
@@ -45,19 +40,24 @@ func New(tba tba.Service, store store.Service, httpAddress, httpsAddress, certFi
 		jwtSecret:    jwtSecret,
 	}
 
-	s.logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
+	s.logger = logrus.New()
+	s.logger.Out = logWriter
+
+	if logJSON {
+		s.logger.Formatter = &logrus.JSONFormatter{}
+	}
 
 	router := s.registerRoutes()
-	s.handler = gziphandler.GzipHandler(ihttp.Log(ihttp.CORS(ihttp.LimitBody(router), origin), s.logger))
+	s.handler = ihttp.Auth(ihttp.Log(gziphandler.GzipHandler(ihttp.CORS(ihttp.LimitBody(router), origin)), s.logger), s.jwtSecret)
 
 	return s
 }
 
 // Run starts the server, and returns if it runs into an error
 func (s *Server) Run() error {
-	s.logger.Printf("Fetching seed events")
+	s.logger.Info("fetching seed events")
 	if err := s.updateEvents(); err != nil {
-		s.logger.Printf("Error: updating event data on Run: %v\n", err)
+		s.logger.WithError(err).Error("updating event data on server run")
 	}
 
 	httpServer := &http.Server{
@@ -74,7 +74,7 @@ func (s *Server) Run() error {
 	errs := make(chan error)
 
 	go func() {
-		s.logger.Printf("Serving http at: %s\n", s.httpAddress)
+		s.logger.WithField("http_address", s.httpAddress).Info("serving http")
 		errs <- httpServer.ListenAndServe()
 	}()
 
@@ -91,60 +91,10 @@ func (s *Server) Run() error {
 		defer httpsServer.Close()
 
 		go func() {
-			s.logger.Printf("Serving https at: %s\n", s.httpsAddress)
+			s.logger.WithField("https_address", s.httpsAddress).Info("serving https")
 			errs <- httpsServer.ListenAndServeTLS(s.certFile, s.keyFile)
 		}()
 	}
 
 	return <-errs
-}
-
-type claims struct {
-	Roles store.Roles `json:"pigmiceRoles"`
-	jwt.StandardClaims
-}
-
-func (s *Server) authMiddleware(next http.HandlerFunc, optional, requireAdmin bool) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if optional && r.Header.Get("Authentication") == "" {
-			next(w, r)
-			return
-		}
-
-		ss := strings.TrimPrefix(r.Header.Get("Authentication"), "Bearer ")
-		token, err := jwt.ParseWithClaims(ss, &claims{}, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-
-			return s.jwtSecret, nil
-		})
-		if err != nil {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
-		if !token.Valid {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
-		claims, ok := token.Claims.(*claims)
-		if !ok {
-			// this shouldn't happen, so we log it
-			s.logger.Printf("Error: got incorrect claims type: %v\n", err)
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
-		if requireAdmin && !claims.Roles.IsAdmin {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), keyRolesContext, claims.Roles)
-		ctx = context.WithValue(ctx, keySubjectContext, claims.Subject)
-
-		next(w, r.WithContext(ctx))
-	}
 }

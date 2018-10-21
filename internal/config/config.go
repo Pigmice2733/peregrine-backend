@@ -18,6 +18,7 @@ type Config struct {
 		CertFile     string `yaml:"certFile"`
 		Origin       string `yaml:"origin"`
 		Year         int    `yaml:"year"`
+		LogJSON      bool   `yaml:"logJSON"`
 	} `yaml:"server"`
 
 	TBA struct {

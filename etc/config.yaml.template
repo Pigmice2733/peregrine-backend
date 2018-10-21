@@ -1,6 +1,7 @@
 server:
     httpAddress: :8080
     origin: "*"
+    logJSON: false
 
 tba:
     URL: https://www.thebluealliance.com/api/v3

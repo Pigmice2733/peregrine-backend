@@ -6,10 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
-
-	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 )
 
 type location struct {
@@ -45,14 +44,14 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		// Get new event data from TBA if event data is over 24 hours old
 		if err := s.updateEvents(); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: updating event data: %v\n", err)
+			go s.logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
 		fullEvents, err := s.store.GetEvents()
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: retrieving event data: %v\n", err)
+			go s.logger.WithError(err).Error("retrieving event data")
 			return
 		}
 
@@ -83,7 +82,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 		// Get new event data from TBA if event data is over 24 hours old
 		if err := s.updateEvents(); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: updating event data: %v\n", err)
+			go s.logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
@@ -96,7 +95,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: retrieving event data: %v\n", err)
+			go s.logger.WithError(err).Error("unable to retrieve event data")
 			return
 		}
 
@@ -142,9 +141,9 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 		e.ManuallyAdded = true
 
 		// this is redundant since the route should be admin-protected anyways
-		if !getRoles(r).IsAdmin {
-			s.logger.Printf("Error: got non-admin user on admin-protected route")
+		if !ihttp.GetRoles(r).IsAdmin {
 			ihttp.Error(w, http.StatusForbidden)
+			go s.logger.Error("got non-admin user on admin-protected route")
 			return
 		}
 
