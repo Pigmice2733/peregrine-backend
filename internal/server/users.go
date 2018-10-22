@@ -7,19 +7,11 @@ import (
 	"strconv"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-	validator "gopkg.in/go-playground/validator.v9"
-
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	jwt "github.com/dgrijalva/jwt-go"
-)
-
-type contextKey string
-
-const (
-	keyRolesContext   contextKey = "pigmice_roles"
-	keySubjectContext contextKey = "pigmice_subject"
+	"golang.org/x/crypto/bcrypt"
+	validator "gopkg.in/go-playground/validator.v9"
 )
 
 type baseUser struct {
@@ -58,12 +50,12 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
-			s.logger.Printf("Error: comparing hash and password: %v\n", err)
+			go s.logger.WithError(err).Error("comparing user hash and password")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
 
-		ss, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &claims{
+		ss, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.Claims{
 			StandardClaims: jwt.StandardClaims{
 				ExpiresAt: time.Now().Add(time.Hour * 8).Unix(),
 				Subject:   strconv.FormatInt(user.ID, 10),
@@ -71,27 +63,13 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			Roles: user.Roles,
 		}).SignedString(s.jwtSecret)
 		if err != nil {
-			s.logger.Printf("Error: generating jwt signed string: %v\n", err)
+			go s.logger.WithError(err).Error("generating jwt signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
 
 		ihttp.Respond(w, map[string]string{"jwt": ss}, http.StatusOK)
 	}
-}
-
-func getRoles(r *http.Request) store.Roles {
-	contextRoles := r.Context().Value(keyRolesContext)
-	if contextRoles == nil {
-		return store.Roles{}
-	}
-
-	roles, ok := contextRoles.(store.Roles)
-	if !ok {
-		return store.Roles{}
-	}
-
-	return roles
 }
 
 func (s *Server) createUserHandler() http.HandlerFunc {
@@ -110,7 +88,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 		}
 
 		// If the creator user isn't an admin, reset their roles
-		if !getRoles(r).IsAdmin {
+		if !ihttp.GetRoles(r).IsAdmin {
 			ru.Roles = store.Roles{}
 		}
 
@@ -123,7 +101,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcrypt.DefaultCost)
 		if err != nil {
-			s.logger.Printf("Error: hashing user password: %v\n", err)
+			go s.logger.WithError(err).Error("hashing user password")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -135,7 +113,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
 		} else if err != nil {
-			s.logger.Printf("Error: creating new user: %v\n", err)
+			go s.logger.WithError(err).Error("creating new user")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}

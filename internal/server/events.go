@@ -6,10 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
-
-	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 )
 
 type location struct {
@@ -19,13 +18,14 @@ type location struct {
 }
 
 type event struct {
-	Key       string         `json:"key"`
-	Name      string         `json:"name"`
-	District  *string        `json:"district,omitempty"`
-	Week      *int           `json:"week,omitempty"`
-	StartDate store.UnixTime `json:"startDate"`
-	EndDate   store.UnixTime `json:"endDate"`
-	Location  location       `json:"location"`
+	Key          string         `json:"key"`
+	Name         string         `json:"name"`
+	District     *string        `json:"district,omitempty"`
+	FullDistrict *string        `json:"fullDistrict,omitempty"`
+	Week         *int           `json:"week,omitempty"`
+	StartDate    store.UnixTime `json:"startDate"`
+	EndDate      store.UnixTime `json:"endDate"`
+	Location     location       `json:"location"`
 }
 
 type webcast struct {
@@ -44,26 +44,27 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		// Get new event data from TBA if event data is over 24 hours old
 		if err := s.updateEvents(); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: updating event data: %v\n", err)
+			go s.logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
 		fullEvents, err := s.store.GetEvents()
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: retrieving event data: %v\n", err)
+			go s.logger.WithError(err).Error("retrieving event data")
 			return
 		}
 
 		events := []event{}
 		for _, fullEvent := range fullEvents {
 			events = append(events, event{
-				Key:       fullEvent.Key,
-				Name:      fullEvent.Name,
-				District:  fullEvent.District,
-				Week:      fullEvent.Week,
-				StartDate: fullEvent.StartDate,
-				EndDate:   fullEvent.EndDate,
+				Key:          fullEvent.Key,
+				Name:         fullEvent.Name,
+				District:     fullEvent.District,
+				FullDistrict: fullEvent.FullDistrict,
+				Week:         fullEvent.Week,
+				StartDate:    fullEvent.StartDate,
+				EndDate:      fullEvent.EndDate,
 				Location: location{
 					Lat: fullEvent.Location.Lat,
 					Lon: fullEvent.Location.Lon,
@@ -81,7 +82,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 		// Get new event data from TBA if event data is over 24 hours old
 		if err := s.updateEvents(); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: updating event data: %v\n", err)
+			go s.logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
@@ -94,7 +95,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: retrieving event data: %v\n", err)
+			go s.logger.WithError(err).Error("unable to retrieve event data")
 			return
 		}
 
@@ -108,12 +109,13 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 		event := webcastEvent{
 			event: event{
-				Key:       fullEvent.Key,
-				Name:      fullEvent.Name,
-				District:  fullEvent.District,
-				Week:      fullEvent.Week,
-				StartDate: fullEvent.StartDate,
-				EndDate:   fullEvent.EndDate,
+				Key:          fullEvent.Key,
+				Name:         fullEvent.Name,
+				District:     fullEvent.District,
+				FullDistrict: fullEvent.FullDistrict,
+				Week:         fullEvent.Week,
+				StartDate:    fullEvent.StartDate,
+				EndDate:      fullEvent.EndDate,
 				Location: location{
 					Name: &fullEvent.Location.Name,
 					Lat:  fullEvent.Location.Lat,
@@ -139,9 +141,9 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 		e.ManuallyAdded = true
 
 		// this is redundant since the route should be admin-protected anyways
-		if !getRoles(r).IsAdmin {
-			s.logger.Printf("Error: got non-admin user on admin-protected route")
+		if !ihttp.GetRoles(r).IsAdmin {
 			ihttp.Error(w, http.StatusForbidden)
+			go s.logger.Error("got non-admin user on admin-protected route")
 			return
 		}
 

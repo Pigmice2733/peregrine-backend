@@ -6,12 +6,13 @@ import (
 
 // Match holds information about an FRC match at a specific event
 type Match struct {
-	Key           string    `json:"key"`
-	EventKey      string    `json:"eventKey"`
-	PredictedTime *UnixTime `json:"predictedTime"`
-	ActualTime    *UnixTime `json:"actualTime"`
-	RedScore      *int      `json:"redScore"`
-	BlueScore     *int      `json:"blueScore"`
+	Key           string    `json:"key" db:"key"`
+	EventKey      string    `json:"eventKey" db:"event_key"`
+	PredictedTime *UnixTime `json:"predictedTime" db:"predicted_time"`
+	ActualTime    *UnixTime `json:"actualTime" db:"actual_time"`
+	ScheduledTime *UnixTime `json:"scheduledTime" db:"scheduled_time"`
+	RedScore      *int      `json:"redScore" db:"red_score"`
+	BlueScore     *int      `json:"blueScore" db:"blue_score"`
 	RedAlliance   []string  `json:"redAlliance"`
 	BlueAlliance  []string  `json:"blueAlliance"`
 }
@@ -21,44 +22,48 @@ func (m *Match) GetTime() *UnixTime {
 	if m.ActualTime != nil {
 		return m.ActualTime
 	}
-	return m.PredictedTime
+	if m.PredictedTime != nil {
+		return m.PredictedTime
+	}
+	return m.ScheduledTime
 }
 
 // GetEventMatches returns all matches from a specfic event.
 func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 	var matches []Match
-	rows, err := s.db.Query("SELECT key, predicted_time, actual_time, red_score, blue_score FROM matches WHERE event_key = $1", eventKey)
+
+	err := s.db.Select(&matches, `
+		SELECT
+			key, predicted_time, scheduled_time, actual_time, red_score, blue_score
+			FROM matches
+			WHERE event_key = $1`, eventKey)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		match := Match{EventKey: eventKey, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
-		if err := rows.Scan(&match.Key, &match.PredictedTime, &match.ActualTime, &match.RedScore, &match.BlueScore); err != nil {
-			return nil, err
-		}
-
+	for i, match := range matches {
 		match.BlueAlliance, err = s.GetMatchAlliance(match.Key, true)
 		if err != nil {
 			return nil, err
 		}
+
 		match.RedAlliance, err = s.GetMatchAlliance(match.Key, false)
 		if err != nil {
 			return nil, err
 		}
-		matches = append(matches, match)
+
+		matches[i] = match // value vs reference stuff
 	}
 
-	return matches, rows.Err()
+	return matches, nil
 }
 
 // GetTeamMatches returns all matches from a specfic event that include a specific team.
 func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, error) {
 	var matches []Match
-	rows, err := s.db.Query(`
+	err := s.db.Select(&matches, `
 		SELECT
-		    key, predicted_time, actual_time, red_score, blue_score
+		    key, predicted_time, scheduled_time, actual_time, red_score, blue_score
 		FROM matches
 		INNER JOIN alliances
 			ON matches.key = alliances.match_key
@@ -66,66 +71,64 @@ func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		match := Match{EventKey: eventKey, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
-		if err := rows.Scan(&match.Key, &match.PredictedTime, &match.ActualTime, &match.RedScore, &match.BlueScore); err != nil {
-			return nil, err
-		}
-
+	for i, match := range matches {
 		match.BlueAlliance, err = s.GetMatchAlliance(match.Key, true)
 		if err != nil {
 			return nil, err
 		}
+
 		match.RedAlliance, err = s.GetMatchAlliance(match.Key, false)
 		if err != nil {
 			return nil, err
 		}
-		matches = append(matches, match)
+
+		matches[i] = match // value vs reference stuff
 	}
 
-	return matches, rows.Err()
+	return matches, nil
 }
 
 // GetMatch returns a specfic match.
 func (s *Service) GetMatch(matchKey string) (Match, error) {
-	var redScore, blueScore *int
-	match := Match{Key: matchKey, PredictedTime: &UnixTime{}, ActualTime: &UnixTime{}}
-	if err := s.db.QueryRow("SELECT event_key, predicted_time, actual_time, red_score, blue_score FROM matches WHERE key = $1", matchKey).
-		Scan(&match.EventKey, &match.PredictedTime, &match.ActualTime, &redScore, &blueScore); err != nil {
+	var m Match
+	if err := s.db.Get(&m, "SELECT * FROM matches WHERE key = $1", matchKey); err != nil {
 		if err == sql.ErrNoRows {
-			return match, ErrNoResults(err)
+			return m, ErrNoResults(err)
 		}
-		return match, err
+		return m, err
 	}
-
-	match.BlueScore = blueScore
-	match.RedScore = redScore
 
 	var err error
-	match.BlueAlliance, err = s.GetMatchAlliance(match.Key, true)
+	m.BlueAlliance, err = s.GetMatchAlliance(m.Key, true)
 	if err != nil {
-		return match, err
+		return m, err
 	}
-	match.RedAlliance, err = s.GetMatchAlliance(match.Key, false)
-	return match, err
+
+	m.RedAlliance, err = s.GetMatchAlliance(m.Key, false)
+	return m, err
 }
 
 // MatchesUpsert upserts multiple matches and their alliances into the database.
 func (s *Service) MatchesUpsert(matches []Match) error {
-	tx, err := s.db.Begin()
+	tx, err := s.db.Beginx()
 	if err != nil {
 		return err
 	}
 
-	stmt, err := tx.Prepare(`
-		INSERT INTO matches (key, event_key, predicted_time, actual_time, red_score, blue_score)
-		VALUES ($1, $2, $3, $4, $5, $6)
+	stmt, err := tx.PrepareNamed(`
+		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score)
+		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score)
 		ON CONFLICT (key)
 		DO
 			UPDATE
-				SET event_key = $2, predicted_time = $3, actual_time = $4, red_score = $5, blue_score = $6
+				SET
+					event_key = :event_key,
+					predicted_time = :predicted_time,
+					scheduled_time = :scheduled_time,
+					actual_time = :actual_time,
+					red_score = :red_score,
+					blue_score = :blue_score
 	`)
 	if err != nil {
 		_ = tx.Rollback()
@@ -134,7 +137,7 @@ func (s *Service) MatchesUpsert(matches []Match) error {
 	defer stmt.Close()
 
 	for _, match := range matches {
-		if _, err = stmt.Exec(match.Key, match.EventKey, match.PredictedTime, match.ActualTime, match.RedScore, match.BlueScore); err != nil {
+		if _, err = stmt.Exec(match); err != nil {
 			_ = tx.Rollback()
 			return err
 		}

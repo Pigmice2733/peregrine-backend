@@ -6,19 +6,19 @@ import (
 	"net/http"
 	"strings"
 
+	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
-
-	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 )
 
 type match struct {
-	Key          string          `json:"key"`
-	Time         *store.UnixTime `json:"time"`
-	RedScore     *int            `json:"redScore,omitempty"`
-	BlueScore    *int            `json:"blueScore,omitempty"`
-	RedAlliance  []string        `json:"redAlliance"`
-	BlueAlliance []string        `json:"blueAlliance"`
+	Key           string          `json:"key"`
+	Time          *store.UnixTime `json:"time"`
+	ScheduledTime *store.UnixTime `json:"scheduledTime,omitempty"`
+	RedScore      *int            `json:"redScore,omitempty"`
+	BlueScore     *int            `json:"blueScore,omitempty"`
+	RedAlliance   []string        `json:"redAlliance"`
+	BlueAlliance  []string        `json:"blueAlliance"`
 }
 
 // matchesHandler returns a handler to get all matches at a given event.
@@ -34,14 +34,14 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: updating match data: %v\n", err)
+			go s.logger.WithError(err).Error("updating match data")
 			return
 		}
 
 		fullMatches, err := s.store.GetEventMatches(eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: retrieving match data: %v\n", err)
+			go s.logger.WithError(err).Error("retrieving event matches")
 			return
 		}
 
@@ -51,12 +51,13 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			// prefix that which needs to be removed before use.
 			key := strings.TrimPrefix(fullMatch.Key, eventKey+"_")
 			matches = append(matches, match{
-				Key:          key,
-				Time:         fullMatch.GetTime(),
-				RedScore:     fullMatch.RedScore,
-				BlueScore:    fullMatch.BlueScore,
-				RedAlliance:  fullMatch.RedAlliance,
-				BlueAlliance: fullMatch.BlueAlliance,
+				Key:           key,
+				Time:          fullMatch.GetTime(),
+				ScheduledTime: fullMatch.ScheduledTime,
+				RedScore:      fullMatch.RedScore,
+				BlueScore:     fullMatch.BlueScore,
+				RedAlliance:   fullMatch.RedAlliance,
+				BlueAlliance:  fullMatch.BlueAlliance,
 			})
 		}
 
@@ -82,7 +83,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: updating match data: %v\n", err)
+			go s.logger.WithError(err).Error("updating match data")
 			return
 		}
 
@@ -93,7 +94,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.logger.Printf("Error: retrieving match data: %v\n", err)
+			go s.logger.WithError(err).Error("retrieving match")
 			return
 		}
 
@@ -128,23 +129,26 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 		m.Key = fmt.Sprintf("%s_%s", eventKey, m.Key)
 
 		// this is redundant since the route should be admin-protected anyways
-		if !getRoles(r).IsAdmin {
+		if !ihttp.GetRoles(r).IsAdmin {
 			ihttp.Error(w, http.StatusForbidden)
+			go s.logger.Error("got non-admin user on admin-protected route")
 			return
 		}
 
 		sm := store.Match{
-			Key:          m.Key,
-			EventKey:     eventKey,
-			ActualTime:   m.Time,
-			RedScore:     m.RedScore,
-			BlueScore:    m.BlueScore,
-			RedAlliance:  m.RedAlliance,
-			BlueAlliance: m.BlueAlliance,
+			Key:           m.Key,
+			EventKey:      eventKey,
+			ActualTime:    m.Time,
+			ScheduledTime: m.Time,
+			RedScore:      m.RedScore,
+			BlueScore:     m.BlueScore,
+			RedAlliance:   m.RedAlliance,
+			BlueAlliance:  m.BlueAlliance,
 		}
 
 		if err := s.store.MatchesUpsert([]store.Match{sm}); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
+			go s.logger.WithError(err).Error("upserting match")
 			return
 		}
 

@@ -19,6 +19,7 @@ type Service struct {
 
 type district struct {
 	Abbreviation string `json:"abbreviation"`
+	FullName     string `json:"display_name"`
 }
 
 type webcast struct {
@@ -50,6 +51,7 @@ type match struct {
 	Key           string `json:"key"`
 	PredictedTime int64  `json:"predicted_time"`
 	ActualTime    int64  `json:"actual_time"`
+	ScheduledTime int64  `json:"time"`
 	Alliances     struct {
 		Red  alliance `json:"red"`
 		Blue alliance `json:"blue"`
@@ -101,6 +103,12 @@ func webcastURL(webcastType store.WebcastType, channel string) (string, error) {
 	return "", fmt.Errorf("got invalid webcast url")
 }
 
+// Ping pings the TBA /status endpoint
+func (s *Service) Ping() error {
+	_, err := s.makeRequest("/status")
+	return err
+}
+
 // GetEvents retreives all events from the given year (e.g. 2018).
 func (s *Service) GetEvents(year int) ([]store.Event, error) {
 	path := fmt.Sprintf("/events/%d", year)
@@ -121,9 +129,10 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 
 	var events []store.Event
 	for _, tbaEvent := range tbaEvents {
-		var district *string
+		var districtAbbreviation, districtFullName *string
 		if tbaEvent.District != nil {
-			district = &tbaEvent.District.Abbreviation
+			districtAbbreviation = &tbaEvent.District.Abbreviation
+			districtFullName = &tbaEvent.District.FullName
 		}
 
 		timeZone, err := time.LoadLocation(tbaEvent.Timezone)
@@ -155,13 +164,14 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 		}
 
 		events = append(events, store.Event{
-			Key:       tbaEvent.Key,
-			Name:      name,
-			District:  district,
-			Week:      tbaEvent.Week,
-			StartDate: store.NewUnixFromTime(startDate),
-			EndDate:   store.NewUnixFromTime(endDate),
-			Webcasts:  webcasts,
+			Key:          tbaEvent.Key,
+			Name:         name,
+			District:     districtAbbreviation,
+			FullDistrict: districtFullName,
+			Week:         tbaEvent.Week,
+			StartDate:    store.NewUnixFromTime(startDate),
+			EndDate:      store.NewUnixFromTime(endDate),
+			Webcasts:     webcasts,
 			Location: store.Location{
 				Lat:  tbaEvent.Lat,
 				Lon:  tbaEvent.Lng,
@@ -195,6 +205,7 @@ func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
 	for _, tbaMatch := range tbaMatches {
 		var predictedTime *store.UnixTime
 		var actualTime *store.UnixTime
+		var scheduledTime *store.UnixTime
 
 		if tbaMatch.PredictedTime != 0 {
 			timestamp := store.NewUnixFromInt(tbaMatch.PredictedTime)
@@ -204,6 +215,11 @@ func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
 		if tbaMatch.ActualTime != 0 {
 			timestamp := store.NewUnixFromInt(int64(tbaMatch.ActualTime))
 			actualTime = &timestamp
+		}
+
+		if tbaMatch.ScheduledTime != 0 {
+			timestamp := store.NewUnixFromInt(int64(tbaMatch.ScheduledTime))
+			scheduledTime = &timestamp
 		}
 
 		var redScore, blueScore *int
@@ -219,6 +235,7 @@ func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
 			EventKey:      eventKey,
 			PredictedTime: predictedTime,
 			ActualTime:    actualTime,
+			ScheduledTime: scheduledTime,
 			RedScore:      redScore,
 			BlueScore:     blueScore,
 			RedAlliance:   tbaMatch.Alliances.Red.TeamKeys,

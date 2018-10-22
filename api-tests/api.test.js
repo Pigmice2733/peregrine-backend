@@ -67,6 +67,7 @@ expect.extend({
       expect(Object.keys(received)).toBeASubsetOf([
         'key',
         'time',
+        'scheduledTime',
         'redAlliance',
         'blueAlliance',
         'redScore',
@@ -116,8 +117,16 @@ const addr = `http://${config.server.httpAddress}`
 
 const youtubeOrTwitch = /^(youtube|twitch)$/
 
-test('the api is alive', () => {
+test('the api is listening', () => {
   return fetch(addr + '/')
+})
+
+test('the api is healthy', async () => {
+  const d = await fetch(addr + '/').then(d => d.json())
+  expect(d.data.ok).toBe(true)
+  expect(d.data.listen.http).toBe(config.server.httpAddress)
+  expect(d.data.services.tba).toBe(true)
+  expect(d.data.services.postgresql).toBe(true)
 })
 
 test('/events endpoint', async () => {
@@ -133,6 +142,7 @@ test('/events endpoint', async () => {
     expect(event.location.lon).toBeA(Number)
     expect(event.key).toBeA(String)
     expect(event.district).toBeUndefinedOr(String)
+    expect(event.fullDistrict).toBeUndefinedOr(String)
     expect(event.week).toBeUndefinedOr(Number)
     expect(Object.keys(event)).toBeASubsetOf([
       'key',
@@ -142,6 +152,7 @@ test('/events endpoint', async () => {
       'endDate',
       'location',
       'district',
+      'fullDistrict',
     ])
   })
 })
@@ -153,6 +164,7 @@ test('/events create endpoint', async () => {
     key: '1970flir',
     name: 'FLIR x Daimler',
     district: 'pnw',
+    fullDistrict: 'Pacific Northwest',
     week: 4,
     startDate: '1970-01-01T19:46:40-08:00',
     endDate: '1970-01-02T09:40:00-08:00',
@@ -186,6 +198,7 @@ test('/events create endpoint', async () => {
     key: event.key,
     name: event.name,
     district: event.district,
+    fullDistrict: event.fullDistrict,
     week: event.week,
     startDate: expect.toEqualDate(event.startDate),
     endDate: expect.toEqualDate(event.endDate),
@@ -207,6 +220,7 @@ test('/events/{eventKey}/info endpoint', async () => {
   expect(info.location.lon).toBeA(Number)
   expect(info.key).toBeA(String)
   expect(info.district).toBeUndefinedOr(String)
+  expect(info.fullDistrict).toBeUndefinedOr(String)
   expect(info.week).toBeUndefinedOr(Number)
   expect(info.webcasts).toEqual(expect.any(Array))
   info.webcasts.forEach(webcast => {
@@ -223,6 +237,7 @@ test('/events/{eventKey}/info endpoint', async () => {
     'endDate',
     'location',
     'district',
+    'fullDistrict',
     'webcasts',
   ])
 })
@@ -233,6 +248,7 @@ test('/events/{eventKey}/matches endpoint', async () => {
   expect(d.data.length).toBeGreaterThan(1)
   d.data.forEach(match => {
     expect(match).toBeAMatch()
+    expect(match.scheduledTime).toBeADateString()
   })
 })
 
@@ -263,6 +279,8 @@ test('/matches create endpoint', async () => {
     addr + `/events/2018flor/matches/${match.key}/info`,
   ).then(d => d.json())
 
+  expect(d.data).toBeAMatch()
+  expect(d.data.scheduledTime).toBeUndefined()
   expect(d.data).toEqual({
     key: match.key,
     time: expect.toEqualDate(match.time),
@@ -278,6 +296,7 @@ test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
     d.json(),
   )
   const info = d.data
+  expect(info.scheduledTime).toBeUndefined()
   expect(info).toBeAMatch()
 })
 
@@ -298,6 +317,7 @@ test('/events/{eventKey}/teams/{teamKey}/info endpoint', async () => {
   expect(info.rankingScore).toBeUndefinedOr(Number)
   expect(info.nextMatch).toBeUndefinedOr(Object)
   if (info.nextMatch !== undefined) {
+    expect(info.nextMatch.scheduledTime).toBeUndefined()
     expect(info.nextMatch).toBeAMatch()
   }
   expect(Object.keys(info)).toBeASubsetOf(['nextMatch', 'rank', 'rankingScore'])

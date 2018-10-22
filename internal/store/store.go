@@ -1,13 +1,12 @@
 package store
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"time"
+	"time" // Register lib/pq PostreSQL driver
 
-	// Register lib/pq PostreSQL driver
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
@@ -16,7 +15,7 @@ type ErrNoResults error
 
 // Service is an interface to manipulate the data store.
 type Service struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
 // Options holds information for connecting to a PostgreSQL instance.
@@ -36,12 +35,23 @@ func (o Options) ConnectionInfo() string {
 
 // New creates a new store service.
 func New(o Options) (Service, error) {
-	db, err := sql.Open("postgres", o.ConnectionInfo())
+	db, err := sqlx.Open("postgres", o.ConnectionInfo())
 	if err != nil {
 		return Service{}, err
 	}
 
 	return Service{db: db}, db.Ping()
+}
+
+// Ping pings the underlying postgresql database. You would think we would call
+// db.Ping() here, but that doesn't actually Ping the database because reasons.
+func (s *Service) Ping() error {
+	if s.db != nil {
+		_, err := s.db.Query("SELECT 1")
+		return err
+	}
+
+	return fmt.Errorf("not connected to postgresql")
 }
 
 // UnixTime exists so that we can have times that look like time.Time's to
@@ -68,6 +78,10 @@ func NewUnixFromInt(time int64) UnixTime {
 // Scan accepts either a time.Time or an int64 for scanning from a database into
 // a unix timestamp.
 func (ut *UnixTime) Scan(src interface{}) error {
+	if ut == nil {
+		return fmt.Errorf("cannot scan into nil unix time")
+	}
+
 	switch v := src.(type) {
 	case time.Time:
 		ut.Unix = v.Unix()
@@ -82,11 +96,8 @@ func (ut *UnixTime) Scan(src interface{}) error {
 
 // Value returns a driver.Value that is always a time.Time that represents the
 // internally stored unix time.
-func (ut *UnixTime) Value() (driver.Value, error) {
-	if ut != nil {
-		return time.Unix(ut.Unix, 0), nil
-	}
-	return nil, nil
+func (ut UnixTime) Value() (driver.Value, error) {
+	return time.Unix(ut.Unix, 0), nil
 }
 
 // MarshalJSON returns a []byte that represents this UnixTime in RFC 3339 format.
