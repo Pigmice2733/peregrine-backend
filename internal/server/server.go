@@ -118,7 +118,7 @@ type status struct {
 func (s *Server) healthHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tbaHealthy := s.tba.Ping() == nil
-		pgHappy := s.store.Ping() == nil
+		pgHealthy := s.store.Ping() == nil
 
 		ihttp.Respond(w, status{
 			Listen: listen{
@@ -127,9 +127,9 @@ func (s *Server) healthHandler() http.HandlerFunc {
 			},
 			Services: services{
 				TBA:        tbaHealthy,
-				PostgreSQL: pgHappy,
+				PostgreSQL: pgHealthy,
 			},
-			Ok: tbaHealthy && pgHappy,
+			Ok: tbaHealthy && pgHealthy,
 		}, http.StatusOK)
 	}
 }

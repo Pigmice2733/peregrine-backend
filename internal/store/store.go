@@ -47,7 +47,8 @@ func New(o Options) (Service, error) {
 // db.Ping() here, but that doesn't actually Ping the database because reasons.
 func (s *Service) Ping() error {
 	if s.db != nil {
-		_, err := s.db.Query("SELECT 1")
+		var alive bool
+		err := s.db.QueryRow("SELECT 1").Scan(&alive)
 		return err
 	}
 
