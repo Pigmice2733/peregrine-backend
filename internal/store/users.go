@@ -56,7 +56,7 @@ func (s *Service) GetUser(username string) (User, error) {
 
 // CreateUser creates a given user.
 func (s *Service) CreateUser(u User) error {
-	_, err := s.db.NamedQuery(`
+	_, err := s.db.NamedExec(`
 	INSERT
 		INTO
 			users (username, hashed_password, first_name, last_name, roles)
