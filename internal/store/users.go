@@ -133,7 +133,7 @@ func (s *Service) GetUsers() ([]User, error) {
 		return nil, errors.Wrap(err, "unable to begin transaction")
 	}
 
-	var users []User
+	users := []User{}
 	if err := tx.Select(&users, "SELECT * FROM users"); err != nil {
 		_ = tx.Rollback()
 		return users, errors.Wrap(err, "unable to select users")

@@ -10,7 +10,7 @@ type Team struct {
 
 // GetTeamKeys retrieves all team keys from an event specified by eventKey.
 func (s *Service) GetTeamKeys(eventKey string) ([]string, error) {
-	var teamKeys []string
+	teamKeys := []string{}
 	return teamKeys, s.db.Select(&teamKeys, "SELECT key FROM teams WHERE event_key = $1", eventKey)
 }
 
