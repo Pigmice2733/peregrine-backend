@@ -333,7 +333,12 @@ describe('users crud endpoints', () => {
   })
 
   test('/users get route', async () => {
-    const resp = await fetch(addr + '/users')
+    const resp = await fetch(addr + '/users', {
+      headers: {
+        'Content-Type': 'application/json',
+        Authentication: 'Bearer ' + (await getJWT()),
+      },
+    })
     expect(resp.status).toBe(200)
 
     const d = await resp.json()
@@ -346,8 +351,18 @@ describe('users crud endpoints', () => {
     user = Object.assign(user, foundUser)
   })
 
+  test('/users get route unauthorized', async () => {
+    const resp = await fetch(addr + '/users')
+    expect(resp.status).toBe(403)
+  })
+
   test('/users/{id} get route', async () => {
-    const resp = await fetch(addr + '/users/' + user.id)
+    const resp = await fetch(addr + '/users/' + user.id, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authentication: 'Bearer ' + (await getJWT()),
+      },
+    })
     expect(resp.status).toBe(200)
 
     const d = await resp.json()
@@ -362,6 +377,12 @@ describe('users crud endpoints', () => {
     })
   })
 
+  test('/users/{id} get route unauthorized', async () => {
+    const resp = await fetch(addr + '/users/' + user.id)
+
+    expect(resp.status).toBe(403)
+  })
+
   test('/users/{id} complete admin patch route', async () => {
     const patchUser = {
       id: user.id,
@@ -369,7 +390,7 @@ describe('users crud endpoints', () => {
       password: user.password + 'b',
       firstName: user.firstName + 'bar',
       lastName: user.lastName + 'foo',
-      stars: (user.stars || []).concat('2018flor_qm28'),
+      stars: (user.stars || []).concat('2018flor'),
       roles: {},
     }
     patchUser.roles.isAdmin = !(user.roles.isAdmin || true)
@@ -406,6 +427,27 @@ describe('users crud endpoints', () => {
     expect(resp.status).toBe(204)
 
     user = Object.assign(user, patchUser)
+  })
+
+  test('/users/{id} get self route', async () => {
+    const resp = await fetch(addr + '/users/' + user.id, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authentication: 'Bearer ' + (await getJWT(user)),
+      },
+    })
+    expect(resp.status).toBe(200)
+
+    const d = await resp.json()
+
+    expect(d.data).toEqual({
+      id: user.id,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      stars: user.stars,
+      roles: { ...user.roles, isAdmin: false },
+    })
   })
 
   test('/users/{id} complete self patch route', async () => {

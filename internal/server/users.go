@@ -148,6 +148,19 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 			return
 		}
 
+		sub, err := ihttp.GetSubject(r)
+		if err != nil {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
+		// if the user is not an admin and their id does not equal the id they
+		// are trying to get, they are forbidden
+		if !ihttp.GetRoles(r).IsAdmin && sub != id {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
 		user, err := s.store.GetUserByID(id)
 		if _, ok := err.(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
@@ -203,7 +216,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 			return
 		}
 
-		u := store.PatchUser{ID: id, Username: ru.Username, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName}
+		u := store.PatchUser{ID: id, Username: ru.Username, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName, Stars: ru.Stars}
 
 		if ru.Password != nil {
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*ru.Password), bcrypt.DefaultCost)
