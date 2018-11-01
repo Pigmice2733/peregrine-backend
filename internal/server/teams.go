@@ -40,10 +40,6 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 			return
 		}
 
-		if teamKeys == nil {
-			teamKeys = []string{}
-		}
-
 		ihttp.Respond(w, teamKeys, http.StatusOK)
 	}
 }
