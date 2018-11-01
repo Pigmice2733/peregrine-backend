@@ -140,6 +140,7 @@ func (s *Service) GetUsers() ([]User, error) {
 	}
 
 	for i, user := range users {
+		user.Stars = []string{}
 		if err := tx.Select(&user.Stars, "SELECT event_key FROM stars WHERE user_id = $1", user.ID); err != nil {
 			_ = tx.Rollback()
 			return users, errors.Wrap(err, "unable to select stars for user")
@@ -165,6 +166,7 @@ func (s *Service) GetUserByID(id int64) (User, error) {
 		return u, errors.Wrap(err, "unable to select users")
 	}
 
+	u.Stars = []string{}
 	if err := tx.Select(&u.Stars, "SELECT event_key FROM stars WHERE user_id = $1", id); err != nil {
 		_ = tx.Rollback()
 		return u, errors.Wrap(err, "unable to select stars for user")
