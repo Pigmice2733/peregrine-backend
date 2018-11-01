@@ -28,7 +28,7 @@ func (m *Match) GetTime() *UnixTime {
 	return m.ScheduledTime
 }
 
-// GetEventMatches returns all matches from a specfic event.
+// GetEventMatches returns all matches from a specific event.
 func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 	var matches []Match
 
@@ -58,7 +58,7 @@ func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 	return matches, nil
 }
 
-// GetTeamMatches returns all matches from a specfic event that include a specific team.
+// GetTeamMatches returns all matches from a specific event that include a specific team.
 func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, error) {
 	var matches []Match
 	err := s.db.Select(&matches, `
@@ -89,7 +89,7 @@ func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, erro
 	return matches, nil
 }
 
-// GetMatch returns a specfic match.
+// GetMatch returns a specific match.
 func (s *Service) GetMatch(matchKey string) (Match, error) {
 	var m Match
 	if err := s.db.Get(&m, "SELECT * FROM matches WHERE key = $1", matchKey); err != nil {

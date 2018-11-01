@@ -4,7 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"time" 
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Register lib/pq PostreSQL driver
