@@ -101,7 +101,7 @@ describe('events endpoints', () => {
 
     expect(resp.status).toBe(201)
 
-    const respInfo = await fetch(addr + `/events/${event.key}/info`)
+    const respInfo = await fetch(addr + `/events/${event.key}`)
     expect(respInfo.status).toBe(200)
 
     const d = await respInfo.json()
@@ -119,8 +119,8 @@ describe('events endpoints', () => {
     })
   })
 
-  test('/events/{eventKey}/info endpoint', async () => {
-    const resp = await fetch(addr + '/events/2018flor/info')
+  test('/events/{eventKey} endpoint', async () => {
+    const resp = await fetch(addr + '/events/2018flor')
     expect(resp.status).toBe(200)
 
     const d = await resp.json()
@@ -197,9 +197,7 @@ describe('match endpoints', () => {
 
     expect(resp.status).toBe(201)
 
-    const respGet = await fetch(
-      addr + `/events/2018flor/matches/${match.key}/info`,
-    )
+    const respGet = await fetch(addr + `/events/2018flor/matches/${match.key}`)
     expect(respGet.status).toBe(200)
 
     const d = await respGet.json()
@@ -216,8 +214,8 @@ describe('match endpoints', () => {
     })
   })
 
-  test('/events/{eventKey}/matches/{matchKey}/info endpoint', async () => {
-    const resp = await fetch(addr + '/events/2018flor/matches/qm28/info')
+  test('/events/{eventKey}/matches/{matchKey} endpoint', async () => {
+    const resp = await fetch(addr + '/events/2018flor/matches/qm28')
     expect(resp.status).toBe(200)
 
     const d = await resp.json()
@@ -241,8 +239,8 @@ describe('team endpoints', () => {
     expect(teams[0]).toEqual(expect.any(String))
   })
 
-  test('/events/{eventKey}/teams/{teamKey}/info endpoint', async () => {
-    const resp = await fetch(addr + '/events/2018flor/teams/frc1065/info')
+  test('/events/{eventKey}/teams/{teamKey} endpoint', async () => {
+    const resp = await fetch(addr + '/events/2018flor/teams/frc1065')
     expect(resp.status).toBe(200)
 
     const d = await resp.json()
