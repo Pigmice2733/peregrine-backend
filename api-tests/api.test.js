@@ -207,6 +207,24 @@ describe('match endpoints', () => {
     })
   })
 
+  test('/events/{eventKey}/matches endpoint with filter for multiple teams on opposite alliances', async () => {
+    const resp = await fetch(
+      addr + '/events/2018flor/matches?team=frc180&team=frc1902',
+    )
+    expect(resp.status).toBe(200)
+
+    const d = await resp.json()
+
+    expect(d).toEqual({ data: expect.any(Array) })
+    expect(d.data.length).toBeGreaterThan(2)
+    d.data.forEach(match => {
+      expect(match).toBeAMatch()
+      expect(match.scheduledTime).toBeADateString()
+      expect(match).toIncludeTeam('frc180')
+      expect(match).toIncludeTeam('frc1902')
+    })
+  })
+
   test('/matches create endpoint', async () => {
     expect(config.seedUser.roles.isAdmin).toBe(true)
 
