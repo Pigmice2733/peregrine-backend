@@ -77,6 +77,18 @@ module.exports = {
     }
     return { pass: true }
   },
+  toIncludeTeam(received, team) {
+    if (
+      received.blueAlliance.includes(team) ||
+      received.redAlliance.includes(team)
+    ) {
+      return { pass: true }
+    }
+    return {
+      message: () => `expected match ${received} to include team ${team}`,
+      pass: false,
+    }
+  },
   toBeUndefinedOr(received, type) {
     if (received === undefined) {
       return { pass: true }

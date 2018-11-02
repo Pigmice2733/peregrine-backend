@@ -26,6 +26,8 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 
+		teams := r.URL.Query()["team"]
+
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
@@ -38,7 +40,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			return
 		}
 
-		fullMatches, err := s.store.GetEventMatches(eventKey)
+		fullMatches, err := s.store.GetMatches(eventKey, teams)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.logger.WithError(err).Error("retrieving event matches")

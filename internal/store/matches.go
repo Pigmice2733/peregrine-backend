@@ -2,6 +2,8 @@ package store
 
 import (
 	"database/sql"
+
+	"github.com/lib/pq"
 )
 
 // Match holds information about an FRC match at a specific event
@@ -28,38 +30,14 @@ func (m *Match) GetTime() *UnixTime {
 	return m.ScheduledTime
 }
 
-// GetEventMatches returns all matches from a specific event.
-func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
-	matches := []Match{}
-
-	err := s.db.Select(&matches, `
-		SELECT
-			key, predicted_time, scheduled_time, actual_time, red_score, blue_score
-			FROM matches
-			WHERE event_key = $1`, eventKey)
-	if err != nil {
-		return nil, err
+// GetMatches returns all matches from a specific event that include the given
+// teams. If teams is nil or empty a list of all the matches for that event are
+// returned.
+func (s *Service) GetMatches(eventKey string, teamKeys []string) ([]Match, error) {
+	if teamKeys == nil {
+		teamKeys = []string{}
 	}
 
-	for i, match := range matches {
-		match.BlueAlliance, err = s.GetMatchAlliance(match.Key, true)
-		if err != nil {
-			return nil, err
-		}
-
-		match.RedAlliance, err = s.GetMatchAlliance(match.Key, false)
-		if err != nil {
-			return nil, err
-		}
-
-		matches[i] = match // value vs reference stuff
-	}
-
-	return matches, nil
-}
-
-// GetTeamMatches returns all matches from a specific event that include a specific team.
-func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, error) {
 	matches := []Match{}
 	err := s.db.Select(&matches, `
 		SELECT
@@ -67,7 +45,7 @@ func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, erro
 		FROM matches
 		INNER JOIN alliances
 			ON matches.key = alliances.match_key
-		WHERE matches.event_key = $1 AND $2 = ANY(alliances.team_keys)`, eventKey, teamKey)
+		WHERE matches.event_key = $1 AND alliances.team_keys @> $2`, eventKey, pq.Array(teamKeys))
 	if err != nil {
 		return nil, err
 	}
