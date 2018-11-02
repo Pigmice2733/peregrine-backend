@@ -30,38 +30,10 @@ func (m *Match) GetTime() *UnixTime {
 	return m.ScheduledTime
 }
 
-// GetEventMatches returns all matches from a specific event.
-func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
-	matches := []Match{}
-
-	err := s.db.Select(&matches, `
-		SELECT
-			key, predicted_time, scheduled_time, actual_time, red_score, blue_score
-			FROM matches
-			WHERE event_key = $1`, eventKey)
-	if err != nil {
-		return nil, err
-	}
-
-	for i, match := range matches {
-		match.BlueAlliance, err = s.GetMatchAlliance(match.Key, true)
-		if err != nil {
-			return nil, err
-		}
-
-		match.RedAlliance, err = s.GetMatchAlliance(match.Key, false)
-		if err != nil {
-			return nil, err
-		}
-
-		matches[i] = match // value vs reference stuff
-	}
-
-	return matches, nil
-}
-
-// GetTeamMatches returns all matches from a specific event that include a specific team.
-func (s *Service) GetTeamMatches(eventKey string, teamKeys []string) ([]Match, error) {
+// GetMatches returns all matches from a specific event that include the given
+// teams. If teams is nil or empty a list of all the matches for that event are
+// returned.
+func (s *Service) GetMatches(eventKey string, teamKeys []string) ([]Match, error) {
 	if teamKeys == nil {
 		teamKeys = []string{}
 	}

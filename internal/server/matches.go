@@ -40,7 +40,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			return
 		}
 
-		fullMatches, err := s.store.GetTeamMatches(eventKey, teams)
+		fullMatches, err := s.store.GetMatches(eventKey, teams)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.logger.WithError(err).Error("retrieving event matches")
