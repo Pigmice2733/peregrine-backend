@@ -26,8 +26,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 
-		// teamFilter will be empty if not specified
-		teamFilter := r.URL.Query().Get("team")
+		teams := r.URL.Query()["team"]
 
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
@@ -41,7 +40,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			return
 		}
 
-		fullMatches, err := s.store.GetEventMatches(eventKey)
+		fullMatches, err := s.store.GetTeamMatches(eventKey, teams)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.logger.WithError(err).Error("retrieving event matches")
@@ -50,13 +49,6 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 
 		matches := []match{}
 		for _, fullMatch := range fullMatches {
-			// If teamFilter is specified, filter matches
-			if teamFilter != "" {
-				if !allianceContainsTeam(fullMatch.RedAlliance, teamFilter) && !allianceContainsTeam(fullMatch.BlueAlliance, teamFilter) {
-					continue
-				}
-			}
-
 			// Match keys are stored in TBA format, with a leading event key
 			// prefix that which needs to be removed before use.
 			key := strings.TrimPrefix(fullMatch.Key, eventKey+"_")

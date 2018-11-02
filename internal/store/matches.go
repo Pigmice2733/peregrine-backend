@@ -2,6 +2,8 @@ package store
 
 import (
 	"database/sql"
+
+	"github.com/lib/pq"
 )
 
 // Match holds information about an FRC match at a specific event
@@ -59,7 +61,7 @@ func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 }
 
 // GetTeamMatches returns all matches from a specific event that include a specific team.
-func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, error) {
+func (s *Service) GetTeamMatches(eventKey string, teamKeys []string) ([]Match, error) {
 	matches := []Match{}
 	err := s.db.Select(&matches, `
 		SELECT
@@ -67,7 +69,7 @@ func (s *Service) GetTeamMatches(eventKey string, teamKey string) ([]Match, erro
 		FROM matches
 		INNER JOIN alliances
 			ON matches.key = alliances.match_key
-		WHERE matches.event_key = $1 AND $2 = ANY(alliances.team_keys)`, eventKey, teamKey)
+		WHERE matches.event_key = $1 AND alliances.team_keys @> $2`, eventKey, pq.Array(teamKeys))
 	if err != nil {
 		return nil, err
 	}
