@@ -174,6 +174,21 @@ describe('match endpoints', () => {
     })
   })
 
+  test('/events/{eventKey}/matches endpoint with filter', async () => {
+    const resp = await fetch(addr + '/events/2018flor/matches?team=frc4481')
+    expect(resp.status).toBe(200)
+
+    const d = await resp.json()
+
+    expect(d).toEqual({ data: expect.any(Array) })
+    expect(d.data.length).toBeGreaterThan(1)
+    d.data.forEach(match => {
+      expect(match).toBeAMatch()
+      expect(match.scheduledTime).toBeADateString()
+      expect(match).toIncludeTeam('frc4481')
+    })
+  })
+
   test('/matches create endpoint', async () => {
     expect(config.seedUser.roles.isAdmin).toBe(true)
 
@@ -248,16 +263,7 @@ describe('team endpoints', () => {
     const info = d.data
     expect(info.rank).toBeUndefinedOr(Number)
     expect(info.rankingScore).toBeUndefinedOr(Number)
-    expect(info.nextMatch).toBeUndefinedOr(Object)
-    if (info.nextMatch !== undefined) {
-      expect(info.nextMatch.scheduledTime).toBeUndefined()
-      expect(info.nextMatch).toBeAMatch()
-    }
-    expect(Object.keys(info)).toBeASubsetOf([
-      'nextMatch',
-      'rank',
-      'rankingScore',
-    ])
+    expect(Object.keys(info)).toBeASubsetOf(['rank', 'rankingScore'])
   })
 })
 
