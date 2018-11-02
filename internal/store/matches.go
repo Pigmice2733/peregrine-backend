@@ -62,6 +62,10 @@ func (s *Service) GetEventMatches(eventKey string) ([]Match, error) {
 
 // GetTeamMatches returns all matches from a specific event that include a specific team.
 func (s *Service) GetTeamMatches(eventKey string, teamKeys []string) ([]Match, error) {
+	if teamKeys == nil {
+		teamKeys = []string{}
+	}
+
 	matches := []Match{}
 	err := s.db.Select(&matches, `
 		SELECT

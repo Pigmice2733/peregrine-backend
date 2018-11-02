@@ -174,7 +174,7 @@ describe('match endpoints', () => {
     })
   })
 
-  test('/events/{eventKey}/matches endpoint with filter', async () => {
+  test('/events/{eventKey}/matches endpoint with filter for single team', async () => {
     const resp = await fetch(addr + '/events/2018flor/matches?team=frc4481')
     expect(resp.status).toBe(200)
 
@@ -186,6 +186,24 @@ describe('match endpoints', () => {
       expect(match).toBeAMatch()
       expect(match.scheduledTime).toBeADateString()
       expect(match).toIncludeTeam('frc4481')
+    })
+  })
+
+  test('/events/{eventKey}/matches endpoint with filter for multiple teams', async () => {
+    const resp = await fetch(
+      addr + '/events/2018flor/matches?team=frc4481&team=frc6527',
+    )
+    expect(resp.status).toBe(200)
+
+    const d = await resp.json()
+
+    expect(d).toEqual({ data: expect.any(Array) })
+    expect(d.data.length).toBeGreaterThan(0)
+    d.data.forEach(match => {
+      expect(match).toBeAMatch()
+      expect(match.scheduledTime).toBeADateString()
+      expect(match).toIncludeTeam('frc4481')
+      expect(match).toIncludeTeam('frc6527')
     })
   })
 
