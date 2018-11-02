@@ -158,15 +158,6 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 	}
 }
 
-func allianceContainsTeam(alliance []string, team string) bool {
-	for _, t := range alliance {
-		if t == team {
-			return true
-		}
-	}
-	return false
-}
-
 // Get new match data from TBA for a particular event. Upsert match data into database.
 func (s *Server) updateMatches(eventKey string) error {
 	// Check that eventKey is a valid event key
