@@ -33,9 +33,8 @@ Pull Peregrine from GitHub:
 
 ### Vendoring
 
-Download and install dep:
-
-    curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+> **NOTE**: These instructions assume that you already have dep installed. If you
+> do not, you can get more info at [dep's install guide](https://github.com/golang/dep/blob/master/docs/installation.md).
 
 Install vendored dependencies:
 
@@ -48,7 +47,7 @@ Install vendored dependencies:
 
 # Database
 
- See the postgresql first steps guide here: https://wiki.postgresql.org/wiki/First_steps
+See the postgresql first steps guide here: https://wiki.postgresql.org/wiki/First_steps
 
     sudo -i -u postgres
     psql
