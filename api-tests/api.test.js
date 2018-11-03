@@ -237,7 +237,7 @@ describe('match endpoints', () => {
       blueAlliance: ['frc6322', 'frc4024', 'frc5283'],
     }
 
-    const resp = await fetch(addr + '/events/2018flor/matches', {
+    const resp = await fetch(addr + '/events/1970flir/matches', {
       method: 'PUT',
       body: JSON.stringify(match),
       headers: {
@@ -248,7 +248,7 @@ describe('match endpoints', () => {
 
     expect(resp.status).toBe(201)
 
-    const respGet = await fetch(addr + `/events/2018flor/matches/${match.key}`)
+    const respGet = await fetch(addr + `/events/1970flir/matches/${match.key}`)
     expect(respGet.status).toBe(200)
 
     const d = await respGet.json()

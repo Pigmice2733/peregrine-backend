@@ -148,7 +148,7 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 			BlueAlliance:  m.BlueAlliance,
 		}
 
-		if err := s.store.MatchesUpsert([]store.Match{sm}); err != nil {
+		if err := s.store.UpsertMatch(sm); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.logger.WithError(err).Error("upserting match")
 			return
@@ -173,5 +173,5 @@ func (s *Server) updateMatches(eventKey string) error {
 		return err
 	}
 
-	return s.store.MatchesUpsert(fullMatches)
+	return s.store.UpdateTBAMatches(fullMatches, eventKey)
 }
