@@ -120,11 +120,12 @@ func (s *Service) UpsertMatch(match Match) error {
 	return tx.Commit()
 }
 
-// PutTBAMatches puts a set of multiple matches and their alliances from TBA into
-// the database. New matches are added, matches deleted from TBA will be deleted
-// from the database. User-created matches will be unaffected. If eventKey is
-// specified, only matches from that event will be affected.
-func (s *Service) PutTBAMatches(matches []Match, eventKey string) error {
+// UpdateTBAMatches puts a set of multiple matches and their alliances from TBA
+// into the database. New matches are added, existing matches will be updated,
+// and matches deleted from TBA will be deleted from the database. User-created
+// matches will be unaffected. If eventKey is specified, only matches from that
+// event will be affected.
+func (s *Service) UpdateTBAMatches(matches []Match, eventKey string) error {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return err

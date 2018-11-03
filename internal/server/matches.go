@@ -173,5 +173,5 @@ func (s *Server) updateMatches(eventKey string) error {
 		return err
 	}
 
-	return s.store.PutTBAMatches(fullMatches, eventKey)
+	return s.store.UpdateTBAMatches(fullMatches, eventKey)
 }
