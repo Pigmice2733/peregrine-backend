@@ -2,7 +2,6 @@ package store
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/lib/pq"
 )
@@ -188,7 +187,6 @@ func (s *Service) PutTBAMatches(matches []Match, eventKey string) error {
 
 	if err != nil {
 		_ = tx.Rollback()
-		fmt.Println(err)
 		return err
 	}
 
