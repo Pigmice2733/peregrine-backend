@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/lib/pq"
 )
@@ -87,14 +88,50 @@ func (s *Service) GetMatch(matchKey string) (Match, error) {
 	return m, err
 }
 
-// MatchesUpsert upserts multiple matches and their alliances into the database.
-func (s *Service) MatchesUpsert(matches []Match) error {
+// UpsertMatch upserts a match and its alliances into the database.
+func (s *Service) UpsertMatch(match Match) error {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return err
 	}
 
-	stmt, err := tx.PrepareNamed(`
+	_, err = tx.NamedExec(`
+		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score)
+		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score)
+		ON CONFLICT (key)
+		DO
+			UPDATE
+				SET
+					event_key = :event_key,
+					predicted_time = :predicted_time,
+					scheduled_time = :scheduled_time,
+					actual_time = :actual_time,
+					red_score = :red_score,
+					blue_score = :blue_score
+	`, match)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	if err = s.AlliancesUpsert(match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+// PutTBAMatches puts a set of multiple matches and their alliances from TBA into
+// the database. New matches are added, matches deleted from TBA will be deleted
+// from the database. User-created matches will be unaffected. If eventKey is
+// specified, only matches from that event will be affected.
+func (s *Service) PutTBAMatches(matches []Match, eventKey string) error {
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	upsert, err := tx.PrepareNamed(`
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score)
 		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score)
 		ON CONFLICT (key)
@@ -112,10 +149,12 @@ func (s *Service) MatchesUpsert(matches []Match) error {
 		_ = tx.Rollback()
 		return err
 	}
-	defer stmt.Close()
+	defer upsert.Close()
 
-	for _, match := range matches {
-		if _, err = stmt.Exec(match); err != nil {
+	matchKeys := make([]string, len(matches))
+
+	for i, match := range matches {
+		if _, err = upsert.Exec(match); err != nil {
 			_ = tx.Rollback()
 			return err
 		}
@@ -123,6 +162,34 @@ func (s *Service) MatchesUpsert(matches []Match) error {
 			_ = tx.Rollback()
 			return err
 		}
+		matchKeys[i] = match.Key
+	}
+
+	upsert.Close()
+
+	if eventKey != "" {
+		_, err = tx.Exec(`
+		DELETE FROM matches m
+			USING events e
+			WHERE e.key = $1 AND
+				  e.key = m.event_key AND
+				  NOT e.manually_added AND
+				  NOT (m.key = ANY($2)) 
+	`, eventKey, pq.StringArray(matchKeys))
+	} else {
+		_, err = tx.Exec(`
+		DELETE FROM matches m
+			USING events e
+			WHERE e.key = m.event_key AND
+				  NOT e.manually_added AND
+				  NOT (m.key = ANY($1)) 
+	`, pq.StringArray(matchKeys))
+	}
+
+	if err != nil {
+		_ = tx.Rollback()
+		fmt.Println(err)
+		return err
 	}
 
 	return tx.Commit()
