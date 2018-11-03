@@ -175,7 +175,7 @@ func (s *Service) UpdateTBAMatches(matches []Match, eventKey string) error {
 				  e.key = m.event_key AND
 				  NOT e.manually_added AND
 				  NOT (m.key = ANY($2)) 
-	`, eventKey, pq.StringArray(matchKeys))
+	`, eventKey, pq.Array(matchKeys))
 	} else {
 		_, err = tx.Exec(`
 		DELETE FROM matches m
