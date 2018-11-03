@@ -41,50 +41,37 @@ func (r *Roles) Scan(src interface{}) error {
 // User holds information about a user such as their id, username, and hashed
 // password.
 type User struct {
-	ID             int64    `json:"id" db:"id"`
-	Username       string   `json:"username" db:"username"`
-	HashedPassword string   `json:"-" db:"hashed_password"`
-	FirstName      string   `json:"firstName" db:"first_name"`
-	LastName       string   `json:"lastName" db:"last_name"`
-	Roles          Roles    `json:"roles" db:"roles"`
-	Stars          []string `json:"stars"`
+	ID             int64          `json:"id" db:"id"`
+	Username       string         `json:"username" db:"username"`
+	HashedPassword string         `json:"-" db:"hashed_password"`
+	FirstName      string         `json:"firstName" db:"first_name"`
+	LastName       string         `json:"lastName" db:"last_name"`
+	Roles          Roles          `json:"roles" db:"roles"`
+	Stars          pq.StringArray `json:"stars" db:"stars"`
 }
 
 // PatchUser is like User but with all nullable fields (besides id) for patching.
 type PatchUser struct {
-	ID             int64    `json:"id" db:"id"`
-	Username       *string  `json:"username" db:"username"`
-	HashedPassword *string  `json:"-" db:"hashed_password"`
-	FirstName      *string  `json:"firstName" db:"first_name"`
-	LastName       *string  `json:"lastName" db:"last_name"`
-	Roles          *Roles   `json:"roles" db:"roles"`
-	Stars          []string `json:"stars"`
+	ID             int64          `json:"id" db:"id"`
+	Username       *string        `json:"username" db:"username"`
+	HashedPassword *string        `json:"-" db:"hashed_password"`
+	FirstName      *string        `json:"firstName" db:"first_name"`
+	LastName       *string        `json:"lastName" db:"last_name"`
+	Roles          *Roles         `json:"roles" db:"roles"`
+	Stars          pq.StringArray `json:"stars"`
 }
 
-// GetUserByUsername retrieves a user by username.
+// GetUserByUsername retrieves a user from the database by username. It does not
+// retrieve the users stars.
 func (s *Service) GetUserByUsername(username string) (User, error) {
 	var u User
 
-	tx, err := s.db.Beginx()
-	if err != nil {
-		return u, errors.Wrap(err, "unable to begin transaction")
-	}
-
-	err = tx.Get(&u, "SELECT * FROM users WHERE username = $1", username)
+	err := s.db.Get(&u, "SELECT * FROM users WHERE username = $1", username)
 	if err == sql.ErrNoRows {
-		_ = tx.Rollback()
 		return u, ErrNoResults(err)
-	} else if err != nil {
-		_ = tx.Rollback()
-		return u, errors.Wrap(err, "unable to select user")
 	}
 
-	if err := tx.Select(&u.Stars, "SELECT event_key FROM stars WHERE user_id = $1", u.ID); err != nil {
-		_ = tx.Rollback()
-		return u, errors.Wrap(err, "unable to select stars for user")
-	}
-
-	return u, errors.Wrap(tx.Commit(), "unable to commit transaction")
+	return u, errors.Wrap(err, "unable to select user")
 }
 
 // CreateUser creates a given user.
@@ -128,51 +115,54 @@ func (s *Service) CreateUser(u User) error {
 
 // GetUsers retrieves all users.
 func (s *Service) GetUsers() ([]User, error) {
-	tx, err := s.db.Beginx()
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to begin transaction")
-	}
-
 	users := []User{}
-	if err := tx.Select(&users, "SELECT * FROM users"); err != nil {
-		_ = tx.Rollback()
-		return users, errors.Wrap(err, "unable to select users")
-	}
 
-	for i, user := range users {
-		user.Stars = []string{}
-		if err := tx.Select(&user.Stars, "SELECT event_key FROM stars WHERE user_id = $1", user.ID); err != nil {
-			_ = tx.Rollback()
-			return users, errors.Wrap(err, "unable to select stars for user")
-		}
+	err := s.db.Select(&users, `
+	SELECT
+		id,
+		username,
+		hashed_password,
+		first_name,
+		last_name,
+		roles,
+		array_remove(array_agg(stars.event_key), NULL) AS stars
+	FROM users
+	LEFT JOIN
+		stars
+	ON
+		stars.user_id = users.id
+	GROUP BY users.id
+	`)
 
-		users[i] = user
-	}
-
-	return users, errors.Wrap(tx.Commit(), "unable to commit transaction")
+	return users, errors.Wrap(err, "unable to fetch users")
 }
 
 // GetUserByID retrieves a user from the database by id.
 func (s *Service) GetUserByID(id int64) (User, error) {
-	tx, err := s.db.Beginx()
-	if err != nil {
-		return User{}, errors.Wrap(err, "unable to begin transaction")
-	}
-
 	var u User
 
-	if err := tx.Get(&u, "SELECT * FROM users WHERE id = $1", id); err != nil {
-		_ = tx.Rollback()
-		return u, errors.Wrap(err, "unable to select users")
+	err := s.db.Get(&u, `
+	SELECT
+		id,
+		username,
+		hashed_password,
+		first_name,
+		last_name,
+		roles,
+		array_remove(array_agg(stars.event_key), NULL) AS stars
+	FROM users
+	LEFT JOIN
+		stars
+	ON
+		stars.user_id = users.id
+	WHERE id = $1
+	GROUP BY users.id
+	`, id)
+	if err == sql.ErrNoRows {
+		return u, ErrNoResults(err)
 	}
 
-	u.Stars = []string{}
-	if err := tx.Select(&u.Stars, "SELECT event_key FROM stars WHERE user_id = $1", id); err != nil {
-		_ = tx.Rollback()
-		return u, errors.Wrap(err, "unable to select stars for user")
-	}
-
-	return u, errors.Wrap(tx.Commit(), "unable to commit transaction")
+	return u, errors.Wrap(err, "unable to select user")
 }
 
 // PatchUser updates a user by their ID.
