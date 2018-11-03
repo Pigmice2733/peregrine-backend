@@ -1,22 +1,20 @@
 package store
 
 import (
-	"database/sql"
-
 	"github.com/lib/pq"
 )
 
 // Match holds information about an FRC match at a specific event
 type Match struct {
-	Key           string    `json:"key" db:"key"`
-	EventKey      string    `json:"eventKey" db:"event_key"`
-	PredictedTime *UnixTime `json:"predictedTime" db:"predicted_time"`
-	ActualTime    *UnixTime `json:"actualTime" db:"actual_time"`
-	ScheduledTime *UnixTime `json:"scheduledTime" db:"scheduled_time"`
-	RedScore      *int      `json:"redScore" db:"red_score"`
-	BlueScore     *int      `json:"blueScore" db:"blue_score"`
-	RedAlliance   []string  `json:"redAlliance"`
-	BlueAlliance  []string  `json:"blueAlliance"`
+	Key           string         `json:"key" db:"key"`
+	EventKey      string         `json:"eventKey" db:"event_key"`
+	PredictedTime *UnixTime      `json:"predictedTime" db:"predicted_time"`
+	ActualTime    *UnixTime      `json:"actualTime" db:"actual_time"`
+	ScheduledTime *UnixTime      `json:"scheduledTime" db:"scheduled_time"`
+	RedScore      *int           `json:"redScore" db:"red_score"`
+	BlueScore     *int           `json:"blueScore" db:"blue_score"`
+	RedAlliance   pq.StringArray `json:"redAlliance" db:"red_alliance"`
+	BlueAlliance  pq.StringArray `json:"blueAlliance" db:"blue_alliance"`
 }
 
 // GetTime returns the actual match time if available, and if not, predicted time
@@ -40,28 +38,31 @@ func (s *Service) GetMatches(eventKey string, teamKeys []string) ([]Match, error
 
 	matches := []Match{}
 	err := s.db.Select(&matches, `
-		SELECT
-		    key, predicted_time, scheduled_time, actual_time, red_score, blue_score
-		FROM matches
-		INNER JOIN alliances
-			ON matches.key = alliances.match_key
-		WHERE matches.event_key = $1 AND alliances.team_keys @> $2`, eventKey, pq.Array(teamKeys))
+	SELECT
+		key,
+		predicted_time,
+		scheduled_time,
+		actual_time,
+		blue_score,
+		red_score,
+		r.team_keys AS red_alliance,
+		b.team_keys AS blue_alliance
+	FROM
+		matches
+	INNER JOIN
+		alliances r
+	ON
+		matches.key = r.match_key AND r.is_blue = false
+	INNER JOIN
+		alliances b
+	ON
+		matches.key = b.match_key AND b.is_blue = true
+	WHERE
+		matches.event_key = $1 AND
+		(r.team_keys || b.team_keys) @> $2
+			`, eventKey, pq.Array(teamKeys))
 	if err != nil {
 		return nil, err
-	}
-
-	for i, match := range matches {
-		match.BlueAlliance, err = s.GetMatchAlliance(match.Key, true)
-		if err != nil {
-			return nil, err
-		}
-
-		match.RedAlliance, err = s.GetMatchAlliance(match.Key, false)
-		if err != nil {
-			return nil, err
-		}
-
-		matches[i] = match // value vs reference stuff
 	}
 
 	return matches, nil
@@ -70,20 +71,29 @@ func (s *Service) GetMatches(eventKey string, teamKeys []string) ([]Match, error
 // GetMatch returns a specific match.
 func (s *Service) GetMatch(matchKey string) (Match, error) {
 	var m Match
-	if err := s.db.Get(&m, "SELECT * FROM matches WHERE key = $1", matchKey); err != nil {
-		if err == sql.ErrNoRows {
-			return m, ErrNoResults(err)
-		}
-		return m, err
-	}
+	err := s.db.Get(&m, `
+	SELECT
+		key,
+		predicted_time,
+		scheduled_time,
+		actual_time,
+		blue_score,
+		red_score,
+		r.team_keys AS red_alliance,
+		b.team_keys AS blue_alliance
+	FROM
+		matches
+	INNER JOIN
+		alliances r
+	ON
+		matches.key = r.match_key AND r.is_blue = false
+	INNER JOIN
+		alliances b
+	ON
+		matches.key = b.match_key AND b.is_blue = true
+	WHERE
+		matches.key = $1`, matchKey)
 
-	var err error
-	m.BlueAlliance, err = s.GetMatchAlliance(m.Key, true)
-	if err != nil {
-		return m, err
-	}
-
-	m.RedAlliance, err = s.GetMatchAlliance(m.Key, false)
 	return m, err
 }
 
