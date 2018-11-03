@@ -61,27 +61,12 @@ type PatchUser struct {
 	Stars          pq.StringArray `json:"stars"`
 }
 
-// GetUserByUsername retrieves a user by username.
+// GetUserByUsername retrieves a user from the database by username. It does not
+// retrieve the users stars.
 func (s *Service) GetUserByUsername(username string) (User, error) {
 	var u User
 
-	err := s.db.Get(&u, `
-	SELECT
-		id,
-		username,
-		hashed_password,
-		first_name,
-		last_name,
-		roles,
-		array_remove(array_agg(stars.event_key), NULL) AS stars
-	FROM users
-	LEFT JOIN
-		stars
-	ON
-		stars.user_id = users.id
-	WHERE username = $1
-	GROUP BY users.id
-	`, username)
+	err := s.db.Get(&u, "SELECT * FROM users WHERE username = $1", username)
 	if err == sql.ErrNoRows {
 		return u, ErrNoResults(err)
 	}
