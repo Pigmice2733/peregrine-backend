@@ -51,6 +51,7 @@ func run(basePath string) error {
 		u := store.User{
 			Username:       c.SeedUser.Username,
 			HashedPassword: string(hashedPassword),
+			Realm:          c.SeedUser.Realm,
 			FirstName:      c.SeedUser.FirstName,
 			LastName:       c.SeedUser.LastName,
 			Roles:          c.SeedUser.Roles,
