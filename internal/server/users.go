@@ -159,11 +159,12 @@ func (s *Server) getUsersHandler() http.HandlerFunc {
 		}
 
 		var users []store.User
+		var adminRealm string
 
 		if roles.IsSuperAdmin {
 			users, err = s.store.GetUsers()
 		} else {
-			adminRealm, err := s.getUserRealm(r)
+			adminRealm, err = s.getUserRealm(r)
 			if err != nil {
 				go s.logger.WithError(err).Error("getting user's realm")
 				ihttp.Error(w, http.StatusInternalServerError)
