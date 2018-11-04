@@ -43,16 +43,16 @@ func GetSubject(r *http.Request) (int64, error) {
 }
 
 // GetRoles retrieves the roles from the http context.
-func GetRoles(r *http.Request) store.Roles {
+func GetRoles(r *http.Request) (store.Roles, error) {
 	contextRoles := r.Context().Value(keyRolesContext)
 	if contextRoles == nil {
-		return store.Roles{}
+		return store.Roles{}, fmt.Errorf("no roles set on context")
 	}
 
 	roles, ok := contextRoles.(store.Roles)
 	if !ok {
-		return store.Roles{}
+		return store.Roles{}, fmt.Errorf("no roles set on context")
 	}
 
-	return roles
+	return roles, nil
 }

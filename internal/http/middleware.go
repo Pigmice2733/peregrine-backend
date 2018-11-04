@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Pigmice2733/peregrine-backend/internal/store"
+
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
 )
@@ -57,6 +59,11 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 		next.ServeHTTP(rr, r)
 		end := time.Now()
 
+		roles, err := GetRoles(r)
+		if err != nil {
+			roles = store.Roles{}
+		}
+
 		fields := logrus.Fields{
 			"method":       r.Method,
 			"remote_addr":  r.RemoteAddr,
@@ -65,7 +72,8 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 			"request_time": end.Sub(start).Seconds(),
 			"status_code":  rr.code,
 			"body_size":    rr.len,
-			"admin":        GetRoles(r).IsAdmin,
+			"admin":        roles.IsAdmin,
+			"super_admin":  roles.IsSuperAdmin,
 		}
 
 		if sub, err := GetSubject(r); err != nil {
@@ -119,7 +127,11 @@ func Auth(next http.HandlerFunc, jwtSecret []byte) http.HandlerFunc {
 // checking user roles.
 func ACL(next http.HandlerFunc, requireAdmin, requireVerified bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		roles := GetRoles(r)
+		roles, err := GetRoles(r)
+		if err != nil {
+			Error(w, http.StatusUnauthorized)
+			return
+		}
 
 		if (requireAdmin && !roles.IsAdmin) || (requireVerified && !roles.IsVerified) {
 			Error(w, http.StatusForbidden)

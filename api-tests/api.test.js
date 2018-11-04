@@ -28,6 +28,7 @@ module.exports = {
       }),
       headers: { 'Content-Type': 'application/json' },
     })
+    expect(resp.status).toBe(200)
     const d = await resp.json()
     return d.data.jwt
   },

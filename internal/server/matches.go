@@ -130,8 +130,12 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 		// unique and consistent with TBA match keys.
 		m.Key = fmt.Sprintf("%s_%s", eventKey, m.Key)
 
-		// this is redundant since the route should be admin-protected anyways
-		if !ihttp.GetRoles(r).IsAdmin {
+		roles, err := ihttp.GetRoles(r)
+		if err != nil {
+			ihttp.Error(w, http.StatusUnauthorized)
+			return
+		}
+		if !roles.IsAdmin {
 			ihttp.Error(w, http.StatusForbidden)
 			go s.logger.Error("got non-admin user on admin-protected route")
 			return

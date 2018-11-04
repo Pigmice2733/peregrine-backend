@@ -18,8 +18,9 @@ const pgExists = "23505"
 // Roles holds information about a users roles and permissions such as whether
 // they are an administrator.
 type Roles struct {
-	IsAdmin    bool `json:"isAdmin" yaml:"isAdmin"`
-	IsVerified bool `json:"isVerified" yaml:"isVerified"`
+	IsSuperAdmin bool `json:"isSuperAdmin" yaml:"isSuperAdmin"`
+	IsAdmin      bool `json:"isAdmin" yaml:"isAdmin"`
+	IsVerified   bool `json:"isVerified" yaml:"isVerified"`
 }
 
 // Value is provided for returning the value of Roles as marshalled JSON for
@@ -44,6 +45,7 @@ type User struct {
 	ID             int64          `json:"id" db:"id"`
 	Username       string         `json:"username" db:"username"`
 	HashedPassword string         `json:"-" db:"hashed_password"`
+	Realm          string         `json:"realm" db:"realm"`
 	FirstName      string         `json:"firstName" db:"first_name"`
 	LastName       string         `json:"lastName" db:"last_name"`
 	Roles          Roles          `json:"roles" db:"roles"`
@@ -84,8 +86,8 @@ func (s *Service) CreateUser(u User) error {
 	_, err = tx.NamedExec(`
 	INSERT
 		INTO
-			users (username, hashed_password, first_name, last_name, roles)
-		VALUES (:username, :hashed_password, :first_name, :last_name, :roles)
+			users (username, hashed_password, realm, first_name, last_name, roles)
+		VALUES (:username, :hashed_password, :realm, :first_name, :last_name, :roles)
 	`, u)
 	if err, ok := err.(*pq.Error); ok {
 		if err.Code == pgExists {
@@ -122,6 +124,7 @@ func (s *Service) GetUsers() ([]User, error) {
 		id,
 		username,
 		hashed_password,
+		realm,
 		first_name,
 		last_name,
 		roles,
@@ -137,6 +140,32 @@ func (s *Service) GetUsers() ([]User, error) {
 	return users, errors.Wrap(err, "unable to fetch users")
 }
 
+// GetUsersByRealm retrieves all users in a specific realm.
+func (s *Service) GetUsersByRealm(realm string) ([]User, error) {
+	users := []User{}
+
+	err := s.db.Select(&users, `
+	SELECT
+		id,
+		username,
+		hashed_password,
+		realm,
+		first_name,
+		last_name,
+		roles,
+		array_remove(array_agg(stars.event_key), NULL) AS stars
+	FROM users
+	LEFT JOIN
+		stars
+	ON
+		stars.user_id = users.id
+	WHERE realm = $1
+	GROUP BY users.id
+	`, realm)
+
+	return users, errors.Wrap(err, "unable to fetch users")
+}
+
 // GetUserByID retrieves a user from the database by id.
 func (s *Service) GetUserByID(id int64) (User, error) {
 	var u User
@@ -146,6 +175,7 @@ func (s *Service) GetUserByID(id int64) (User, error) {
 		id,
 		username,
 		hashed_password,
+		realm,
 		first_name,
 		last_name,
 		roles,

@@ -11,7 +11,7 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/", s.healthHandler()).Methods("GET")
 
 	r.Handle("/authenticate", s.authenticateHandler()).Methods("POST")
-	r.Handle("/users", ihttp.ACL(s.createUserHandler(), true, false)).Methods("POST")
+	r.Handle("/users", s.createUserHandler()).Methods("POST")
 	r.Handle("/users", ihttp.ACL(s.getUsersHandler(), true, true)).Methods("GET")
 	r.Handle("/users/{id}", s.getUserByIDHandler()).Methods("GET")
 	r.Handle("/users/{id}", s.patchUserHandler()).Methods("PATCH")

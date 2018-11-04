@@ -39,6 +39,7 @@ describe('users crud endpoints', () => {
     user = {
       username: 'users-create' + Number(new Date()),
       password: 'password',
+      realm: 'frc2733',
       firstName: 'test',
       lastName: 'test',
     }
@@ -76,7 +77,7 @@ describe('users crud endpoints', () => {
 
   test('/users get route unauthorized', async () => {
     const resp = await fetch(api.address + '/users')
-    expect(resp.status).toBe(403)
+    expect(resp.status).toBe(401)
   })
 
   test('/users/{id} get route', async () => {
@@ -93,6 +94,7 @@ describe('users crud endpoints', () => {
     expect(d.data).toEqual({
       id: user.id,
       username: user.username,
+      realm: user.realm,
       firstName: user.firstName,
       lastName: user.lastName,
       stars: user.stars,
@@ -103,7 +105,7 @@ describe('users crud endpoints', () => {
   test('/users/{id} get route unauthorized', async () => {
     const resp = await fetch(api.address + '/users/' + user.id)
 
-    expect(resp.status).toBe(403)
+    expect(resp.status).toBe(401)
   })
 
   test('/users/{id} complete admin patch route', async () => {
@@ -114,9 +116,8 @@ describe('users crud endpoints', () => {
       firstName: user.firstName + 'bar',
       lastName: user.lastName + 'foo',
       stars: (user.stars || []).concat('2018flor'),
-      roles: {},
+      roles: { isAdmin: false },
     }
-    patchUser.roles.isAdmin = !(user.roles.isAdmin || true)
 
     const resp = await fetch(api.address + '/users/' + patchUser.id, {
       method: 'PATCH',
@@ -166,10 +167,11 @@ describe('users crud endpoints', () => {
     expect(d.data).toEqual({
       id: user.id,
       username: user.username,
+      realm: user.realm,
       firstName: user.firstName,
       lastName: user.lastName,
       stars: user.stars,
-      roles: { ...user.roles, isAdmin: false },
+      roles: { isAdmin: false, isSuperAdmin: false, isVerified: true },
     })
   })
 
