@@ -23,4 +23,5 @@ seedUser:
   lastName: Doe
   roles:
     isVerified: true
-    isAdmin: true
+    isSuperAdmin: true
+    isAdmin: false

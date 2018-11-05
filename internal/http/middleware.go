@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Pigmice2733/peregrine-backend/internal/store"
-
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
 )
@@ -59,10 +57,7 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 		next.ServeHTTP(rr, r)
 		end := time.Now()
 
-		roles, err := GetRoles(r)
-		if err != nil {
-			roles = store.Roles{}
-		}
+		roles := GetRoles(r)
 
 		fields := logrus.Fields{
 			"method":       r.Method,
@@ -125,14 +120,15 @@ func Auth(next http.HandlerFunc, jwtSecret []byte) http.HandlerFunc {
 
 // ACL returns a middleware that must be used inside of an Auth middleware for
 // checking user roles.
-func ACL(next http.HandlerFunc, requireAdmin, requireVerified bool) http.HandlerFunc {
+func ACL(next http.HandlerFunc, requireAdmin, requireVerified, requireLoggedIn bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		roles, err := GetRoles(r)
-		if err != nil {
+		_, err := GetSubject(r)
+		if err != nil && requireLoggedIn {
 			Error(w, http.StatusUnauthorized)
 			return
 		}
 
+		roles := GetRoles(r)
 		if (requireAdmin && !roles.IsAdmin) || (requireVerified && !roles.IsVerified) {
 			Error(w, http.StatusForbidden)
 			return

@@ -21,7 +21,7 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 		// Get new team data from TBA
 		if err := s.updateTeamKeys(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(store.ErrNoResults); ok {
+			if err == store.ErrNoResults {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -50,7 +50,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 		// Get new team rankings data from TBA
 		if err := s.updateTeamRankings(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(store.ErrNoResults); ok {
+			if err == store.ErrNoResults {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -61,7 +61,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 
 		fullTeam, err := s.store.GetTeam(teamKey, eventKey)
 		if err != nil {
-			if _, ok := err.(store.ErrNoResults); ok {
+			if err == store.ErrNoResults {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}

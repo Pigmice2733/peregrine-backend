@@ -62,7 +62,7 @@ func (s *Service) CheckTBAEventKeyExists(eventKey string) error {
 
 	err := s.db.Get(&manuallyAdded, "SELECT manually_added FROM events WHERE key = $1", eventKey)
 	if err == sql.ErrNoRows {
-		return ErrNoResults(fmt.Errorf("event key %s does not exist", eventKey))
+		return ErrNoResults
 	} else if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (s *Service) GetEvent(eventKey string) (Event, error) {
 	var event Event
 	if err := s.db.Get(&event, "SELECT * FROM events WHERE key = $1", eventKey); err != nil {
 		if err == sql.ErrNoRows {
-			return event, ErrNoResults(err)
+			return event, ErrNoResults
 		}
 		return event, err
 	}

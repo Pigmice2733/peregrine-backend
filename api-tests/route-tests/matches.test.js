@@ -88,7 +88,7 @@ test('/matches create endpoint', async () => {
   }
 
   const eventResp = await fetch(api.address + '/events', {
-    method: 'PUT',
+    method: 'POST',
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ test('/matches create endpoint', async () => {
   }
 
   const resp = await fetch(api.address + '/events/1970flir/matches', {
-    method: 'PUT',
+    method: 'POST',
     body: JSON.stringify(match),
     headers: {
       'Content-Type': 'application/json',

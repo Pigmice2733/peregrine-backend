@@ -11,7 +11,16 @@ import (
 )
 
 // ErrNoResults indicates that no data matching the query was found.
-type ErrNoResults error
+var ErrNoResults = fmt.Errorf("no matching records found")
+
+// ErrExists is returned if a unique record already exists.
+var ErrExists = fmt.Errorf("a record already exists")
+
+// ErrFKeyViolation is returned if inserting a record causes a foreign key violation.
+var ErrFKeyViolation = fmt.Errorf("foreign key violation")
+
+const pgExists = "23505"
+const pgFKeyViolation = "23503"
 
 // Service is an interface to manipulate the data store.
 type Service struct {

@@ -31,7 +31,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(store.ErrNoResults); ok {
+			if err == store.ErrNoResults {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -80,7 +80,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(store.ErrNoResults); ok {
+			if err == store.ErrNoResults {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -91,7 +91,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 
 		fullMatch, err := s.store.GetMatch(matchKey)
 		if err != nil {
-			if _, ok := err.(store.ErrNoResults); ok {
+			if err == store.ErrNoResults {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -130,11 +130,7 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 		// unique and consistent with TBA match keys.
 		m.Key = fmt.Sprintf("%s_%s", eventKey, m.Key)
 
-		roles, err := ihttp.GetRoles(r)
-		if err != nil {
-			ihttp.Error(w, http.StatusUnauthorized)
-			return
-		}
+		roles := ihttp.GetRoles(r)
 		if !roles.IsAdmin {
 			ihttp.Error(w, http.StatusForbidden)
 			go s.logger.Error("got non-admin user on admin-protected route")

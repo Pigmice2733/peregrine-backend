@@ -90,7 +90,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 		fullEvent, err := s.store.GetEvent(eventKey)
 		if err != nil {
-			if _, ok := err.(store.ErrNoResults); ok {
+			if err == store.ErrNoResults {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -140,11 +140,7 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 
 		e.ManuallyAdded = true
 
-		roles, err := ihttp.GetRoles(r)
-		if err != nil {
-			ihttp.Error(w, http.StatusUnauthorized)
-			return
-		}
+		roles := ihttp.GetRoles(r)
 		if !roles.IsAdmin {
 			ihttp.Error(w, http.StatusForbidden)
 			go s.logger.Error("got non-admin user on admin-protected route")
