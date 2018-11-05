@@ -24,4 +24,4 @@ seedUser:
   roles:
     isVerified: true
     isSuperAdmin: true
-    isAdmin: true
+    isAdmin: false

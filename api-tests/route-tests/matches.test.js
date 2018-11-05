@@ -64,7 +64,7 @@ test('/events/{eventKey}/matches', async () => {
   })
 
   // /matches create endpoint
-  expect(api.config.seedUser.roles.isAdmin).toBe(true)
+  expect(api.config.seedUser.roles.isSuperAdmin).toBe(true)
 
   let event = {
     key: '1970flir',
