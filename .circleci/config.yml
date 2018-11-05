@@ -10,8 +10,8 @@ jobs:
           GO_ENV: testing
       - image: circleci/postgres:10-alpine
         environment:
-            POSTGRES_USER: peregrine
-            POSTGRES_DB: peregrine
+          POSTGRES_USER: peregrine
+          POSTGRES_DB: peregrine
     working_directory: /go/src/github.com/Pigmice2733/peregrine-backend
     steps:
       - checkout
@@ -20,8 +20,8 @@ jobs:
       - run: go test -v ./...
       - run: go build -o migrate cmd/migrate/main.go
       - run: go build -o peregrine cmd/peregrine/main.go
-      - run: ./migrate -up
-      - run: 
+      - run: ./migrate -down && ./migrate -up
+      - run:
           command: ./peregrine
           background: true
       - run: cd api-tests && npm i
@@ -46,7 +46,7 @@ jobs:
       - run: tar czvf deploy.tgz -C /tmp/ deploy
       - run: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null deploy.tgz $EDGE_SSH_USER@$EDGE_SSH_HOST:/root
       - run: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -t $EDGE_SSH_USER@$EDGE_SSH_HOST "./deploy.sh"
-      
+
   deploy_prod:
     docker:
       - image: circleci/golang:1.10
@@ -83,4 +83,3 @@ workflows:
           filters:
             branches:
               only: develop
-              
