@@ -119,8 +119,9 @@ func Auth(next http.HandlerFunc, jwtSecret []byte) http.HandlerFunc {
 }
 
 // ACL returns a middleware that must be used inside of an Auth middleware for
-// checking user roles.
-func ACL(next http.HandlerFunc, requireAdmin, requireVerified, requireLoggedIn bool) http.HandlerFunc {
+// checking user roles. The SuperOrAdmin requirement will be satisfied by any
+// user who is either a SuperAdmin or a realm Admin.
+func ACL(next http.HandlerFunc, requireSuperOrAdmin, requireVerified, requireLoggedIn bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, err := GetSubject(r)
 		if err != nil && requireLoggedIn {
@@ -129,7 +130,7 @@ func ACL(next http.HandlerFunc, requireAdmin, requireVerified, requireLoggedIn b
 		}
 
 		roles := GetRoles(r)
-		if (requireAdmin && !roles.IsAdmin) || (requireVerified && !roles.IsVerified) {
+		if (requireSuperOrAdmin && !roles.IsSuperAdmin && !roles.IsAdmin) || (requireVerified && !roles.IsVerified) {
 			Error(w, http.StatusForbidden)
 			return
 		}

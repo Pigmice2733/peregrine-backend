@@ -140,13 +140,6 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 
 		e.ManuallyAdded = true
 
-		roles := ihttp.GetRoles(r)
-		if !roles.IsAdmin && !roles.IsSuperAdmin {
-			ihttp.Error(w, http.StatusForbidden)
-			go s.logger.Error("got non-admin user on admin-protected route")
-			return
-		}
-
 		if err := s.store.EventsUpsert([]store.Event{e}); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			return

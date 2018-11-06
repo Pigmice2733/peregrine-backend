@@ -148,10 +148,6 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 func (s *Server) getUsersHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		roles := ihttp.GetRoles(r)
-		if !roles.IsAdmin && !roles.IsSuperAdmin {
-			ihttp.Respond(w, nil, http.StatusForbidden)
-			return
-		}
 
 		var users []store.User
 		var adminRealm string
