@@ -57,7 +57,7 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 		next.ServeHTTP(rr, r)
 		end := time.Now()
 
-		l.WithFields(logrus.Fields{
+		fields := logrus.Fields{
 			"method":       r.Method,
 			"remote_addr":  r.RemoteAddr,
 			"url":          r.URL.String(),
@@ -65,9 +65,14 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 			"request_time": end.Sub(start).Seconds(),
 			"status_code":  rr.code,
 			"body_size":    rr.len,
-			"user_id":      GetSubject(r),
 			"admin":        GetRoles(r).IsAdmin,
-		}).Info("got request")
+		}
+
+		if sub, err := GetSubject(r); err != nil {
+			fields["user_id"] = sub
+		}
+
+		l.WithFields(fields).Info("got request")
 	}
 }
 

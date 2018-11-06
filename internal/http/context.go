@@ -1,7 +1,9 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	jwt "github.com/dgrijalva/jwt-go"
@@ -20,19 +22,24 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-// GetSubject retrieves the subject from the http context.
-func GetSubject(r *http.Request) string {
+// GetSubject retrieves the subject (user id) from the http context.
+func GetSubject(r *http.Request) (int64, error) {
 	contextSubject := r.Context().Value(keySubjectContext)
 	if contextSubject == nil {
-		return ""
+		return 0, fmt.Errorf("no subject set on context")
 	}
 
 	sub, ok := contextSubject.(string)
 	if !ok {
-		return ""
+		return 0, fmt.Errorf("got invalid type for subject")
 	}
 
-	return sub
+	id, err := strconv.ParseInt(sub, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("unable to parse subject as int")
+	}
+
+	return id, nil
 }
 
 // GetRoles retrieves the roles from the http context.

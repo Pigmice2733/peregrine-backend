@@ -10,7 +10,7 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 )
 
-// Service provides an interface to retreive data from
+// Service provides an interface to retrieve data from
 // The Blue Alliance's API
 type Service struct {
 	URL    string
@@ -109,7 +109,7 @@ func (s *Service) Ping() error {
 	return err
 }
 
-// GetEvents retreives all events from the given year (e.g. 2018).
+// GetEvents retrieves all events from the given year (e.g. 2018).
 func (s *Service) GetEvents(year int) ([]store.Event, error) {
 	path := fmt.Sprintf("/events/%d", year)
 

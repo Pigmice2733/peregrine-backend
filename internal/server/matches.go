@@ -26,6 +26,8 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 
+		teams := r.URL.Query()["team"]
+
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
@@ -38,7 +40,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			return
 		}
 
-		fullMatches, err := s.store.GetEventMatches(eventKey)
+		fullMatches, err := s.store.GetMatches(eventKey, teams)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.logger.WithError(err).Error("retrieving event matches")
@@ -146,7 +148,7 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 			BlueAlliance:  m.BlueAlliance,
 		}
 
-		if err := s.store.MatchesUpsert([]store.Match{sm}); err != nil {
+		if err := s.store.UpsertMatch(sm); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.logger.WithError(err).Error("upserting match")
 			return
@@ -171,5 +173,5 @@ func (s *Server) updateMatches(eventKey string) error {
 		return err
 	}
 
-	return s.store.MatchesUpsert(fullMatches)
+	return s.store.UpdateTBAMatches(fullMatches, eventKey)
 }

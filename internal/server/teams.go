@@ -2,8 +2,6 @@ package server
 
 import (
 	"net/http"
-	"strings"
-	"time"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -11,7 +9,6 @@ import (
 )
 
 type team struct {
-	NextMatch    *match   `json:"nextMatch,omitempty"`
 	Rank         *int     `json:"rank,omitempty"`
 	RankingScore *float64 `json:"rankingScore,omitempty"`
 }
@@ -38,10 +35,6 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.logger.WithError(err).Error("retrieving team key data")
 			return
-		}
-
-		if teamKeys == nil {
-			teamKeys = []string{}
 		}
 
 		ihttp.Respond(w, teamKeys, http.StatusOK)
@@ -77,46 +70,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 			return
 		}
 
-		fullMatches, err := s.store.GetTeamMatches(eventKey, teamKey)
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving team match data")
-			return
-		}
-
-		now := time.Now().Unix()
-		var fullNextMatch *store.Match
-		for i, fullMatch := range fullMatches {
-			matchTime := fullMatch.GetTime()
-			if fullNextMatch != nil {
-				nextMatchTime := fullNextMatch.GetTime()
-				if matchTime != nil && matchTime.Unix > now && matchTime.Unix < nextMatchTime.Unix {
-					fullNextMatch = &fullMatches[i]
-				}
-			} else {
-				if matchTime != nil && matchTime.Unix > now {
-					fullNextMatch = &fullMatches[i]
-				}
-			}
-		}
-
-		var nextMatch *match
-		if fullNextMatch != nil {
-			// Match keys are stored in TBA format, with leading event key
-			// prefix, which needs to be removed before use.
-			key := strings.TrimPrefix(fullNextMatch.Key, eventKey+"_")
-			nextMatch = &match{
-				Key:          key,
-				Time:         fullNextMatch.GetTime(),
-				RedScore:     fullNextMatch.RedScore,
-				BlueScore:    fullNextMatch.BlueScore,
-				RedAlliance:  fullNextMatch.RedAlliance,
-				BlueAlliance: fullNextMatch.BlueAlliance,
-			}
-		}
-
 		team := team{
-			NextMatch:    nextMatch,
 			Rank:         fullTeam.Rank,
 			RankingScore: fullTeam.RankingScore,
 		}

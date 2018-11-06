@@ -46,7 +46,7 @@ type Location struct {
 
 // GetEvents returns all events from the database. event.Webcasts will be nil for every event.
 func (s *Service) GetEvents() ([]Event, error) {
-	var events []Event
+	events := []Event{}
 
 	return events, s.db.Select(&events, "SELECT * FROM events")
 }
