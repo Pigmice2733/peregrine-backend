@@ -66,6 +66,7 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 			"status_code":  rr.code,
 			"body_size":    rr.len,
 			"admin":        GetRoles(r).IsAdmin,
+			"user_agent":   r.Header.Get("User-Agent"),
 		}
 
 		if sub, err := GetSubject(r); err != nil {
