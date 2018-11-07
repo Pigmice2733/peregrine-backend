@@ -25,11 +25,12 @@ type Server struct {
 	year             int
 	logger           *logrus.Logger
 	eventsLastUpdate *time.Time
+	start            time.Time
 }
 
 // New creates a new Peregrine API server
-func New(tba tba.Service, store store.Service, logWriter io.Writer, logJSON bool, httpAddress, httpsAddress, certFile, keyFile, origin string, jwtSecret []byte, year int) Server {
-	s := Server{
+func New(tba tba.Service, store store.Service, logWriter io.Writer, logJSON bool, httpAddress, httpsAddress, certFile, keyFile, origin string, jwtSecret []byte, year int) *Server {
+	s := &Server{
 		tba:          tba,
 		store:        store,
 		httpAddress:  httpAddress,
@@ -73,6 +74,8 @@ func (s *Server) Run() error {
 
 	errs := make(chan error)
 
+	s.start = time.Now()
+
 	go func() {
 		s.logger.WithField("http_address", s.httpAddress).Info("serving http")
 		errs <- httpServer.ListenAndServe()
@@ -110,9 +113,11 @@ type services struct {
 }
 
 type status struct {
-	Listen   listen   `json:"listen"`
-	Services services `json:"services"`
-	Ok       bool     `json:"ok"`
+	StartTime int64    `json:"startTime"`
+	Uptime    int64    `json:"uptime"`
+	Listen    listen   `json:"listen"`
+	Services  services `json:"services"`
+	Ok        bool     `json:"ok"`
 }
 
 func (s *Server) healthHandler() http.HandlerFunc {
@@ -121,6 +126,8 @@ func (s *Server) healthHandler() http.HandlerFunc {
 		pgHealthy := s.store.Ping() == nil
 
 		ihttp.Respond(w, status{
+			StartTime: s.start.Unix(),
+			Uptime:    int64(time.Since(s.start).Seconds()),
 			Listen: listen{
 				HTTP:  s.httpAddress,
 				HTTPS: s.httpsAddress,
