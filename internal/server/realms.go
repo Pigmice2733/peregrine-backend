@@ -103,8 +103,7 @@ func (s *Server) realmHandler() http.HandlerFunc {
 		roles := ihttp.GetRoles(r)
 		if !roles.IsSuperAdmin {
 			if roles.IsAdmin {
-				subjectRealm, err := s.getUserRealm(r)
-				if err != nil || subjectRealm != teamKey {
+				if ihttp.GetRealm(r) != teamKey {
 					ihttp.Error(w, http.StatusForbidden)
 					return
 				}
@@ -141,8 +140,7 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 		roles := ihttp.GetRoles(r)
 		if !roles.IsSuperAdmin {
 			if roles.IsAdmin {
-				subjectRealm, err := s.getUserRealm(r)
-				if err != nil || subjectRealm != teamKey {
+				if ihttp.GetRealm(r) != teamKey {
 					ihttp.Error(w, http.StatusForbidden)
 					return
 				}
@@ -187,8 +185,7 @@ func (s *Server) deleteRealmHandler() http.HandlerFunc {
 		roles := ihttp.GetRoles(r)
 		if !roles.IsSuperAdmin {
 			if roles.IsAdmin {
-				subjectRealm, err := s.getUserRealm(r)
-				if err != nil || subjectRealm != teamKey {
+				if ihttp.GetRealm(r) != teamKey {
 					ihttp.Error(w, http.StatusForbidden)
 					return
 				}

@@ -113,6 +113,7 @@ func Auth(next http.HandlerFunc, jwtSecret []byte) http.HandlerFunc {
 
 		ctx := context.WithValue(r.Context(), keyRolesContext, claims.Roles)
 		ctx = context.WithValue(ctx, keySubjectContext, claims.Subject)
+		ctx = context.WithValue(ctx, keyRealmContext, claims.Realm)
 
 		next(w, r.WithContext(ctx))
 	}
