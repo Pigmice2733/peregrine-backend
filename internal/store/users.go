@@ -159,7 +159,7 @@ func (s *Service) GetUserByID(id int64) (User, error) {
 	GROUP BY users.id
 	`, id)
 	if err == sql.ErrNoRows {
-        return u, ErrNoResults(fmt.Errorf("user %+v does not exist", u))
+		return u, ErrNoResults(fmt.Errorf("user %+v does not exist", u))
 	}
 
 	return u, errors.Wrap(err, "unable to select user")
