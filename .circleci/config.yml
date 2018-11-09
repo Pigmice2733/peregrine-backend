@@ -3,6 +3,17 @@
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2
 jobs:
+  lint:
+    docker:
+      - image: circleci/golang:1.10
+    working_directory: /go/src/github.com/Pigmice2733/peregrine-backend
+    steps:
+      - checkout
+      - run: mkdir ./bin/
+      - run: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s v1.12
+      - run: dep ensure
+      - run: ./bin/golangci-lint run
+
   test:
     docker:
       - image: circleci/golang:1.10-node
@@ -10,8 +21,8 @@ jobs:
           GO_ENV: testing
       - image: circleci/postgres:10-alpine
         environment:
-            POSTGRES_USER: peregrine
-            POSTGRES_DB: peregrine
+          POSTGRES_USER: peregrine
+          POSTGRES_DB: peregrine
     working_directory: /go/src/github.com/Pigmice2733/peregrine-backend
     steps:
       - checkout
@@ -21,7 +32,7 @@ jobs:
       - run: go build -o migrate cmd/migrate/main.go
       - run: go build -o peregrine cmd/peregrine/main.go
       - run: ./migrate -up
-      - run: 
+      - run:
           command: ./peregrine
           background: true
       - run: cd api-tests && npm i
@@ -46,7 +57,7 @@ jobs:
       - run: tar czvf deploy.tgz -C /tmp/ deploy
       - run: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null deploy.tgz $EDGE_SSH_USER@$EDGE_SSH_HOST:/root
       - run: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -t $EDGE_SSH_USER@$EDGE_SSH_HOST "./deploy.sh"
-      
+
   deploy_prod:
     docker:
       - image: circleci/golang:1.10
@@ -70,17 +81,19 @@ workflows:
   version: 2
   test_n_deploy:
     jobs:
+      - lint
       - test
       - deploy_prod:
           requires:
+            - lint
             - test
           filters:
             branches:
               only: master
       - deploy_edge:
           requires:
+            - lint
             - test
           filters:
             branches:
               only: develop
-              
