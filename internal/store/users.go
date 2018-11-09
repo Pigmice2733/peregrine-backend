@@ -68,7 +68,7 @@ func (s *Service) GetUserByUsername(username string) (User, error) {
 
 	err := s.db.Get(&u, "SELECT * FROM users WHERE username = $1", username)
 	if err == sql.ErrNoRows {
-		return u, ErrNoResults(fmt.Errorf("user %+v does not exist", u))
+		return u, ErrNoResults(fmt.Errorf("user %d does not exist", u.ID))
 	}
 
 	return u, errors.Wrap(err, "unable to select user")
@@ -159,7 +159,7 @@ func (s *Service) GetUserByID(id int64) (User, error) {
 	GROUP BY users.id
 	`, id)
 	if err == sql.ErrNoRows {
-		return u, ErrNoResults(fmt.Errorf("user %+v does not exist", u))
+		return u, ErrNoResults(fmt.Errorf("user %d does not exist", u.ID))
 	}
 
 	return u, errors.Wrap(err, "unable to select user")

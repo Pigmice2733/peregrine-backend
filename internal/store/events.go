@@ -79,7 +79,7 @@ func (s *Service) GetEvent(eventKey string) (Event, error) {
 	var event Event
 	if err := s.db.Get(&event, "SELECT * FROM events WHERE key = $1", eventKey); err != nil {
 		if err == sql.ErrNoRows {
-			return event, ErrNoResults(fmt.Errorf("event %+v does not exist", event))
+			return event, ErrNoResults(fmt.Errorf("event %s does not exist", event.Key))
 		}
 		return event, err
 	}
