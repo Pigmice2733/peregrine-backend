@@ -12,6 +12,7 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -37,7 +38,7 @@ func run(basePath string) error {
 		APIKey: c.TBA.APIKey,
 	}
 
-	s, err := store.New(c.Database)
+	sto, err := store.New(c.Database)
 	if err != nil {
 		return errors.Wrap(err, "opening postgres server")
 	}
@@ -56,15 +57,14 @@ func run(basePath string) error {
 			Roles:          c.SeedUser.Roles,
 		}
 
-		err = s.CreateUser(u)
+		err = sto.CreateUser(u)
 		if err != nil && err != store.ErrExists {
 			return errors.Wrap(err, "creating seed user")
 		}
 	}
 
-	year := c.Server.Year
-	if year == 0 {
-		year = time.Now().Year()
+	if c.Server.Year == 0 {
+		c.Server.Year = time.Now().Year()
 	}
 
 	jwtSecret := make([]byte, 64)
@@ -72,19 +72,18 @@ func run(basePath string) error {
 		return errors.Wrap(err, "generating jwt secret")
 	}
 
-	server := server.New(
-		tba,
-		s,
-		os.Stdout,
-		c.Server.LogJSON,
-		c.Server.HTTPAddress,
-		c.Server.HTTPSAddress,
-		c.Server.CertFile,
-		c.Server.KeyFile,
-		c.Server.Origin,
-		jwtSecret,
-		year,
-	)
+	logger := logrus.New()
+	if c.Server.LogJSON {
+		logger.Formatter = &logrus.JSONFormatter{}
+	}
 
-	return errors.Wrap(server.Run(), "running server")
+	s := &server.Server{
+		TBA:       tba,
+		Store:     sto,
+		Logger:    logger,
+		Server:    c.Server,
+		JWTSecret: jwtSecret,
+	}
+
+	return errors.Wrap(s.Run(), "running server")
 }

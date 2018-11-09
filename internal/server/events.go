@@ -44,14 +44,14 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		// Get new event data from TBA if event data is over 24 hours old
 		if err := s.updateEvents(); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("unable to update event data")
+			go s.Logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
-		fullEvents, err := s.store.GetEvents()
+		fullEvents, err := s.Store.GetEvents()
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving event data")
+			go s.Logger.WithError(err).Error("retrieving event data")
 			return
 		}
 
@@ -82,20 +82,20 @@ func (s *Server) eventHandler() http.HandlerFunc {
 		// Get new event data from TBA if event data is over 24 hours old
 		if err := s.updateEvents(); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("unable to update event data")
+			go s.Logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
 		eventKey := mux.Vars(r)["eventKey"]
 
-		fullEvent, err := s.store.GetEvent(eventKey)
+		fullEvent, err := s.Store.GetEvent(eventKey)
 		if err != nil {
 			if _, ok := err.(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("unable to retrieve event data")
+			go s.Logger.WithError(err).Error("unable to retrieve event data")
 			return
 		}
 
@@ -143,11 +143,11 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 		// this is redundant since the route should be admin-protected anyways
 		if !ihttp.GetRoles(r).IsAdmin {
 			ihttp.Error(w, http.StatusForbidden)
-			go s.logger.Error("got non-admin user on admin-protected route")
+			go s.Logger.Error("got non-admin user on admin-protected route")
 			return
 		}
 
-		if err := s.store.EventsUpsert([]store.Event{e}); err != nil {
+		if err := s.Store.EventsUpsert([]store.Event{e}); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -162,12 +162,12 @@ func (s *Server) updateEvents() error {
 	now := time.Now()
 
 	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > 24.0 {
-		fullEvents, err := s.tba.GetEvents(s.year)
+		fullEvents, err := s.TBA.GetEvents(s.Year)
 		if err != nil {
 			return err
 		}
 
-		if err := s.store.EventsUpsert(fullEvents); err != nil {
+		if err := s.Store.EventsUpsert(fullEvents); err != nil {
 			return fmt.Errorf("upserting events: %v", err)
 		}
 

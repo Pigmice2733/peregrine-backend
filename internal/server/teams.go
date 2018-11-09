@@ -26,14 +26,14 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("updating team key data")
+			go s.Logger.WithError(err).Error("updating team key data")
 			return
 		}
 
-		teamKeys, err := s.store.GetTeamKeys(eventKey)
+		teamKeys, err := s.Store.GetTeamKeys(eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving team key data")
+			go s.Logger.WithError(err).Error("retrieving team key data")
 			return
 		}
 
@@ -55,18 +55,18 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("updating team rankings data")
+			go s.Logger.WithError(err).Error("updating team rankings data")
 			return
 		}
 
-		fullTeam, err := s.store.GetTeam(teamKey, eventKey)
+		fullTeam, err := s.Store.GetTeam(teamKey, eventKey)
 		if err != nil {
 			if _, ok := err.(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving team rankings data")
+			go s.Logger.WithError(err).Error("retrieving team rankings data")
 			return
 		}
 
@@ -82,33 +82,33 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 // Get new team key data from TBA for a particular event. Upsert data into database.
 func (s *Server) updateTeamKeys(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.store.CheckTBAEventKeyExists(eventKey)
+	err := s.Store.CheckTBAEventKeyExists(eventKey)
 	if err == store.ErrManuallyAdded {
 		return nil
 	} else if err != nil {
 		return err
 	}
 
-	teams, err := s.tba.GetTeamKeys(eventKey)
+	teams, err := s.TBA.GetTeamKeys(eventKey)
 	if err != nil {
 		return err
 	}
-	return s.store.TeamKeysUpsert(eventKey, teams)
+	return s.Store.TeamKeysUpsert(eventKey, teams)
 }
 
 // Get new team rankings data from TBA for a particular event. Upsert data into database.
 func (s *Server) updateTeamRankings(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.store.CheckTBAEventKeyExists(eventKey)
+	err := s.Store.CheckTBAEventKeyExists(eventKey)
 	if err == store.ErrManuallyAdded {
 		return nil
 	} else if err != nil {
 		return err
 	}
 
-	teams, err := s.tba.GetTeamRankings(eventKey)
+	teams, err := s.TBA.GetTeamRankings(eventKey)
 	if err != nil {
 		return err
 	}
-	return s.store.TeamsUpsert(teams)
+	return s.Store.TeamsUpsert(teams)
 }
