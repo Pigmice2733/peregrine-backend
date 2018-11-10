@@ -48,7 +48,17 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 			return
 		}
 
-		fullEvents, err := s.store.GetEvents()
+		var fullEvents []store.Event
+		var err error
+
+		roles := ihttp.GetRoles(r)
+
+		if roles.IsSuperAdmin {
+			fullEvents, err = s.store.GetEventz()
+		} else {
+			fullEvents, err = s.store.GetEventsFromRealm(ihttp.GetRealm(r))
+		}
+
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.logger.WithError(err).Error("retrieving event data")
@@ -99,6 +109,11 @@ func (s *Server) eventHandler() http.HandlerFunc {
 			return
 		}
 
+		if !s.checkEventAccess(fullEvent.Realm, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
 		webcasts := []webcast{}
 		for _, fullWebcast := range fullEvent.Webcasts {
 			webcasts = append(webcasts, webcast{
@@ -138,10 +153,19 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 			return
 		}
 
+		creatorRealm := ihttp.GetRealm(r)
+		if creatorRealm == "" {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.logger.Error("required user realm is null")
+			return
+		}
+
+		e.Realm = &creatorRealm
 		e.ManuallyAdded = true
 
 		if err := s.store.EventsUpsert([]store.Event{e}); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
+			go s.logger.WithError(err).Error("unable to upsert event data")
 			return
 		}
 
@@ -168,4 +192,12 @@ func (s *Server) updateEvents() error {
 	}
 
 	return nil
+}
+
+// Returns whether a user can access an event or its matches
+func (s *Server) checkEventAccess(eventRealm *string, r *http.Request) bool {
+	roles := ihttp.GetRoles(r)
+	userRealm := ihttp.GetRealm(r)
+
+	return eventRealm == nil || roles.IsSuperAdmin || *eventRealm != userRealm
 }

@@ -8,16 +8,18 @@ import (
 // Event holds information about an FRC event such as webcast associated with
 // it, the location, its start date, and more.
 type Event struct {
-	Key           string    `json:"key" db:"key"`
-	Name          string    `json:"name" db:"name"`
-	District      *string   `json:"district" db:"district"`
-	FullDistrict  *string   `json:"fullDistrict" db:"full_district"`
-	Week          *int      `json:"week" db:"week"`
-	ManuallyAdded bool      `json:"manuallyAdded" db:"manually_added"`
-	StartDate     UnixTime  `json:"startDate" db:"start_date"`
-	EndDate       UnixTime  `json:"endDate" db:"end_date"`
-	Webcasts      []Webcast `json:"webcasts"`
-	Location      `json:"location"`
+	Key          string    `json:"key" db:"key"`
+	Name         string    `json:"name" db:"name"`
+	District     *string   `json:"district" db:"district"`
+	FullDistrict *string   `json:"fullDistrict" db:"full_district"`
+	Week         *int      `json:"week" db:"week"`
+	StartDate    UnixTime  `json:"startDate" db:"start_date"`
+	EndDate      UnixTime  `json:"endDate" db:"end_date"`
+	Webcasts     []Webcast `json:"webcasts"`
+	Location     `json:"location"`
+
+	ManuallyAdded bool    `json:"manuallyAdded" db:"manually_added"`
+	Realm         *string `db:"realm"`
 }
 
 // WebcastType represents a data source for a webcast such as twitch or youtube.
@@ -44,11 +46,20 @@ type Location struct {
 	Lon  float64 `json:"lon" db:"lon"`
 }
 
-// GetEvents returns all events from the database. event.Webcasts will be nil for every event.
-func (s *Service) GetEvents() ([]Event, error) {
+// GetEventz returns all events from the database. event.Webcasts will be nil for every event.
+func (s *Service) GetEventz() ([]Event, error) {
 	events := []Event{}
 
 	return events, s.db.Select(&events, "SELECT * FROM events")
+}
+
+// GetEventsFromRealm returns all events from a specific realm. Additionally all
+// TBA events will be retrieved. If no realm is specified ("") then just the TBA
+// events will be retrieved. event.Webcasts will be nil for every event.
+func (s *Service) GetEventsFromRealm(realm string) ([]Event, error) {
+	events := []Event{}
+
+	return events, s.db.Select(&events, "SELECT * FROM events WHERE manually_added = FALSE OR realm = $1", realm)
 }
 
 // ErrManuallyAdded is returned when an event has been manually inserted into
@@ -96,8 +107,8 @@ func (s *Service) EventsUpsert(events []Event) error {
 	}
 
 	eventStmt, err := tx.PrepareNamed(`
-		INSERT INTO events (key, name, district, full_district, week, manually_added, start_date, end_date, location_name, lat, lon)
-		VALUES (:key, :name, :district, :full_district, :week, :manually_added, :start_date, :end_date, :location_name, :lat, :lon)
+		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, manually_added, realm)
+		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :manually_added, :realm)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -106,12 +117,13 @@ func (s *Service) EventsUpsert(events []Event) error {
 					district = :district,
 					full_district = :full_district,
 					week = :week,
-					manually_added = :manually_added,
 					start_date = :start_date,
 					end_date = :end_date,
 					location_name = :location_name,
 					lat = :lat,
-					lon = :lon
+					lon = :lon,
+					manually_added = :manually_added,
+                    realm = :realm
 	`)
 	if err != nil {
 		_ = tx.Rollback()

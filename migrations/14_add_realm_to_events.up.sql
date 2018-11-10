@@ -1,0 +1,2 @@
+ALTER TABLE events
+    ADD COLUMN realm TEXT REFERENCES realms;

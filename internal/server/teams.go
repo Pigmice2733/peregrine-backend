@@ -18,6 +18,18 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 
+		event, err := s.store.GetEvent(eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.Realm, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
 		// Get new team data from TBA
 		if err := s.updateTeamKeys(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
@@ -46,6 +58,18 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		eventKey, teamKey := vars["eventKey"], vars["teamKey"]
+
+		event, err := s.store.GetEvent(eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.Realm, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
 
 		// Get new team rankings data from TBA
 		if err := s.updateTeamRankings(eventKey); err != nil {

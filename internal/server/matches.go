@@ -28,6 +28,18 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 
 		teams := r.URL.Query()["team"]
 
+		event, err := s.store.GetEvent(eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.Realm, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
@@ -72,6 +84,18 @@ func (s *Server) matchHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		eventKey, matchKey := vars["eventKey"], vars["matchKey"]
+
+		event, err := s.store.GetEvent(eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.Realm, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
 
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
@@ -125,6 +149,18 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 		}
 
 		eventKey := mux.Vars(r)["eventKey"]
+
+		event, err := s.store.GetEvent(eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.Realm, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
 
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.

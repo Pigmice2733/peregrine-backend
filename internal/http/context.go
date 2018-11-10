@@ -59,7 +59,8 @@ func GetRoles(r *http.Request) store.Roles {
 	return roles
 }
 
-// GetRealm retrieves the user realm from the http context.
+// GetRealm retrieves the user realm from the http context. Returns "" if there
+// is no realm.
 func GetRealm(r *http.Request) string {
 	contextRealm := r.Context().Value(keyRealmContext)
 	if contextRealm == nil {
