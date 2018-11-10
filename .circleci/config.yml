@@ -3,6 +3,17 @@
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2
 jobs:
+  lint:
+    docker:
+      - image: circleci/golang:1.10
+    working_directory: /go/src/github.com/Pigmice2733/peregrine-backend
+    steps:
+      - checkout
+      - run: mkdir ./bin/
+      - run: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s v1.12
+      - run: dep ensure
+      - run: ./bin/golangci-lint run
+
   test:
     docker:
       - image: circleci/golang:1.10-node
@@ -20,7 +31,7 @@ jobs:
       - run: go test -v ./...
       - run: go build -o migrate cmd/migrate/main.go
       - run: go build -o peregrine cmd/peregrine/main.go
-      - run: ./migrate -down && ./migrate -up
+      - run: ./migrate -up
       - run:
           command: ./peregrine
           background: true
@@ -70,15 +81,18 @@ workflows:
   version: 2
   test_n_deploy:
     jobs:
+      - lint
       - test
       - deploy_prod:
           requires:
+            - lint
             - test
           filters:
             branches:
               only: master
       - deploy_edge:
           requires:
+            - lint
             - test
           filters:
             branches:
