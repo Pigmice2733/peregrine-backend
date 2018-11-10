@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -33,7 +34,7 @@ func (s *Service) GetRealm(team string) (Realm, error) {
 	var realm Realm
 	err := s.db.Get(&realm, "SELECT * FROM realms WHERE team = $1", team)
 	if err == sql.ErrNoRows {
-		return realm, ErrNoResults
+		return realm, &ErrNoResults{msg: fmt.Sprintf("realm with team %s not found", team)}
 	}
 	return realm, err
 }
@@ -52,7 +53,7 @@ func (s *Service) InsertRealm(realm Realm) error {
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
 			_ = tx.Rollback()
-			return ErrExists
+			return &ErrExists{msg: fmt.Sprintf("realm %s already exists", realm.Team)}
 		}
 		_ = tx.Rollback()
 		return errors.Wrap(err, "unable to insert realm")
@@ -101,7 +102,7 @@ func (s *Service) PatchRealm(realm PatchRealm) error {
 
 	if count, err := result.RowsAffected(); err != nil || count == 0 {
 		_ = tx.Rollback()
-		return ErrNoResults
+		return &ErrNoResults{msg: fmt.Sprintf("realm %s not found", realm.Team)}
 	}
 
 	return errors.Wrap(tx.Commit(), "unable to patch realm")

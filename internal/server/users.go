@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -42,12 +43,12 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		user, err := s.store.GetUserByUsername(ru.Username)
-		if err == store.ErrNoResults {
+		user, err := s.Store.GetUserByUsername(ru.Username)
+		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
-			go s.logger.WithError(err).Error("retrieving user from database")
+			go s.Logger.WithError(err).Error("retrieving user from database")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -57,7 +58,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
-			go s.logger.WithError(err).Error("comparing user hash and password")
+			go s.Logger.WithError(err).Error("comparing user hash and password")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -69,9 +70,9 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			},
 			Roles: user.Roles,
 			Realm: user.Realm,
-		}).SignedString(s.jwtSecret)
+		}).SignedString(s.JWTSecret)
 		if err != nil {
-			go s.logger.WithError(err).Error("generating jwt signed string")
+			go s.Logger.WithError(err).Error("generating jwt signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -116,22 +117,22 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcrypt.DefaultCost)
 		if err != nil {
-			go s.logger.WithError(err).Error("hashing user password")
+			go s.Logger.WithError(err).Error("hashing user password")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
 
 		u.HashedPassword = string(hashedPassword)
 
-		err = s.store.CreateUser(u)
-		if err == store.ErrExists {
+		err = s.Store.CreateUser(u)
+		if _, ok := err.(*store.ErrExists); ok {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
-		} else if err == store.ErrFKeyViolation {
+		} else if _, ok := err.(*store.ErrFKeyViolation); ok {
 			ihttp.Respond(w, err, http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {
-			go s.logger.WithError(err).Error("creating new user")
+			go s.Logger.WithError(err).Error("creating new user")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -148,13 +149,13 @@ func (s *Server) getUsersHandler() http.HandlerFunc {
 		var err error
 
 		if roles.IsSuperAdmin {
-			users, err = s.store.GetUsers()
+			users, err = s.Store.GetUsers()
 		} else {
-			users, err = s.store.GetUsersByRealm(ihttp.GetRealm(r))
+			users, err = s.Store.GetUsersByRealm(ihttp.GetRealm(r))
 		}
 
 		if err != nil {
-			go s.logger.WithError(err).Error("getting users")
+			go s.Logger.WithError(err).Error("getting users")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -185,12 +186,12 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 			return
 		}
 
-		user, err := s.store.GetUserByID(id)
-		if err == store.ErrNoResults {
+		user, err := s.Store.GetUserByID(id)
+		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
-			go s.logger.WithError(err).Error("getting user by id")
+			go s.Logger.WithError(err).Error("getting user by id")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -243,9 +244,9 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 
 		// Admins can only patch users in the same realm
 		if targetID != subjectID && !roles.IsSuperAdmin {
-			targetUser, err := s.store.GetUserByID(targetID)
+			targetUser, err := s.Store.GetUserByID(targetID)
 			if err != nil {
-				go s.logger.WithError(err).Error("getting user")
+				go s.Logger.WithError(err).Error("getting user")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -275,7 +276,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		if ru.Password != nil {
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*ru.Password), bcrypt.DefaultCost)
 			if err != nil {
-				go s.logger.WithError(err).Error("hashing user password")
+				go s.Logger.WithError(err).Error("hashing user password")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -284,15 +285,16 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 			u.HashedPassword = &hashedPasswordString
 		}
 
-		err = s.store.PatchUser(u)
-		if err == store.ErrNoResults {
+		err = s.Store.PatchUser(u)
+		if _, ok := err.(*store.ErrNoResults); ok {
+			fmt.Printf("%s\n", err)
 			ihttp.Error(w, http.StatusNotFound)
 			return
-		} else if err == store.ErrFKeyViolation {
+		} else if _, ok := err.(*store.ErrFKeyViolation); ok {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {
-			go s.logger.WithError(err).Error("patching user")
+			go s.Logger.WithError(err).Error("patching user")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -323,9 +325,9 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 
 		// Admins can only delete users in the same realm
 		if id != requestID && !roles.IsSuperAdmin {
-			targetUser, err := s.store.GetUserByID(id)
+			targetUser, err := s.Store.GetUserByID(id)
 			if err != nil {
-				go s.logger.WithError(err).Error("getting user")
+				go s.Logger.WithError(err).Error("getting user")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -335,9 +337,9 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 			}
 		}
 
-		err = s.store.DeleteUser(id)
+		err = s.Store.DeleteUser(id)
 		if err != nil {
-			go s.logger.WithError(err).Error("deleting user")
+			go s.Logger.WithError(err).Error("deleting user")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -345,12 +347,3 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 		ihttp.Respond(w, nil, http.StatusNoContent)
 	}
 }
-
-// func (s *Server) getUserRealm(r *http.Request) (string, error) {
-// 	ID, err := ihttp.GetSubject(r)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	user, err := s.store.GetUserByID(ID)
-// 	return user.Realm, err
-// }

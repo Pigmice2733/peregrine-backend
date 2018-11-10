@@ -28,10 +28,10 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 
 		teams := r.URL.Query()["team"]
 
-		event, err := s.store.GetEvent(eventKey)
+		event, err := s.Store.GetEvent(eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving event")
+			go s.Logger.WithError(err).Error("retrieving event")
 			return
 		}
 
@@ -43,19 +43,19 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if err == store.ErrNoResults {
+			if _, ok := err.(*store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("updating match data")
+			go s.Logger.WithError(err).Error("updating match data")
 			return
 		}
 
-		fullMatches, err := s.store.GetMatches(eventKey, teams)
+		fullMatches, err := s.Store.GetMatches(eventKey, teams)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving event matches")
+			go s.Logger.WithError(err).Error("retrieving event matches")
 			return
 		}
 
@@ -85,10 +85,10 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		vars := mux.Vars(r)
 		eventKey, matchKey := vars["eventKey"], vars["matchKey"]
 
-		event, err := s.store.GetEvent(eventKey)
+		event, err := s.Store.GetEvent(eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving event")
+			go s.Logger.WithError(err).Error("retrieving event")
 			return
 		}
 
@@ -104,23 +104,23 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if err == store.ErrNoResults {
+			if _, ok := err.(*store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("updating match data")
+			go s.Logger.WithError(err).Error("updating match data")
 			return
 		}
 
-		fullMatch, err := s.store.GetMatch(matchKey)
+		fullMatch, err := s.Store.GetMatch(matchKey)
 		if err != nil {
-			if err == store.ErrNoResults {
+			if _, ok := err.(*store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving match")
+			go s.Logger.WithError(err).Error("retrieving match")
 			return
 		}
 
@@ -150,10 +150,10 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 
 		eventKey := mux.Vars(r)["eventKey"]
 
-		event, err := s.store.GetEvent(eventKey)
+		event, err := s.Store.GetEvent(eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving event")
+			go s.Logger.WithError(err).Error("retrieving event")
 			return
 		}
 
@@ -177,9 +177,9 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 			BlueAlliance:  m.BlueAlliance,
 		}
 
-		if err := s.store.UpsertMatch(sm); err != nil {
+		if err := s.Store.UpsertMatch(sm); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("upserting match")
+			go s.Logger.WithError(err).Error("upserting match")
 			return
 		}
 
@@ -190,17 +190,17 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 // Get new match data from TBA for a particular event. Upsert match data into database.
 func (s *Server) updateMatches(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.store.CheckTBAEventKeyExists(eventKey)
+	err := s.Store.CheckTBAEventKeyExists(eventKey)
 	if err == store.ErrManuallyAdded {
 		return nil
 	} else if err != nil {
 		return err
 	}
 
-	fullMatches, err := s.tba.GetMatches(eventKey)
+	fullMatches, err := s.TBA.GetMatches(eventKey)
 	if err != nil {
 		return err
 	}
 
-	return s.store.UpdateTBAMatches(fullMatches, eventKey)
+	return s.Store.UpdateTBAMatches(fullMatches, eventKey)
 }

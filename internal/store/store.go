@@ -11,13 +11,31 @@ import (
 )
 
 // ErrNoResults indicates that no data matching the query was found.
-var ErrNoResults = fmt.Errorf("no matching records found")
+type ErrNoResults struct {
+	msg string
+}
+
+func (enr *ErrNoResults) Error() string {
+	return enr.msg
+}
 
 // ErrExists is returned if a unique record already exists.
-var ErrExists = fmt.Errorf("a record already exists")
+type ErrExists struct {
+	msg string
+}
+
+func (eex *ErrExists) Error() string {
+	return eex.msg
+}
 
 // ErrFKeyViolation is returned if inserting a record causes a foreign key violation.
-var ErrFKeyViolation = fmt.Errorf("foreign key violation")
+type ErrFKeyViolation struct {
+	msg string
+}
+
+func (efk *ErrFKeyViolation) Error() string {
+	return efk.msg
+}
 
 const pgExists = "23505"
 const pgFKeyViolation = "23503"

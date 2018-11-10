@@ -44,7 +44,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		// Get new event data from TBA if event data is over 24 hours old
 		if err := s.updateEvents(); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("unable to update event data")
+			go s.Logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
@@ -54,14 +54,14 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		roles := ihttp.GetRoles(r)
 
 		if roles.IsSuperAdmin {
-			fullEvents, err = s.store.GetEvents()
+			fullEvents, err = s.Store.GetEvents()
 		} else {
-			fullEvents, err = s.store.GetEventsFromRealm(ihttp.GetRealm(r))
+			fullEvents, err = s.Store.GetEventsFromRealm(ihttp.GetRealm(r))
 		}
 
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving event data")
+			go s.Logger.WithError(err).Error("retrieving event data")
 			return
 		}
 
@@ -92,20 +92,20 @@ func (s *Server) eventHandler() http.HandlerFunc {
 		// Get new event data from TBA if event data is over 24 hours old
 		if err := s.updateEvents(); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("unable to update event data")
+			go s.Logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
 		eventKey := mux.Vars(r)["eventKey"]
 
-		fullEvent, err := s.store.GetEvent(eventKey)
+		fullEvent, err := s.Store.GetEvent(eventKey)
 		if err != nil {
-			if err == store.ErrNoResults {
+			if _, ok := err.(*store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("unable to retrieve event data")
+			go s.Logger.WithError(err).Error("unable to retrieve event data")
 			return
 		}
 
@@ -156,16 +156,16 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 		creatorRealm := ihttp.GetRealm(r)
 		if creatorRealm == "" {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.Error("required user realm is null")
+			go s.Logger.Error("required user realm is null")
 			return
 		}
 
 		e.Realm = &creatorRealm
 		e.ManuallyAdded = true
 
-		if err := s.store.EventsUpsert([]store.Event{e}); err != nil {
+		if err := s.Store.EventsUpsert([]store.Event{e}); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("unable to upsert event data")
+			go s.Logger.WithError(err).Error("unable to upsert event data")
 			return
 		}
 
@@ -179,12 +179,12 @@ func (s *Server) updateEvents() error {
 	now := time.Now()
 
 	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > 24.0 {
-		fullEvents, err := s.tba.GetEvents(s.year)
+		fullEvents, err := s.TBA.GetEvents(s.Year)
 		if err != nil {
 			return err
 		}
 
-		if err := s.store.EventsUpsert(fullEvents); err != nil {
+		if err := s.Store.EventsUpsert(fullEvents); err != nil {
 			return fmt.Errorf("upserting events: %v", err)
 		}
 

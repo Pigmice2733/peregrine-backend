@@ -65,7 +65,7 @@ func (s *Service) GetUserByUsername(username string) (User, error) {
 
 	err := s.db.Get(&u, "SELECT * FROM users WHERE username = $1", username)
 	if err == sql.ErrNoRows {
-		return u, ErrNoResults
+		return u, &ErrNoResults{msg: fmt.Sprintf("user %d does not exist", u.ID)}
 	}
 
 	return u, errors.Wrap(err, "unable to select user")
@@ -88,10 +88,10 @@ func (s *Service) CreateUser(u User) error {
 		if err, ok := err.(*pq.Error); ok {
 			_ = tx.Rollback()
 			if err.Code == pgExists {
-				return ErrExists
+				return &ErrExists{msg: fmt.Sprintf("username %s already exists", u.Username)}
 			}
 			if err.Code == pgFKeyViolation {
-				return ErrFKeyViolation
+				return &ErrFKeyViolation{msg: fmt.Sprintf("user fk violation on realm %s: %v", u.Realm, err)}
 			}
 			return err
 		}
@@ -109,7 +109,7 @@ func (s *Service) CreateUser(u User) error {
 		if _, err := starsStmt.Exec(u.ID, star); err != nil {
 			_ = tx.Rollback()
 			if err, ok := err.(*pq.Error); ok && err.Code == pgFKeyViolation {
-				return ErrFKeyViolation
+				return &ErrFKeyViolation{msg: fmt.Sprintf("user stars event key fk violation: %v", err)}
 			}
 			return errors.Wrap(err, "unable to insert star for user")
 		}
@@ -192,7 +192,7 @@ func (s *Service) GetUserByID(id int64) (User, error) {
 	GROUP BY users.id
 	`, id)
 	if err == sql.ErrNoRows {
-		return u, ErrNoResults
+		return u, &ErrNoResults{msg: fmt.Sprintf("user %d does not exist", u.ID)}
 	}
 
 	return u, errors.Wrap(err, "unable to select user")
@@ -207,14 +207,14 @@ func (s *Service) PatchUser(pu PatchUser) error {
 
 	result, err := tx.NamedExec(`
 	UPDATE users
-	SET
-		username = COALESCE(:username, username),
-		hashed_password = COALESCE(:hashed_password, hashed_password),
-		first_name = COALESCE(:first_name, first_name),
-		last_name = COALESCE(:last_name, last_name),
-		roles = COALESCE(:roles, roles)
-	WHERE
-		id = :id
+	    SET
+		    username = COALESCE(:username, username),
+		    hashed_password = COALESCE(:hashed_password, hashed_password),
+		    first_name = COALESCE(:first_name, first_name),
+		    last_name = COALESCE(:last_name, last_name),
+		    roles = COALESCE(:roles, roles)
+	    WHERE
+		    id = :id
 	`, pu)
 	if err != nil {
 		_ = tx.Rollback()
@@ -223,7 +223,7 @@ func (s *Service) PatchUser(pu PatchUser) error {
 
 	if count, err := result.RowsAffected(); err != nil || count == 0 {
 		_ = tx.Rollback()
-		return ErrNoResults
+		return &ErrNoResults{msg: fmt.Sprintf("user ID %d not found", pu.ID)}
 	}
 
 	if pu.Stars != nil {
@@ -242,7 +242,7 @@ func (s *Service) PatchUser(pu PatchUser) error {
 			if _, err := starsStmt.Exec(pu.ID, star); err != nil {
 				_ = tx.Rollback()
 				if err, ok := err.(*pq.Error); ok && err.Code == pgFKeyViolation {
-					return ErrFKeyViolation
+					return &ErrFKeyViolation{msg: fmt.Sprintf("user stars event key fk violation: %v", err)}
 				}
 				return errors.Wrap(err, "unable to insert star for user")
 			}

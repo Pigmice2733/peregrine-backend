@@ -41,23 +41,23 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 
 		realm := store.Realm{Team: rr.Team, Name: rr.Name, PublicData: rr.PublicData}
 
-		err := s.store.InsertRealm(realm)
-		if err == store.ErrExists {
+		err := s.Store.InsertRealm(realm)
+		if _, ok := err.(*store.ErrExists); ok {
 			ihttp.Error(w, http.StatusConflict)
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving realms")
+			go s.Logger.WithError(err).Error("retrieving realms")
 			return
 		}
 
 		realmAdmin, adminPassword, err := s.createRealmAdmin(realm.Team)
-		if err == store.ErrExists {
+		if _, ok := err.(*store.ErrExists); ok {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("creating realm admin")
+			go s.Logger.WithError(err).Error("creating realm admin")
 			return
 		}
 
@@ -84,10 +84,10 @@ func (s *Server) realmsHandler() http.HandlerFunc {
 			return
 		}
 
-		realms, err := s.store.GetRealms()
+		realms, err := s.Store.GetRealms()
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving realms")
+			go s.Logger.WithError(err).Error("retrieving realms")
 			return
 		}
 
@@ -113,13 +113,13 @@ func (s *Server) realmHandler() http.HandlerFunc {
 			}
 		}
 
-		realm, err := s.store.GetRealm(teamKey)
-		if err == store.ErrNoResults {
+		realm, err := s.Store.GetRealm(teamKey)
+		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("retrieving realms")
+			go s.Logger.WithError(err).Error("retrieving realms")
 			return
 		}
 
@@ -163,12 +163,12 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 
 		sr := store.PatchRealm{Team: teamKey, Name: pr.Name, PublicData: pr.PublicData}
 
-		err := s.store.PatchRealm(sr)
-		if err == store.ErrNoResults {
+		err := s.Store.PatchRealm(sr)
+		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
-			go s.logger.WithError(err).Error("patching realm")
+			go s.Logger.WithError(err).Error("patching realm")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -195,10 +195,10 @@ func (s *Server) deleteRealmHandler() http.HandlerFunc {
 			}
 		}
 
-		err := s.store.DeleteRealm(teamKey)
+		err := s.Store.DeleteRealm(teamKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.logger.WithError(err).Error("deleting realms")
+			go s.Logger.WithError(err).Error("deleting realms")
 			return
 		}
 
@@ -227,13 +227,14 @@ func (s *Server) createRealmAdmin(teamKey string) (store.User, string, error) {
 		Roles:          store.Roles{IsAdmin: true, IsVerified: true, IsSuperAdmin: false},
 	}
 
-	err = store.ErrExists
-	for err == store.ErrExists {
+	alreadyExists := true
+	for alreadyExists {
 		if _, err := rand.Read(random); err != nil {
 			return store.User{}, "", errors.Wrap(err, "generating realm admin username")
 		}
 		realmAdmin.Username = base64.StdEncoding.EncodeToString(random)[:32]
-		err = s.store.CreateUser(realmAdmin)
+		err = s.Store.CreateUser(realmAdmin)
+		_, alreadyExists = err.(*store.ErrExists)
 	}
 	return realmAdmin, adminPassword, err
 }
