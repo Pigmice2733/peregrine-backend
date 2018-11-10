@@ -9,17 +9,20 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+// Server holds information about the peregrine backend HTTP server.
+type Server struct {
+	HTTPAddress  string `yaml:"httpAddress"`
+	HTTPSAddress string `yaml:"httpsAddress"`
+	KeyFile      string `yaml:"keyFile"`
+	CertFile     string `yaml:"certFile"`
+	Origin       string `yaml:"origin"`
+	Year         int    `yaml:"year"`
+	LogJSON      bool   `yaml:"logJSON"`
+}
+
 // Config holds information about how the peregrine backend is configured.
 type Config struct {
-	Server struct {
-		HTTPAddress  string `yaml:"httpAddress"`
-		HTTPSAddress string `yaml:"httpsAddress"`
-		KeyFile      string `yaml:"keyFile"`
-		CertFile     string `yaml:"certFile"`
-		Origin       string `yaml:"origin"`
-		Year         int    `yaml:"year"`
-		LogJSON      bool   `yaml:"logJSON"`
-	} `yaml:"server"`
+	Server Server `yaml:"server"`
 
 	TBA struct {
 		URL    string `yaml:"URL"`

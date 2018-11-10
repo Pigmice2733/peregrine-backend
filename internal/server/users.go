@@ -35,12 +35,12 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		user, err := s.store.GetUserByUsername(ru.Username)
+		user, err := s.Store.GetUserByUsername(ru.Username)
 		if _, ok := err.(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
-			go s.logger.WithError(err).Error("retrieving user from database")
+			go s.Logger.WithError(err).Error("retrieving user from database")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -55,7 +55,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
-			go s.logger.WithError(err).Error("comparing user hash and password")
+			go s.Logger.WithError(err).Error("comparing user hash and password")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -66,9 +66,9 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 				Subject:   strconv.FormatInt(user.ID, 10),
 			},
 			Roles: user.Roles,
-		}).SignedString(s.jwtSecret)
+		}).SignedString(s.JWTSecret)
 		if err != nil {
-			go s.logger.WithError(err).Error("generating jwt signed string")
+			go s.Logger.WithError(err).Error("generating jwt signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -106,19 +106,19 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcrypt.DefaultCost)
 		if err != nil {
-			go s.logger.WithError(err).Error("hashing user password")
+			go s.Logger.WithError(err).Error("hashing user password")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
 
 		u.HashedPassword = string(hashedPassword)
 
-		err = s.store.CreateUser(u)
+		err = s.Store.CreateUser(u)
 		if err == store.ErrExists {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
 		} else if err != nil {
-			go s.logger.WithError(err).Error("creating new user")
+			go s.Logger.WithError(err).Error("creating new user")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -129,9 +129,9 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 func (s *Server) getUsersHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		users, err := s.store.GetUsers()
+		users, err := s.Store.GetUsers()
 		if err != nil {
-			go s.logger.WithError(err).Error("getting users")
+			go s.Logger.WithError(err).Error("getting users")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -161,12 +161,12 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 			return
 		}
 
-		user, err := s.store.GetUserByID(id)
+		user, err := s.Store.GetUserByID(id)
 		if _, ok := err.(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
-			go s.logger.WithError(err).Error("getting user by id")
+			go s.Logger.WithError(err).Error("getting user by id")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -221,7 +221,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		if ru.Password != nil {
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*ru.Password), bcrypt.DefaultCost)
 			if err != nil {
-				go s.logger.WithError(err).Error("hashing user password")
+				go s.Logger.WithError(err).Error("hashing user password")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -230,12 +230,12 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 			u.HashedPassword = &hashedPasswordString
 		}
 
-		err = s.store.PatchUser(u)
+		err = s.Store.PatchUser(u)
 		if err == store.ErrExists {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
 		} else if err != nil {
-			go s.logger.WithError(err).Error("patching user")
+			go s.Logger.WithError(err).Error("patching user")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}

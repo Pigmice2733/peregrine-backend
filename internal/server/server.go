@@ -1,11 +1,11 @@
 package server
 
 import (
-	"io"
 	"net/http"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
+	"github.com/Pigmice2733/peregrine-backend/internal/config"
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
@@ -14,56 +14,29 @@ import (
 
 // Server is the scouting API server
 type Server struct {
-	tba              tba.Service
-	store            store.Service
-	handler          http.Handler
-	httpAddress      string
-	httpsAddress     string
-	certFile         string
-	keyFile          string
-	jwtSecret        []byte
-	year             int
-	logger           *logrus.Logger
+	config.Server
+
+	TBA              tba.Service
+	Store            store.Service
+	Logger           *logrus.Logger
+	JWTSecret        []byte
 	eventsLastUpdate *time.Time
 	start            time.Time
 }
 
-// New creates a new Peregrine API server
-func New(tba tba.Service, store store.Service, logWriter io.Writer, logJSON bool, httpAddress, httpsAddress, certFile, keyFile, origin string, jwtSecret []byte, year int) *Server {
-	s := &Server{
-		tba:          tba,
-		store:        store,
-		httpAddress:  httpAddress,
-		httpsAddress: httpsAddress,
-		certFile:     certFile,
-		keyFile:      keyFile,
-		year:         year,
-		jwtSecret:    jwtSecret,
-	}
-
-	s.logger = logrus.New()
-	s.logger.Out = logWriter
-
-	if logJSON {
-		s.logger.Formatter = &logrus.JSONFormatter{}
-	}
-
-	router := s.registerRoutes()
-	s.handler = ihttp.Auth(ihttp.Log(gziphandler.GzipHandler(ihttp.CORS(ihttp.LimitBody(router), origin)), s.logger), s.jwtSecret)
-
-	return s
-}
-
 // Run starts the server, and returns if it runs into an error
 func (s *Server) Run() error {
-	s.logger.Info("fetching seed events")
+	router := s.registerRoutes()
+	handler := ihttp.Auth(ihttp.Log(gziphandler.GzipHandler(ihttp.CORS(ihttp.LimitBody(router), s.Origin)), s.Logger), s.JWTSecret)
+
+	s.Logger.Info("fetching seed events")
 	if err := s.updateEvents(); err != nil {
-		s.logger.WithError(err).Error("updating event data on server run")
+		s.Logger.WithError(err).Error("updating event data on server run")
 	}
 
 	httpServer := &http.Server{
-		Addr:              s.httpAddress,
-		Handler:           s.handler,
+		Addr:              s.HTTPAddress,
+		Handler:           handler,
 		ReadTimeout:       time.Second * 15,
 		ReadHeaderTimeout: time.Second * 15,
 		WriteTimeout:      time.Second * 15,
@@ -77,14 +50,14 @@ func (s *Server) Run() error {
 	s.start = time.Now()
 
 	go func() {
-		s.logger.WithField("http_address", s.httpAddress).Info("serving http")
+		s.Logger.WithField("http_address", s.HTTPAddress).Info("serving http")
 		errs <- httpServer.ListenAndServe()
 	}()
 
-	if s.certFile != "" && s.keyFile != "" {
+	if s.CertFile != "" && s.KeyFile != "" {
 		httpsServer := &http.Server{
-			Addr:              s.httpsAddress,
-			Handler:           s.handler,
+			Addr:              s.HTTPSAddress,
+			Handler:           handler,
 			ReadTimeout:       time.Second * 15,
 			ReadHeaderTimeout: time.Second * 15,
 			WriteTimeout:      time.Second * 15,
@@ -94,8 +67,8 @@ func (s *Server) Run() error {
 		defer httpsServer.Close()
 
 		go func() {
-			s.logger.WithField("https_address", s.httpsAddress).Info("serving https")
-			errs <- httpsServer.ListenAndServeTLS(s.certFile, s.keyFile)
+			s.Logger.WithField("https_address", s.HTTPSAddress).Info("serving https")
+			errs <- httpsServer.ListenAndServeTLS(s.CertFile, s.KeyFile)
 		}()
 	}
 
@@ -122,15 +95,15 @@ type status struct {
 
 func (s *Server) healthHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tbaHealthy := s.tba.Ping() == nil
-		pgHealthy := s.store.Ping() == nil
+		tbaHealthy := s.TBA.Ping() == nil
+		pgHealthy := s.Store.Ping() == nil
 
 		ihttp.Respond(w, status{
 			StartTime: s.start.Unix(),
 			Uptime:    int64(time.Since(s.start).Seconds()),
 			Listen: listen{
-				HTTP:  s.httpAddress,
-				HTTPS: s.httpsAddress,
+				HTTP:  s.HTTPAddress,
+				HTTPS: s.HTTPSAddress,
 			},
 			Services: services{
 				TBA:        tbaHealthy,
