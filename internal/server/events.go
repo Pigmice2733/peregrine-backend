@@ -54,7 +54,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		roles := ihttp.GetRoles(r)
 
 		if roles.IsSuperAdmin {
-			fullEvents, err = s.store.GetEventz()
+			fullEvents, err = s.store.GetEvents()
 		} else {
 			fullEvents, err = s.store.GetEventsFromRealm(ihttp.GetRealm(r))
 		}

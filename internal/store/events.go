@@ -46,8 +46,8 @@ type Location struct {
 	Lon  float64 `json:"lon" db:"lon"`
 }
 
-// GetEventz returns all events from the database. event.Webcasts will be nil for every event.
-func (s *Service) GetEventz() ([]Event, error) {
+// GetEvents returns all events from the database. event.Webcasts will be nil for every event.
+func (s *Service) GetEvents() ([]Event, error) {
 	events := []Event{}
 
 	return events, s.db.Select(&events, "SELECT * FROM events")
