@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"flag"
 	"fmt"
@@ -85,5 +86,5 @@ func run(basePath string) error {
 		JWTSecret: jwtSecret,
 	}
 
-	return errors.Wrap(s.Run(), "running server")
+	return errors.Wrap(s.Run(context.Background()), "running server")
 }
