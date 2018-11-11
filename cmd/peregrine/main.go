@@ -43,6 +43,7 @@ func run(basePath string) error {
 	if err != nil {
 		return errors.Wrap(err, "opening postgres server")
 	}
+	defer sto.Close()
 
 	if c.SeedUser != nil {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(c.SeedUser.Password), bcrypt.DefaultCost)

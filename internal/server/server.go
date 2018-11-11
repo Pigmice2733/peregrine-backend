@@ -73,12 +73,12 @@ func (s *Server) Run(ctx context.Context) error {
 		}()
 	}
 
-	go func() {
-		<-ctx.Done()
-		errs <- nil
-	}()
-
-	return <-errs
+	select {
+	case err := <-errs:
+		return err
+	case <-ctx.Done():
+		return nil
+	}
 }
 
 type listen struct {

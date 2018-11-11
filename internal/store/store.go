@@ -47,12 +47,19 @@ func New(o Options) (Service, error) {
 // db.Ping() here, but that doesn't actually Ping the database because reasons.
 func (s *Service) Ping() error {
 	if s.db != nil {
-		var alive bool
-		err := s.db.QueryRow("SELECT 1").Scan(&alive)
-		return err
+		return s.db.QueryRow("SELECT 1").Scan(new(bool))
 	}
 
 	return fmt.Errorf("not connected to postgresql")
+}
+
+// Close closes the underlying postgresql database.
+func (s *Service) Close() error {
+	if s.db != nil {
+		return s.db.Close()
+	}
+
+	return nil
 }
 
 // UnixTime exists so that we can have times that look like time.Time's to
