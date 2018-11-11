@@ -150,7 +150,8 @@ func (s *Server) getUsersHandler() http.HandlerFunc {
 		if roles.IsSuperAdmin {
 			users, err = s.Store.GetUsers()
 		} else {
-			realmID, err := ihttp.GetRealmID(r)
+			var realmID int64
+			realmID, err = ihttp.GetRealmID(r)
 			if err != nil {
 				ihttp.Error(w, http.StatusUnauthorized)
 				return
