@@ -4,7 +4,7 @@ const fetch = require('node-fetch')
 const realm = {
   team: 'frc1234',
   name: 'Numb',
-  publicData: false,
+  shareReports: false,
 }
 
 let realmAdmin
@@ -62,9 +62,9 @@ test('realms', async () => {
   expect(foundRealm).toEqual({
     team: realm.team,
     name: realm.name,
-    publicData: realm.publicData,
+    shareReports: realm.shareReports,
   })
-  expect(Object.keys(foundRealm)).toEqual(['team', 'name', 'publicData'])
+  expect(Object.keys(foundRealm)).toEqual(['team', 'name', 'shareReports'])
 
   // /realms get unauthorized
   resp = await fetch(api.address + '/realms', {
@@ -88,9 +88,9 @@ test('realms', async () => {
   expect(d.data).toEqual({
     team: realm.team,
     name: realm.name,
-    publicData: realm.publicData,
+    shareReports: realm.shareReports,
   })
-  expect(Object.keys(d.data)).toEqual(['team', 'name', 'publicData'])
+  expect(Object.keys(d.data)).toEqual(['team', 'name', 'shareReports'])
 
   // /realms/{teamKey} get admin
   resp = await fetch(api.address + '/realms/' + realm.team, {
@@ -107,9 +107,9 @@ test('realms', async () => {
   expect(d.data).toEqual({
     team: realm.team,
     name: realm.name,
-    publicData: realm.publicData,
+    shareReports: realm.shareReports,
   })
-  expect(Object.keys(d.data)).toEqual(['team', 'name', 'publicData'])
+  expect(Object.keys(d.data)).toEqual(['team', 'name', 'shareReports'])
 
   // /realms/{teamKey} get unauthorized
   resp = await fetch(api.address + '/realms/' + realm.team, {
@@ -148,7 +148,7 @@ test('realms', async () => {
   // /realms/{teamKey} complete patch
   patchRealm = {
     name: 'Name',
-    publicData: !realm.publicData,
+    shareReports: !realm.shareReports,
   }
 
   resp = await fetch(api.address + '/realms/' + realm.team, {
@@ -161,7 +161,7 @@ test('realms', async () => {
   })
 
   realm.name = 'Name'
-  realm.publicData = !realm.publicData
+  realm.shareReports = !realm.shareReports
 
   expect(resp.status).toBe(204)
 
@@ -199,9 +199,9 @@ test('realms', async () => {
   expect(d.data).toEqual({
     team: realm.team,
     name: realm.name,
-    publicData: realm.publicData,
+    shareReports: realm.shareReports,
   })
-  expect(Object.keys(d.data)).toEqual(['team', 'name', 'publicData'])
+  expect(Object.keys(d.data)).toEqual(['team', 'name', 'shareReports'])
 
   // /realms/{teamKey} delete unauthorized
   resp = await fetch(api.address + '/realms/' + realm.team, {

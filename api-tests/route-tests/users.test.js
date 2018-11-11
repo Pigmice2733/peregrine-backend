@@ -41,7 +41,7 @@ test('users CRUD', async () => {
   let otherRealm = {
     team: 'frc2471',
     name: 'TMM',
-    publicData: false,
+    shareReports: false,
   }
 
   // users create

@@ -15,9 +15,9 @@ import (
 )
 
 type realm struct {
-	Team       string `json:"team" validate:"required"`
-	Name       string `json:"name" validate:"required"`
-	PublicData bool   `json:"publicData"`
+	Team         string `json:"team" validate:"required"`
+	Name         string `json:"name" validate:"required"`
+	ShareReports bool   `json:"shareReports"`
 }
 
 // createRealmHandler returns a handler to create a new realm.
@@ -39,7 +39,7 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		realm := store.Realm{Team: rr.Team, Name: rr.Name, PublicData: rr.PublicData}
+		realm := store.Realm{Team: rr.Team, Name: rr.Name, ShareReports: rr.ShareReports}
 
 		err := s.Store.InsertRealm(realm)
 		if _, ok := err.(*store.ErrExists); ok {
@@ -130,8 +130,8 @@ func (s *Server) realmHandler() http.HandlerFunc {
 // patchRealmHandler returns a handler to modify a specific realm.
 func (s *Server) patchRealmHandler() http.HandlerFunc {
 	type patchRealm struct {
-		Name       *string `json:"name" validate:"omitempty,gte=1,lte=32"`
-		PublicData *bool   `json:"publicData"`
+		Name         *string `json:"name" validate:"omitempty,gte=1,lte=32"`
+		ShareReports *bool   `json:"shareReports"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -161,7 +161,7 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		sr := store.PatchRealm{Team: teamKey, Name: pr.Name, PublicData: pr.PublicData}
+		sr := store.PatchRealm{Team: teamKey, Name: pr.Name, ShareReports: pr.ShareReports}
 
 		err := s.Store.PatchRealm(sr)
 		if _, ok := err.(*store.ErrNoResults); ok {

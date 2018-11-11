@@ -10,16 +10,16 @@ import (
 
 // Realm holds the team key and name of a realm.
 type Realm struct {
-	Team       string `json:"team" db:"team"`
-	Name       string `json:"name" db:"name"`
-	PublicData bool   `json:"publicData" db:"public_data"`
+	Team         string `json:"team" db:"team"`
+	Name         string `json:"name" db:"name"`
+	ShareReports bool   `json:"shareReports" db:"share_reports"`
 }
 
 // PatchRealm is a nullable Realm, except for the Team, which is the PK.
 type PatchRealm struct {
-	Team       string  `db:"team"`
-	Name       *string `db:"name"`
-	PublicData *bool   `db:"public_data"`
+	Team         string  `db:"team"`
+	Name         *string `db:"name"`
+	ShareReports *bool   `db:"share_reports"`
 }
 
 // GetRealms returns all realms in the database.
@@ -47,8 +47,8 @@ func (s *Service) InsertRealm(realm Realm) error {
 	}
 
 	_, err = tx.NamedExec(`
-		INSERT INTO realms (team, name, public_data)
-		VALUES (:team, :name, :public_data)
+		INSERT INTO realms (team, name, share_reports)
+		VALUES (:team, :name, :share_reports)
 	`, realm)
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
@@ -91,7 +91,7 @@ func (s *Service) PatchRealm(realm PatchRealm) error {
 	UPDATE realms
 	    SET
 		    name = COALESCE(:name, name),
-		    public_data = COALESCE(:public_data, public_data)
+		    share_reports = COALESCE(:share_reports, share_reports)
 	    WHERE
 		    team = :team
 	`, realm)
