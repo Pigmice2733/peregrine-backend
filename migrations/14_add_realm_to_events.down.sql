@@ -1,2 +1,2 @@
 ALTER TABLE events
-    DROP COLUMN realm;
+    DROP COLUMN realm_id;

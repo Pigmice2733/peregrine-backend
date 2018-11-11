@@ -18,7 +18,7 @@ database:
 seedUser:
   username: test
   password: testpassword
-  realm: frc2733
+  realmID: 1
   firstName: John
   lastName: Doe
   roles:

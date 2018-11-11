@@ -68,7 +68,12 @@ test('events', async () => {
 
   expect(resp.status).toBe(201)
 
-  let respInfo = await fetch(api.address + `/events/${event.key}`)
+  let respInfo = await fetch(api.address + `/events/${event.key}`, {
+    method: 'GET',
+    headers: {
+      Authentication: 'Bearer ' + (await api.getJWT()),
+    },
+  })
   expect(respInfo.status).toBe(200)
 
   d = await respInfo.json()

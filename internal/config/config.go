@@ -32,7 +32,7 @@ type Config struct {
 	SeedUser *struct {
 		Username  string      `yaml:"username"`
 		Password  string      `yaml:"password"`
-		Realm     string      `yaml:"realm"`
+		RealmID   int64       `yaml:"realmID"`
 		FirstName string      `yaml:"firstName"`
 		LastName  string      `yaml:"lastName"`
 		Roles     store.Roles `yaml:"roles"`

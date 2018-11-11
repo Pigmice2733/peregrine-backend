@@ -1,2 +1,2 @@
 ALTER TABLE events
-    ADD COLUMN realm TEXT REFERENCES realms;
+    ADD COLUMN realm_id INTEGER REFERENCES realms;

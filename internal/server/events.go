@@ -49,14 +49,19 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		}
 
 		var fullEvents []store.Event
-		var err error
 
 		roles := ihttp.GetRoles(r)
+
+		userRealm, err := ihttp.GetRealmID(r)
 
 		if roles.IsSuperAdmin {
 			fullEvents, err = s.Store.GetEvents()
 		} else {
-			fullEvents, err = s.Store.GetEventsFromRealm(ihttp.GetRealm(r))
+			if err != nil {
+				fullEvents, err = s.Store.GetEventsFromRealm(nil)
+			} else {
+				fullEvents, err = s.Store.GetEventsFromRealm(&userRealm)
+			}
 		}
 
 		if err != nil {
@@ -109,7 +114,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 			return
 		}
 
-		if !s.checkEventAccess(fullEvent.Realm, r) {
+		if !s.checkEventAccess(fullEvent.RealmID, r) {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
@@ -153,17 +158,23 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 			return
 		}
 
-		creatorRealm := ihttp.GetRealm(r)
-		if creatorRealm == "" {
-			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.Error("required user realm is null")
+		creatorRealm, err := ihttp.GetRealmID(r)
+		if err != nil {
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
 
-		e.Realm = &creatorRealm
+		e.RealmID = &creatorRealm
 		e.ManuallyAdded = true
 
-		if err := s.Store.EventsUpsert([]store.Event{e}); err != nil {
+		err = s.Store.EventsUpsert([]store.Event{e})
+		if _, ok := err.(*store.ErrExists); ok {
+			ihttp.Error(w, http.StatusConflict)
+			return
+		} else if _, ok := err.(*store.ErrFKeyViolation); ok {
+			ihttp.Error(w, http.StatusUnprocessableEntity)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("unable to upsert event data")
 			return
@@ -195,9 +206,20 @@ func (s *Server) updateEvents() error {
 }
 
 // Returns whether a user can access an event or its matches
-func (s *Server) checkEventAccess(eventRealm *string, r *http.Request) bool {
-	roles := ihttp.GetRoles(r)
-	userRealm := ihttp.GetRealm(r)
+func (s *Server) checkEventAccess(eventRealm *int64, r *http.Request) bool {
+	if eventRealm == nil {
+		return true
+	}
 
-	return eventRealm == nil || roles.IsSuperAdmin || *eventRealm != userRealm
+	roles := ihttp.GetRoles(r)
+
+	if roles.IsSuperAdmin {
+		return true
+	}
+
+	userRealm, err := ihttp.GetRealmID(r)
+	if err != nil {
+		return false
+	}
+	return *eventRealm != userRealm
 }

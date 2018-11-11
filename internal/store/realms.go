@@ -8,16 +8,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Realm holds the team key and name of a realm.
+// Realm holds the name of a realm, and whether to share the realms reports.
 type Realm struct {
-	Team         string `json:"team" db:"team"`
+	ID           int64  `json:"id" db:"id"`
 	Name         string `json:"name" db:"name"`
 	ShareReports bool   `json:"shareReports" db:"share_reports"`
 }
 
-// PatchRealm is a nullable Realm, except for the Team, which is the PK.
+// PatchRealm is a nullable Realm, except for the ID.
 type PatchRealm struct {
-	Team         string  `db:"team"`
+	ID           int64   `db:"id"`
 	Name         *string `db:"name"`
 	ShareReports *bool   `db:"share_reports"`
 }
@@ -30,48 +30,54 @@ func (s *Service) GetRealms() ([]Realm, error) {
 }
 
 // GetRealm retrieves a specific realm.
-func (s *Service) GetRealm(team string) (Realm, error) {
+func (s *Service) GetRealm(id int64) (Realm, error) {
 	var realm Realm
-	err := s.db.Get(&realm, "SELECT * FROM realms WHERE team = $1", team)
+	err := s.db.Get(&realm, "SELECT * FROM realms WHERE id = $1", id)
 	if err == sql.ErrNoRows {
-		return realm, &ErrNoResults{msg: fmt.Sprintf("realm with team %s not found", team)}
+		return realm, &ErrNoResults{msg: fmt.Sprintf("realm with id %d not found", id)}
 	}
 	return realm, err
 }
 
 // InsertRealm inserts a realm into the database.
-func (s *Service) InsertRealm(realm Realm) error {
+func (s *Service) InsertRealm(realm Realm) (int64, error) {
 	tx, err := s.db.Beginx()
 	if err != nil {
-		return errors.Wrap(err, "unable to begin transaction")
+		return -1, errors.Wrap(err, "unable to begin transaction")
 	}
 
-	_, err = tx.NamedExec(`
-		INSERT INTO realms (team, name, share_reports)
-		VALUES (:team, :name, :share_reports)
-	`, realm)
+	stmt, err := tx.PrepareNamed(`
+	    INSERT INTO realms (name, share_reports)
+		    VALUES (:name, :share_reports)
+	        RETURNING id
+    `)
 	if err != nil {
-		if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
-			_ = tx.Rollback()
-			return &ErrExists{msg: fmt.Sprintf("realm %s already exists", realm.Team)}
-		}
 		_ = tx.Rollback()
-		return errors.Wrap(err, "unable to insert realm")
+		return -1, errors.Wrap(err, "unable to prepare realm insert statement")
 	}
 
-	return tx.Commit()
+	err = stmt.Get(&realm.ID, realm)
+	if err != nil {
+		_ = tx.Rollback()
+		if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
+			return -1, &ErrExists{msg: fmt.Sprintf("realm with name: %s already exists", realm.Name)}
+		}
+		return -1, errors.Wrap(err, "unable to insert realm")
+	}
+
+	return realm.ID, tx.Commit()
 }
 
 // DeleteRealm deletes a realm from the database.
-func (s *Service) DeleteRealm(team string) error {
+func (s *Service) DeleteRealm(id int64) error {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return errors.Wrap(err, "unable to begin transaction")
 	}
 
 	_, err = tx.Exec(`
-		DELETE FROM realms WHERE team = $1
-	`, team)
+		DELETE FROM realms WHERE id = $1
+	`, id)
 	if err != nil {
 		_ = tx.Rollback()
 		return err
@@ -93,7 +99,7 @@ func (s *Service) PatchRealm(realm PatchRealm) error {
 		    name = COALESCE(:name, name),
 		    share_reports = COALESCE(:share_reports, share_reports)
 	    WHERE
-		    team = :team
+		    id = :id
 	`, realm)
 	if err != nil {
 		_ = tx.Rollback()
@@ -102,7 +108,7 @@ func (s *Service) PatchRealm(realm PatchRealm) error {
 
 	if count, err := result.RowsAffected(); err != nil || count == 0 {
 		_ = tx.Rollback()
-		return &ErrNoResults{msg: fmt.Sprintf("realm %s not found", realm.Team)}
+		return &ErrNoResults{msg: fmt.Sprintf("realm %d not found", realm.ID)}
 	}
 
 	return errors.Wrap(tx.Commit(), "unable to patch realm")

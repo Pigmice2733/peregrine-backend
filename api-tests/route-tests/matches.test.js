@@ -116,6 +116,15 @@ test('/events/{eventKey}/matches', async () => {
   let respGet = await fetch(
     api.address + `/events/1970flir/matches/${match.key}`,
   )
+  expect(respGet.status).toBe(403)
+
+  respGet = await fetch(
+    api.address + `/events/1970flir/matches/${match.key}`,  {
+    method: 'GET',
+    headers: {
+      Authentication: 'Bearer ' + (await api.getJWT()),
+    },
+  })
   expect(respGet.status).toBe(200)
 
   d = await respGet.json()

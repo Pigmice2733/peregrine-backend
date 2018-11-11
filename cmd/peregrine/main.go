@@ -52,7 +52,7 @@ func run(basePath string) error {
 		u := store.User{
 			Username:       c.SeedUser.Username,
 			HashedPassword: string(hashedPassword),
-			Realm:          c.SeedUser.Realm,
+			RealmID:        c.SeedUser.RealmID,
 			FirstName:      c.SeedUser.FirstName,
 			LastName:       c.SeedUser.LastName,
 			Roles:          c.SeedUser.Roles,
@@ -60,7 +60,7 @@ func run(basePath string) error {
 
 		err = sto.CreateUser(u)
 		_, ok := err.(*store.ErrExists)
-		if err != nil && ok {
+		if err != nil && !ok {
 			return errors.Wrap(err, "creating seed user")
 		}
 	}

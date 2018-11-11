@@ -35,7 +35,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			return
 		}
 
-		if !s.checkEventAccess(event.Realm, r) {
+		if !s.checkEventAccess(event.RealmID, r) {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
@@ -92,7 +92,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 			return
 		}
 
-		if !s.checkEventAccess(event.Realm, r) {
+		if !s.checkEventAccess(event.RealmID, r) {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
@@ -157,7 +157,7 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 			return
 		}
 
-		if !s.checkEventAccess(event.Realm, r) {
+		if !s.checkEventAccess(event.RealmID, r) {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}

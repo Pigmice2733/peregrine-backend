@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS realms (
-    team TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
     share_reports BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-INSERT INTO realms (team, name, share_reports) VALUES ('frc2733', 'Pigmice', TRUE);
+INSERT INTO realms (name, share_reports) VALUES ('Pigmice', TRUE);

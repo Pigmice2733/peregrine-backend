@@ -25,7 +25,7 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 			return
 		}
 
-		if !s.checkEventAccess(event.Realm, r) {
+		if !s.checkEventAccess(event.RealmID, r) {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
@@ -66,7 +66,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 			return
 		}
 
-		if !s.checkEventAccess(event.Realm, r) {
+		if !s.checkEventAccess(event.RealmID, r) {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}

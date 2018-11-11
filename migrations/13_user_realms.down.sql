@@ -1,2 +1,2 @@
 ALTER TABLE users
-    DROP COLUMN realm
+    DROP COLUMN realm_id

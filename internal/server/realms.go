@@ -1,21 +1,17 @@
 package server
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
-	"golang.org/x/crypto/bcrypt"
 	validator "gopkg.in/go-playground/validator.v9"
 )
 
 type realm struct {
-	Team         string `json:"team" validate:"required"`
 	Name         string `json:"name" validate:"required"`
 	ShareReports bool   `json:"shareReports"`
 }
@@ -39,9 +35,9 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		realm := store.Realm{Team: rr.Team, Name: rr.Name, ShareReports: rr.ShareReports}
+		realm := store.Realm{Name: rr.Name, ShareReports: rr.ShareReports}
 
-		err := s.Store.InsertRealm(realm)
+		id, err := s.Store.InsertRealm(realm)
 		if _, ok := err.(*store.ErrExists); ok {
 			ihttp.Error(w, http.StatusConflict)
 			return
@@ -51,28 +47,7 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		realmAdmin, adminPassword, err := s.createRealmAdmin(realm.Team)
-		if _, ok := err.(*store.ErrExists); ok {
-			ihttp.Respond(w, err, http.StatusConflict)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("creating realm admin")
-			return
-		}
-
-		u := requestUser{
-			baseUser: baseUser{
-				Username: realmAdmin.Username,
-				Password: adminPassword,
-			},
-			Realm:     realm.Team,
-			FirstName: realmAdmin.FirstName,
-			LastName:  realmAdmin.LastName,
-			Roles:     realmAdmin.Roles,
-		}
-
-		ihttp.Respond(w, u, http.StatusOK)
+		ihttp.Respond(w, id, http.StatusOK)
 	}
 }
 
@@ -98,12 +73,16 @@ func (s *Server) realmsHandler() http.HandlerFunc {
 // realmHandler returns a handler to get a specific realm.
 func (s *Server) realmHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		teamKey := mux.Vars(r)["teamKey"]
+		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		if err != nil {
+			ihttp.Error(w, http.StatusBadRequest)
+			return
+		}
 
 		roles := ihttp.GetRoles(r)
 		if !roles.IsSuperAdmin {
 			if roles.IsAdmin {
-				if ihttp.GetRealm(r) != teamKey {
+				if userRealm, err := ihttp.GetRealmID(r); err != nil || userRealm != id {
 					ihttp.Error(w, http.StatusForbidden)
 					return
 				}
@@ -113,7 +92,7 @@ func (s *Server) realmHandler() http.HandlerFunc {
 			}
 		}
 
-		realm, err := s.Store.GetRealm(teamKey)
+		realm, err := s.Store.GetRealm(id)
 		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
@@ -135,12 +114,16 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		teamKey := mux.Vars(r)["teamKey"]
+		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		if err != nil {
+			ihttp.Error(w, http.StatusBadRequest)
+			return
+		}
 
 		roles := ihttp.GetRoles(r)
 		if !roles.IsSuperAdmin {
 			if roles.IsAdmin {
-				if ihttp.GetRealm(r) != teamKey {
+				if userRealm, err := ihttp.GetRealmID(r); err != nil || userRealm != id {
 					ihttp.Error(w, http.StatusForbidden)
 					return
 				}
@@ -161,9 +144,9 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		sr := store.PatchRealm{Team: teamKey, Name: pr.Name, ShareReports: pr.ShareReports}
+		sr := store.PatchRealm{ID: id, Name: pr.Name, ShareReports: pr.ShareReports}
 
-		err := s.Store.PatchRealm(sr)
+		err = s.Store.PatchRealm(sr)
 		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
@@ -180,12 +163,16 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 // deleteRealmHandler returns a handler to delete a specific realm.
 func (s *Server) deleteRealmHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		teamKey := mux.Vars(r)["teamKey"]
+		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		if err != nil {
+			ihttp.Error(w, http.StatusBadRequest)
+			return
+		}
 
 		roles := ihttp.GetRoles(r)
 		if !roles.IsSuperAdmin {
 			if roles.IsAdmin {
-				if ihttp.GetRealm(r) != teamKey {
+				if userRealm, err := ihttp.GetRealmID(r); err != nil || userRealm != id {
 					ihttp.Error(w, http.StatusForbidden)
 					return
 				}
@@ -195,7 +182,7 @@ func (s *Server) deleteRealmHandler() http.HandlerFunc {
 			}
 		}
 
-		err := s.Store.DeleteRealm(teamKey)
+		err = s.Store.DeleteRealm(id)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("deleting realms")
@@ -204,37 +191,4 @@ func (s *Server) deleteRealmHandler() http.HandlerFunc {
 
 		ihttp.Respond(w, nil, http.StatusNoContent)
 	}
-}
-
-func (s *Server) createRealmAdmin(teamKey string) (store.User, string, error) {
-	random := make([]byte, 32)
-	if _, err := rand.Read(random); err != nil {
-		return store.User{}, "", errors.Wrap(err, "generating realm admin password")
-	}
-	adminPassword := base64.StdEncoding.EncodeToString(random)[:32]
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
-	if err != nil {
-		return store.User{}, "", errors.Wrap(err, "hashing realm admin password")
-	}
-
-	realmAdmin := store.User{
-		Username:       "",
-		HashedPassword: string(hashedPassword),
-		Realm:          teamKey,
-		FirstName:      "first",
-		LastName:       "last",
-		Roles:          store.Roles{IsAdmin: true, IsVerified: true, IsSuperAdmin: false},
-	}
-
-	alreadyExists := true
-	for alreadyExists {
-		if _, err := rand.Read(random); err != nil {
-			return store.User{}, "", errors.Wrap(err, "generating realm admin username")
-		}
-		realmAdmin.Username = base64.StdEncoding.EncodeToString(random)[:32]
-		err = s.Store.CreateUser(realmAdmin)
-		_, alreadyExists = err.(*store.ErrExists)
-	}
-	return realmAdmin, adminPassword, err
 }

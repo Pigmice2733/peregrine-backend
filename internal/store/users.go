@@ -40,14 +40,14 @@ type User struct {
 	ID             int64          `json:"id" db:"id"`
 	Username       string         `json:"username" db:"username"`
 	HashedPassword string         `json:"-" db:"hashed_password"`
-	Realm          string         `json:"realm" db:"realm"`
+	RealmID        int64          `json:"realmID" db:"realm_id"`
 	FirstName      string         `json:"firstName" db:"first_name"`
 	LastName       string         `json:"lastName" db:"last_name"`
 	Roles          Roles          `json:"roles" db:"roles"`
 	Stars          pq.StringArray `json:"stars" db:"stars"`
 }
 
-// PatchUser is like User but with all nullable fields (besides id) for patching.
+// PatchUser is like User but with all nullable fields (besides id and realmID) for patching.
 type PatchUser struct {
 	ID             int64          `json:"id" db:"id"`
 	Username       *string        `json:"username" db:"username"`
@@ -78,24 +78,29 @@ func (s *Service) CreateUser(u User) error {
 		return errors.Wrap(err, "unable to begin transaction")
 	}
 
-	_, err = tx.NamedExec(`
+	userStmt, err := tx.PrepareNamed(`
 	INSERT
 		INTO
-			users (username, hashed_password, realm, first_name, last_name, roles)
-		VALUES (:username, :hashed_password, :realm, :first_name, :last_name, :roles)
-	`, u)
+			users (username, hashed_password, realm_id, first_name, last_name, roles)
+		VALUES (:username, :hashed_password, :realm_id, :first_name, :last_name, :roles)
+		RETURNING id
+	`)
 	if err != nil {
+		_ = tx.Rollback()
+		return errors.Wrap(err, "unable to prepare user insert statement")
+	}
+
+	err = userStmt.Get(&u.ID, u)
+	if err != nil {
+		_ = tx.Rollback()
 		if err, ok := err.(*pq.Error); ok {
-			_ = tx.Rollback()
 			if err.Code == pgExists {
 				return &ErrExists{msg: fmt.Sprintf("username %s already exists", u.Username)}
 			}
 			if err.Code == pgFKeyViolation {
-				return &ErrFKeyViolation{msg: fmt.Sprintf("user fk violation on realm %s: %v", u.Realm, err)}
+				return &ErrFKeyViolation{msg: fmt.Sprintf("user fk violation on realm ID %d: %v", u.RealmID, err)}
 			}
-			return err
 		}
-		_ = tx.Rollback()
 		return errors.Wrap(err, "unable to insert user")
 	}
 
@@ -127,7 +132,7 @@ func (s *Service) GetUsers() ([]User, error) {
 		id,
 		username,
 		hashed_password,
-		realm,
+		realm_id,
 		first_name,
 		last_name,
 		roles,
@@ -144,7 +149,7 @@ func (s *Service) GetUsers() ([]User, error) {
 }
 
 // GetUsersByRealm retrieves all users in a specific realm.
-func (s *Service) GetUsersByRealm(realm string) ([]User, error) {
+func (s *Service) GetUsersByRealm(realmID int64) ([]User, error) {
 	users := []User{}
 
 	err := s.db.Select(&users, `
@@ -152,7 +157,7 @@ func (s *Service) GetUsersByRealm(realm string) ([]User, error) {
 		id,
 		username,
 		hashed_password,
-		realm,
+		realm_id,
 		first_name,
 		last_name,
 		roles,
@@ -162,9 +167,9 @@ func (s *Service) GetUsersByRealm(realm string) ([]User, error) {
 		stars
 	ON
 		stars.user_id = users.id
-	WHERE realm = $1
+	WHERE realm_id = $1
 	GROUP BY users.id
-	`, realm)
+	`, realmID)
 
 	return users, errors.Wrap(err, "unable to fetch users")
 }
@@ -178,7 +183,7 @@ func (s *Service) GetUserByID(id int64) (User, error) {
 		id,
 		username,
 		hashed_password,
-		realm,
+		realm_id,
 		first_name,
 		last_name,
 		roles,

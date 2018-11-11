@@ -69,12 +69,15 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 			"body_size":    rr.len,
 			"admin":        roles.IsAdmin,
 			"super_admin":  roles.IsSuperAdmin,
-			"realm":        GetRealm(r),
 			"user_agent":   r.Header.Get("User-Agent"),
 		}
 
 		if sub, err := GetSubject(r); err != nil {
 			fields["user_id"] = sub
+		}
+
+		if realm, err := GetRealmID(r); err != nil {
+			fields["realm_id"] = realm
 		}
 
 		l.WithFields(fields).Info("got request")
@@ -115,7 +118,7 @@ func Auth(next http.HandlerFunc, jwtSecret []byte) http.HandlerFunc {
 
 		ctx := context.WithValue(r.Context(), keyRolesContext, claims.Roles)
 		ctx = context.WithValue(ctx, keySubjectContext, claims.Subject)
-		ctx = context.WithValue(ctx, keyRealmContext, claims.Realm)
+		ctx = context.WithValue(ctx, keyRealmContext, claims.RealmID)
 
 		next(w, r.WithContext(ctx))
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -22,7 +21,7 @@ type baseUser struct {
 
 type requestUser struct {
 	baseUser
-	Realm     string      `json:"realm" validate:"required"`
+	RealmID   int64       `json:"realmID" validate:"required"`
 	FirstName string      `json:"firstName" validate:"required"`
 	LastName  string      `json:"lastName" validate:"required"`
 	Roles     store.Roles `json:"roles"`
@@ -68,8 +67,8 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 				ExpiresAt: time.Now().Add(time.Hour * 8).Unix(),
 				Subject:   strconv.FormatInt(user.ID, 10),
 			},
-			Roles: user.Roles,
-			Realm: user.Realm,
+			Roles:   user.Roles,
+			RealmID: user.RealmID,
 		}).SignedString(s.JWTSecret)
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt signed string")
@@ -102,7 +101,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 		// Only super-admins can create verified users in realms other than their own.
 		if !roles.IsSuperAdmin {
-			if ihttp.GetRealm(r) != ru.Realm {
+			if id, err := ihttp.GetRealmID(r); err != nil || id != ru.RealmID {
 				ru.Roles.IsVerified = false
 				ru.Roles.IsAdmin = false
 			}
@@ -113,7 +112,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			return
 		}
 
-		u := store.User{Username: ru.Username, Realm: ru.Realm, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName}
+		u := store.User{Username: ru.Username, RealmID: ru.RealmID, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcrypt.DefaultCost)
 		if err != nil {
@@ -151,7 +150,12 @@ func (s *Server) getUsersHandler() http.HandlerFunc {
 		if roles.IsSuperAdmin {
 			users, err = s.Store.GetUsers()
 		} else {
-			users, err = s.Store.GetUsersByRealm(ihttp.GetRealm(r))
+			realmID, err := ihttp.GetRealmID(r)
+			if err != nil {
+				ihttp.Error(w, http.StatusUnauthorized)
+				return
+			}
+			users, err = s.Store.GetUsersByRealm(realmID)
 		}
 
 		if err != nil {
@@ -196,8 +200,8 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 			return
 		}
 
-		if roles.IsSuperAdmin && sub != id {
-			if ihttp.GetRealm(r) != user.Realm {
+		if !roles.IsSuperAdmin && sub != id {
+			if realmID, err := ihttp.GetRealmID(r); err != nil || realmID != user.RealmID {
 				ihttp.Error(w, http.StatusForbidden)
 				return
 			}
@@ -250,7 +254,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
-			if ihttp.GetRealm(r) != targetUser.Realm {
+			if realmID, err := ihttp.GetRealmID(r); err != nil || realmID != targetUser.RealmID {
 				ihttp.Error(w, http.StatusForbidden)
 				return
 			}
@@ -287,7 +291,6 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 
 		err = s.Store.PatchUser(u)
 		if _, ok := err.(*store.ErrNoResults); ok {
-			fmt.Printf("%s\n", err)
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if _, ok := err.(*store.ErrFKeyViolation); ok {
@@ -331,7 +334,7 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
-			if ihttp.GetRealm(r) != targetUser.Realm {
+			if realmID, err := ihttp.GetRealmID(r); err != nil || realmID != targetUser.RealmID {
 				ihttp.Error(w, http.StatusForbidden)
 				return
 			}

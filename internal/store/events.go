@@ -3,6 +3,8 @@ package store
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/lib/pq"
 )
 
 // Event holds information about an FRC event such as webcast associated with
@@ -18,8 +20,8 @@ type Event struct {
 	Webcasts     []Webcast `json:"webcasts"`
 	Location     `json:"location"`
 
-	ManuallyAdded bool    `json:"manuallyAdded" db:"manually_added"`
-	Realm         *string `db:"realm"`
+	ManuallyAdded bool   `json:"manuallyAdded" db:"manually_added"`
+	RealmID       *int64 `db:"realm_id"`
 }
 
 // WebcastType represents a data source for a webcast such as twitch or youtube.
@@ -54,12 +56,15 @@ func (s *Service) GetEvents() ([]Event, error) {
 }
 
 // GetEventsFromRealm returns all events from a specific realm. Additionally all
-// TBA events will be retrieved. If no realm is specified ("") then just the TBA
+// TBA events will be retrieved. If no realm is specified (nil) then just the TBA
 // events will be retrieved. event.Webcasts will be nil for every event.
-func (s *Service) GetEventsFromRealm(realm string) ([]Event, error) {
+func (s *Service) GetEventsFromRealm(realm *int64) ([]Event, error) {
 	events := []Event{}
 
-	return events, s.db.Select(&events, "SELECT * FROM events WHERE manually_added = FALSE OR realm = $1", realm)
+	if realm == nil {
+		return events, s.db.Select(&events, "SELECT * FROM events WHERE manually_added = FALSE")
+	}
+	return events, s.db.Select(&events, "SELECT * FROM events WHERE manually_added = FALSE OR realm_id = $1", *realm)
 }
 
 // ErrManuallyAdded is returned when an event has been manually inserted into
@@ -107,8 +112,8 @@ func (s *Service) EventsUpsert(events []Event) error {
 	}
 
 	eventStmt, err := tx.PrepareNamed(`
-		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, manually_added, realm)
-		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :manually_added, :realm)
+		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, manually_added, realm_id)
+		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :manually_added, :realm_id)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -123,7 +128,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 					lat = :lat,
 					lon = :lon,
 					manually_added = :manually_added,
-                    realm = :realm
+                    realm_id = :realm_id
 	`)
 	if err != nil {
 		_ = tx.Rollback()
@@ -153,6 +158,13 @@ func (s *Service) EventsUpsert(events []Event) error {
 	for _, event := range events {
 		if _, err = eventStmt.Exec(event); err != nil {
 			_ = tx.Rollback()
+			if err, ok := err.(*pq.Error); ok {
+				if err.Code == pgExists {
+					return &ErrExists{msg: fmt.Sprintf("event with key %s already exists", event.Key)}
+				} else if err.Code == pgFKeyViolation {
+					return &ErrFKeyViolation{msg: fmt.Sprintf("foreign key violation: %v", err.Error())}
+				}
+			}
 			return err
 		}
 
