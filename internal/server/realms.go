@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -54,16 +55,41 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 // realmsHandler returns a handler to get all realms.
 func (s *Server) realmsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if roles := ihttp.GetRoles(r); !roles.IsSuperAdmin {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
+		roles := ihttp.GetRoles(r)
 
-		realms, err := s.Store.GetRealms()
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving realms")
-			return
+		var realms []store.Realm
+		var err error
+
+		if roles.IsSuperAdmin {
+			realms, err = s.Store.GetRealms()
+			if err != nil {
+				ihttp.Error(w, http.StatusInternalServerError)
+				go s.Logger.WithError(err).Error("retrieving realms")
+				return
+			}
+		} else {
+			realms, err = s.Store.GetPublicRealms()
+			if err != nil {
+				ihttp.Error(w, http.StatusInternalServerError)
+				go s.Logger.WithError(err).Error("retrieving realms")
+				return
+			}
+			var userRealm int64
+			userRealm, err = ihttp.GetRealmID(r)
+			if err != nil {
+				ihttp.Respond(w, realms, http.StatusOK)
+				return
+			}
+			var realm store.Realm
+			realm, err = s.Store.GetRealm(userRealm)
+			if err != nil {
+				ihttp.Error(w, http.StatusInternalServerError)
+				go s.Logger.WithError(err).Error(fmt.Sprintf("retrieving realm %d", userRealm))
+				return
+			}
+			if !realm.ShareReports {
+				realms = append(realms, realm)
+			}
 		}
 
 		ihttp.Respond(w, realms, http.StatusOK)
@@ -79,19 +105,6 @@ func (s *Server) realmHandler() http.HandlerFunc {
 			return
 		}
 
-		roles := ihttp.GetRoles(r)
-		if !roles.IsSuperAdmin {
-			if roles.IsAdmin {
-				if userRealm, err := ihttp.GetRealmID(r); err != nil || userRealm != id {
-					ihttp.Error(w, http.StatusForbidden)
-					return
-				}
-			} else {
-				ihttp.Error(w, http.StatusForbidden)
-				return
-			}
-		}
-
 		realm, err := s.Store.GetRealm(id)
 		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
@@ -100,6 +113,19 @@ func (s *Server) realmHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving realms")
 			return
+		}
+
+		roles := ihttp.GetRoles(r)
+		if !roles.IsSuperAdmin && !realm.ShareReports {
+			userRealm, err := ihttp.GetRealmID(r)
+			if err != nil {
+				ihttp.Error(w, http.StatusUnauthorized)
+				return
+			}
+			if userRealm != id {
+				ihttp.Error(w, http.StatusForbidden)
+				return
+			}
 		}
 
 		ihttp.Respond(w, realm, http.StatusOK)
@@ -123,7 +149,12 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 		roles := ihttp.GetRoles(r)
 		if !roles.IsSuperAdmin {
 			if roles.IsAdmin {
-				if userRealm, err := ihttp.GetRealmID(r); err != nil || userRealm != id {
+				userRealm, err := ihttp.GetRealmID(r)
+				if err != nil {
+					ihttp.Error(w, http.StatusUnauthorized)
+					return
+				}
+				if userRealm != id {
 					ihttp.Error(w, http.StatusForbidden)
 					return
 				}
@@ -172,7 +203,12 @@ func (s *Server) deleteRealmHandler() http.HandlerFunc {
 		roles := ihttp.GetRoles(r)
 		if !roles.IsSuperAdmin {
 			if roles.IsAdmin {
-				if userRealm, err := ihttp.GetRealmID(r); err != nil || userRealm != id {
+				userRealm, err := ihttp.GetRealmID(r)
+				if err != nil {
+					ihttp.Error(w, http.StatusUnauthorized)
+					return
+				}
+				if userRealm != id {
 					ihttp.Error(w, http.StatusForbidden)
 					return
 				}

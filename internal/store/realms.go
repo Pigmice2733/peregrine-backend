@@ -29,6 +29,13 @@ func (s *Service) GetRealms() ([]Realm, error) {
 	return realms, s.db.Select(&realms, "SELECT * FROM realms")
 }
 
+// GetPublicRealms returns all public realms in the database.
+func (s *Service) GetPublicRealms() ([]Realm, error) {
+	realms := []Realm{}
+
+	return realms, s.db.Select(&realms, "SELECT * FROM realms WHERE share_reports = TRUE")
+}
+
 // GetRealm retrieves a specific realm.
 func (s *Service) GetRealm(id int64) (Realm, error) {
 	var realm Realm

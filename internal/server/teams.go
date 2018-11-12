@@ -106,11 +106,12 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 // Get new team key data from TBA for a particular event. Upsert data into database.
 func (s *Server) updateTeamKeys(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.Store.CheckTBAEventKeyExists(eventKey)
-	if err == store.ErrManuallyAdded {
-		return nil
-	} else if err != nil {
+	valid, err := s.Store.CheckTBAEventKeyExists(eventKey)
+	if err != nil {
 		return err
+	}
+	if !valid {
+		return nil
 	}
 
 	teams, err := s.TBA.GetTeamKeys(eventKey)
@@ -123,11 +124,12 @@ func (s *Server) updateTeamKeys(eventKey string) error {
 // Get new team rankings data from TBA for a particular event. Upsert data into database.
 func (s *Server) updateTeamRankings(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.Store.CheckTBAEventKeyExists(eventKey)
-	if err == store.ErrManuallyAdded {
-		return nil
-	} else if err != nil {
+	valid, err := s.Store.CheckTBAEventKeyExists(eventKey)
+	if err != nil {
 		return err
+	}
+	if !valid {
+		return nil
 	}
 
 	teams, err := s.TBA.GetTeamRankings(eventKey)

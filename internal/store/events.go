@@ -11,6 +11,7 @@ import (
 // it, the location, its start date, and more.
 type Event struct {
 	Key          string    `json:"key" db:"key"`
+	RealmID      *int64    `db:"realm_id"`
 	Name         string    `json:"name" db:"name"`
 	District     *string   `json:"district" db:"district"`
 	FullDistrict *string   `json:"fullDistrict" db:"full_district"`
@@ -19,9 +20,6 @@ type Event struct {
 	EndDate      UnixTime  `json:"endDate" db:"end_date"`
 	Webcasts     []Webcast `json:"webcasts"`
 	Location     `json:"location"`
-
-	ManuallyAdded bool   `json:"manuallyAdded" db:"manually_added"`
-	RealmID       *int64 `db:"realm_id"`
 }
 
 // WebcastType represents a data source for a webcast such as twitch or youtube.
@@ -62,32 +60,24 @@ func (s *Service) GetEventsFromRealm(realm *int64) ([]Event, error) {
 	events := []Event{}
 
 	if realm == nil {
-		return events, s.db.Select(&events, "SELECT * FROM events WHERE manually_added = FALSE")
+		return events, s.db.Select(&events, "SELECT * FROM events WHERE realm_id IS NULL")
 	}
-	return events, s.db.Select(&events, "SELECT * FROM events WHERE manually_added = FALSE OR realm_id = $1", *realm)
+	return events, s.db.Select(&events, "SELECT * FROM events WHERE realm_id IS NULL OR realm_id = $1", *realm)
 }
-
-// ErrManuallyAdded is returned when an event has been manually inserted into
-// the DB rather than returned from TBA.
-var ErrManuallyAdded = fmt.Errorf("store: manually added event")
 
 // CheckTBAEventKeyExists checks whether a specific event key exists and is from
 // TBA rather than manually added.
-func (s *Service) CheckTBAEventKeyExists(eventKey string) error {
-	var manuallyAdded bool
+func (s *Service) CheckTBAEventKeyExists(eventKey string) (bool, error) {
+	var realmID *int64
 
-	err := s.db.Get(&manuallyAdded, "SELECT manually_added FROM events WHERE key = $1", eventKey)
+	err := s.db.Get(&realmID, "SELECT realm_id FROM events WHERE key = $1", eventKey)
 	if err == sql.ErrNoRows {
-		return &ErrNoResults{msg: fmt.Sprintf("event key %s not found", eventKey)}
+		return false, &ErrNoResults{msg: fmt.Sprintf("event key %s not found", eventKey)}
 	} else if err != nil {
-		return err
+		return false, err
 	}
 
-	if manuallyAdded {
-		return ErrManuallyAdded
-	}
-
-	return nil
+	return realmID == nil, nil
 }
 
 // GetEvent retrieves a specific event.
@@ -112,8 +102,8 @@ func (s *Service) EventsUpsert(events []Event) error {
 	}
 
 	eventStmt, err := tx.PrepareNamed(`
-		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, manually_added, realm_id)
-		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :manually_added, :realm_id)
+		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, realm_id)
+		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :realm_id)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -127,7 +117,6 @@ func (s *Service) EventsUpsert(events []Event) error {
 					location_name = :location_name,
 					lat = :lat,
 					lon = :lon,
-					manually_added = :manually_added,
                     realm_id = :realm_id
 	`)
 	if err != nil {

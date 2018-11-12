@@ -4,4 +4,4 @@ CREATE TABLE IF NOT EXISTS realms (
     share_reports BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-INSERT INTO realms (name, share_reports) VALUES ('Pigmice', TRUE);
+INSERT INTO realms (name, share_reports) VALUES ('Pigmice', FALSE);

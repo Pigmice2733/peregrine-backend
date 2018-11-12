@@ -190,11 +190,12 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 // Get new match data from TBA for a particular event. Upsert match data into database.
 func (s *Server) updateMatches(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.Store.CheckTBAEventKeyExists(eventKey)
-	if err == store.ErrManuallyAdded {
-		return nil
-	} else if err != nil {
+	valid, err := s.Store.CheckTBAEventKeyExists(eventKey)
+	if err != nil {
 		return err
+	}
+	if !valid {
+		return nil
 	}
 
 	fullMatches, err := s.TBA.GetMatches(eventKey)

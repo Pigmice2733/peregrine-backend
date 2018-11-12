@@ -19,6 +19,7 @@ type location struct {
 
 type event struct {
 	Key          string         `json:"key"`
+	RealmID      *int64         `json:"realmID,omitempty"`
 	Name         string         `json:"name"`
 	District     *string        `json:"district,omitempty"`
 	FullDistrict *string        `json:"fullDistrict,omitempty"`
@@ -74,6 +75,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		for _, fullEvent := range fullEvents {
 			events = append(events, event{
 				Key:          fullEvent.Key,
+				RealmID:      fullEvent.RealmID,
 				Name:         fullEvent.Name,
 				District:     fullEvent.District,
 				FullDistrict: fullEvent.FullDistrict,
@@ -130,6 +132,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 		event := webcastEvent{
 			event: event{
 				Key:          fullEvent.Key,
+				RealmID:      fullEvent.RealmID,
 				Name:         fullEvent.Name,
 				District:     fullEvent.District,
 				FullDistrict: fullEvent.FullDistrict,
@@ -165,7 +168,6 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 		}
 
 		e.RealmID = &creatorRealm
-		e.ManuallyAdded = true
 
 		err = s.Store.EventsUpsert([]store.Event{e})
 		if _, ok := err.(*store.ErrExists); ok {

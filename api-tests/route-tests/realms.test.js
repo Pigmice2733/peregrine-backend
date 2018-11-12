@@ -84,11 +84,13 @@ test('realms', async () => {
   })
   expect(Object.keys(foundRealm)).toEqual(['id', 'name', 'shareReports'])
 
-  // /realms get unauthorized
+  // /realms get no login
   resp = await fetch(api.address + '/realms', {
     method: 'GET',
   })
-  expect(resp.status).toBe(401)
+  expect(resp.status).toBe(200)
+  d = await resp.json()
+  expect(d.data).toHaveLength(0)
 
   // /realms/{id} endpoint
   // /realms/{id} get super-admin
