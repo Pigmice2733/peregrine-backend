@@ -38,6 +38,15 @@ Or in Powershell on Window:
 
     cd $env:GOPATH/src/github.com/Pigmice2733/peregrine-backend
 
+### Vendoring
+
+> **NOTE**: These instructions assume that you already have dep installed. If you
+> do not, you can get more info at [dep's install guide](https://github.com/golang/dep/blob/master/docs/installation.md).
+
+Install vendored dependencies:
+
+    dep ensure
+
 # Quickstart (development)
 
 ### Configuration
@@ -54,22 +63,14 @@ You will need to do this each time you reopen your terminal.
 
 > **TIP**: If you get an error similar to `got error: opening config: open etc/config.docker.yaml: permission denied`, you may need to run the following command to set selinux to permissive mode: `sudo setenforce 0`.
 
-You can run peregrine-backend in docker for development. While it's a bit slower, it can allow you to get started in just one command. From the base application directory:
+You can run peregrine-backend in docker for development. While it's a bit slower, it can allow you to get started in just a few commands. From the base application directory:
 
+    dep ensure
     docker-compose up
 
 The application will rebuild and restart on changes of any \*.go file. If you want to run new migrations or clear your database, you can do Ctrl+C to kill docker-compose and restart it with the above command. By default it will run the server on port 8080.
 
 # Without Docker (development)
-
-### Vendoring
-
-> **NOTE**: These instructions assume that you already have dep installed. If you
-> do not, you can get more info at [dep's install guide](https://github.com/golang/dep/blob/master/docs/installation.md).
-
-Install vendored dependencies:
-
-    dep ensure
 
 ### Building
 
