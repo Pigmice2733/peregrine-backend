@@ -23,6 +23,10 @@ A scouting app solves many problems found in traditional paper scouting methods.
 
 # Setup
 
+### Windows
+
+Go Fuck Yourself
+
 ### GOPATH
 
 > **NOTE**: These instructions assume that you already have Go installed and your environment setup. If you do not, you can get more info at [golang.org's install guide](http://golang.org/doc/install).
