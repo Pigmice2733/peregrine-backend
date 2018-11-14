@@ -40,7 +40,7 @@ A TBA (the blue alliance) API key is needed to fetch events and matches from the
 
 ### Running
 
-> **NOTE**: These instructions assume that you already have Docker installed. If you do not, you can get more info at [dockers's install guide](https://docs.docker.com/install/).
+> **NOTE**: These instructions assume that you already have Docker installed and have the daemon running. If you do not, you can get more info at [dockers's install guide](https://docs.docker.com/install/).
 
 > **TIP**: If you get an error similar to `got error: opening config: open etc/config.docker.yaml: permission denied`, you may need to run the following command to set selinux to permissive mode: `sudo setenforce 0`.
 
