@@ -30,6 +30,14 @@ Pull Peregrine from GitHub:
 
     go get github.com/Pigmice2733/peregrine-backend
 
+The `go get` command will clone the repository to your GOPATH. You can get to the base directory by using cd on Linux:
+
+    cd $GOPATH/src/github.com/Pigmice2733/peregrine-backend
+
+Or in Powershell on Window:
+
+    cd $env:GOPATH/src/github.com/Pigmice2733/peregrine-backend
+
 # Quickstart (development)
 
 ### Configuration
@@ -37,6 +45,8 @@ Pull Peregrine from GitHub:
 A TBA (the blue alliance) API key is needed to fetch events and matches from the blue alliance. You can get one by visiting [the account page](https://www.thebluealliance.com/account). Go to the "Read API Keys" section, write a short description (e.g. "Peregrine Development Instance"), and hit "Add New Key". Then, copy the key in it's entirety, and run the following command:
 
     export TBA_API_KEY="your-api-key-here"
+
+You will need to do this each time you reopen your terminal.
 
 ### Running
 
