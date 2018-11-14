@@ -1,0 +1,40 @@
+version: "3"
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_DB: peregrine
+      POSTGRES_USER: peregrine
+      POSTGRES_PASSWORD: ""
+    ports:
+      - 5432:5432
+
+  migrate:
+    environment:
+      - GO_ENV=docker
+    build: .
+    command: ["migrate", "-up"]
+    volumes:
+      - .:/go/src/github.com/Pigmice2733/peregrine-backend
+    depends_on:
+      - db
+    links:
+      - db
+
+  app:
+    environment:
+      - GO_ENV=docker
+      - TBA_API_KEY=${TBA_API_KEY}
+    build: .
+    working_dir: /go/src/github.com/Pigmice2733/peregrine-backend/cmd/peregrine
+    command: ["watcher", "-basePath", "../.."]
+    volumes:
+      - .:/go/src/github.com/Pigmice2733/peregrine-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - migrate
+    links:
+      - db
+      - migrate

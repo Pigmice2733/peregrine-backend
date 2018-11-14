@@ -1,0 +1,14 @@
+server:
+  httpAddress: :8080
+  origin: "*"
+  logJSON: false
+
+tba:
+  URL: https://www.thebluealliance.com/api/v3
+
+database:
+  user: peregrine
+  host: db
+  port: 5432
+  name: peregrine
+  sslMode: disable
