@@ -30,7 +30,7 @@ cd $HOME/go/src/github.com/Pigmice2733/peregrine-backend
 
 # Setup
 
-There are two ways to get Peregrine runnning for development. You can either run it in docker (recommended for beginners), or you can run it natively on your machine. If you chose the docker route, stay in this section. Otherwise, go to the native setup section.
+There are two ways to get Peregrine runnning for development. You can either run it in docker (recommended for beginners), or you can run it natively on your machine. If you chose the docker route, stay in this section. Otherwise, go to the [native setup section](#native-setup-not-recommended-for-beginners).
 
 1. [Install Docker](https://docs.docker.com/install/) and start the daemon.
 
@@ -105,7 +105,7 @@ go test ./...
 
 ## Integration (jest) tests
 
-You must have a server running for integration tests. See the setup section.
+You must have a server running for integration tests. See the [setup section](#setup).
 
 1. Go to the api-tests folder:
 
@@ -146,7 +146,7 @@ git add internal/foo/bar.go
 git commit -m "Add the initial report endpoints"
 ```
 
-3. Verify that your tests pass (see the testing section). If they don't then fix them and add a commit.
+3. Verify that your tests pass (see the [testing section](#testing)). If they don't then fix them and add a commit.
 
 4. Push the branch to the remote github repo:
 
