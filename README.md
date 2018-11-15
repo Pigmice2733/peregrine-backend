@@ -30,7 +30,7 @@ cd $HOME/go/src/github.com/Pigmice2733/peregrine-backend
 
 # Setup
 
-There are two ways to get Peregrine runnning for development. You can either run it in docker (recommended for beginners), or you can run it natively on your machine. If you chose the docker route, stay in this section. Otherwise, go to the [native setup section](#native-setup-not-recommended-for-beginners).
+There are two ways to get Peregrine runnning for development. You can either run it in docker (recommended for beginners), or you can run it natively on your machine. If you are having issues with Docker, you may want to try running the app natively. If you chose the docker route, stay in this section. Otherwise, go to the [native setup section](#native-setup-not-recommended-for-beginners).
 
 1. [Install Docker](https://docs.docker.com/install/) and start the daemon. Also, install [docker-compose](https://docs.docker.com/compose/install/).
 
