@@ -32,7 +32,7 @@ cd $HOME/go/src/github.com/Pigmice2733/peregrine-backend
 
 There are two ways to get Peregrine runnning for development. You can either run it in docker (recommended for beginners), or you can run it natively on your machine. If you chose the docker route, stay in this section. Otherwise, go to the [native setup section](#native-setup-not-recommended-for-beginners).
 
-1. [Install Docker](https://docs.docker.com/install/) and start the daemon.
+1. [Install Docker](https://docs.docker.com/install/) and start the daemon. Also, install [docker-compose](https://docs.docker.com/compose/install/).
 
 2. Go to the [TBA account page](https://www.thebluealliance.com/account) and get a read API key. Set the TBA API key environment variable (you will need to do this each time you close and reopen your terminal):
 
