@@ -2,4 +2,4 @@ server:
   httpAddress: 0.0.0.0:8080
   year: 2018
 
-dsn: user=postgres port=5432 dbname=peregrine sslmode=disable
+dsn: user=peregrine port=5432 dbname=peregrine sslmode=disable
