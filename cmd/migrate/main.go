@@ -42,13 +42,13 @@ func run(steps int, up, down bool, migrationsTable, basePath, migrationsPath str
 		return errors.Wrap(err, "opening config")
 	}
 
-	db, err := sql.Open("postgres", c.Database.ConnectionInfo())
+	db, err := sql.Open("postgres", c.DSN)
 	if err != nil {
 		return errors.Wrap(err, "connecting to database")
 	}
 	defer db.Close()
 
-	config := &postgres.Config{MigrationsTable: migrationsTable, DatabaseName: c.Database.Name}
+	config := &postgres.Config{MigrationsTable: migrationsTable}
 	driver, err := postgres.WithInstance(db, config)
 	if err != nil {
 		return errors.Wrap(err, "getting postgresql driver")
@@ -64,7 +64,7 @@ func run(steps int, up, down bool, migrationsTable, basePath, migrationsPath str
 
 	m, err := migrate.NewWithDatabaseInstance(
 		migrationsSource,
-		c.Database.Name, driver)
+		"peregrine", driver)
 	if err != nil {
 		return errors.Wrap(err, "opening migrations")
 	}

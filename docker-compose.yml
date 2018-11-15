@@ -48,7 +48,7 @@ services:
   app:
     environment:
       - GO_ENV=docker
-      - TBA_API_KEY=${TBA_API_KEY}
+      - PRGN_TBA_API_KEY=${PRGN_TBA_API_KEY}
     build: .
     command: ["./wait-for-it.sh", "-h", "db", "-p", "5432", "--", "peregrine"]
     ports:

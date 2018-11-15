@@ -37,7 +37,7 @@ There are two ways to get Peregrine runnning for development. You can either run
 2. Go to the [TBA account page](https://www.thebluealliance.com/account) and get a read API key. Set the TBA API key environment variable (you will need to do this each time you close and reopen your terminal):
 
 ```
-export TBA_API_KEY="your-api-key-goes-here"
+export PRGN_TBA_API_KEY="your-api-key-goes-here"
 ```
 
 3. Build the docker image:

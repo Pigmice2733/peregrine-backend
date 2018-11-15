@@ -37,7 +37,7 @@ func run(basePath string) error {
 		APIKey: c.TBA.APIKey,
 	}
 
-	sto, err := store.New(c.Database)
+	sto, err := store.New(c.DSN)
 	if err != nil {
 		return errors.Wrap(err, "opening postgres server")
 	}
