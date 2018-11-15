@@ -24,6 +24,7 @@ services:
   app:
     environment:
       - CGO_ENABLED=0
+      - GOOS=linux
       - GO_ENV=docker
       - TBA_API_KEY=${TBA_API_KEY}
     build: .
