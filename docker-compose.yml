@@ -14,8 +14,6 @@ services:
       - GO_ENV=docker
     build: .
     command: ["migrate", "-up"]
-    volumes:
-      - .:/go/src/github.com/Pigmice2733/peregrine-backend
     depends_on:
       - db
     links:
@@ -23,15 +21,10 @@ services:
 
   app:
     environment:
-      - CGO_ENABLED=0
-      - GOOS=linux
       - GO_ENV=docker
       - TBA_API_KEY=${TBA_API_KEY}
     build: .
-    working_dir: /go/src/github.com/Pigmice2733/peregrine-backend
-    command: ["./watch.sh", "peregrine"]
-    volumes:
-      - .:/go/src/github.com/Pigmice2733/peregrine-backend
+    command: ["peregrine"]
     ports:
       - "8080:8080"
     depends_on:

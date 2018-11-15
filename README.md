@@ -40,15 +40,19 @@ There are two ways to get Peregrine runnning for development. You can either run
 export TBA_API_KEY="your-api-key-goes-here"
 ```
 
+3. Build the docker image:
+
+```
+docker-compose build
+```
+
 3. Use docker-compose to start the app:
 
 ```
 docker-compose up
 ```
 
-> **TIP**: If you get a permissions error with opening your config files or `watch.sh` you may need to set SELinux to permissive mode with: `sudo setenforce 0`.
-
-The application will start running on port 8080. You should be able to access the API at http://localhost:8080/. The app will also expose the PostgreSQL database on port 5432.
+4. Party! The application will start running on port 8080. You should be able to access the API at http://localhost:8080/. The app will also expose the PostgreSQL database on port 5432.
 
 # Native Setup (not recommended for beginners)
 
