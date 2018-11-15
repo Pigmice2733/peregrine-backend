@@ -46,12 +46,6 @@ export TBA_API_KEY="your-api-key-goes-here"
 docker-compose build
 ```
 
-3. Use docker-compose to start the database:
-
-```
-docker-compose up -d db
-```
-
 4. Use docker-compose to start the app:
 
 ```

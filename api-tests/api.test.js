@@ -18,12 +18,17 @@ const youtubeOrTwitch = /^(youtube|twitch)$/
 const seedUser = {
   username: 'test',
   password: 'testpassword',
+  roles: {
+    isAdmin: true,
+    isVerified: true,
+  },
 }
 
 module.exports = {
   address,
   config,
   youtubeOrTwitch,
+  seedUser,
   getJWT: async (user = seedUser) => {
     const resp = await fetch(address + '/authenticate', {
       method: 'POST',

@@ -13,7 +13,8 @@ services:
     environment:
       - GO_ENV=docker
     build: .
-    command: ["migrate", "-up"]
+    command:
+      ["./wait-for-it.sh", "-h", "db", "-p", "5432", "--", "migrate", "-up"]
     depends_on:
       - db
     links:
@@ -25,6 +26,12 @@ services:
     build: .
     command:
       [
+        "./wait-for-it.sh",
+        "-h",
+        "db",
+        "-p",
+        "5432",
+        "--",
         "migrate",
         "-up",
         "-migrationsTable",
@@ -43,12 +50,12 @@ services:
       - GO_ENV=docker
       - TBA_API_KEY=${TBA_API_KEY}
     build: .
-    command: ["peregrine"]
+    command: ["./wait-for-it.sh", "-h", "db", "-p", "5432", "--", "peregrine"]
     ports:
       - "8080:8080"
     depends_on:
       - db
       - migrate
-      # - seed
+      - seed
     links:
       - db

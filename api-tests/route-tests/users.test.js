@@ -6,8 +6,8 @@ describe('auth endpoints', () => {
     const resp = await fetch(api.address + '/authenticate', {
       method: 'POST',
       body: JSON.stringify({
-        username: api.config.seedUser.username,
-        password: api.config.seedUser.password,
+        username: api.seedUser.username,
+        password: api.seedUser.password,
       }),
       headers: { 'Content-Type': 'application/json' },
     })
@@ -22,8 +22,8 @@ describe('auth endpoints', () => {
     const resp = await fetch(api.address + '/authenticate', {
       method: 'POST',
       body: JSON.stringify({
-        username: api.config.seedUser.username,
-        password: api.config.seedUser.password + 'a',
+        username: api.seedUser.username,
+        password: api.seedUser.password + 'a',
       }),
       headers: { 'Content-Type': 'application/json' },
     })

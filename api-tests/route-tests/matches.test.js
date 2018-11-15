@@ -69,7 +69,7 @@ test('/events/{eventKey}/matches endpoint with filter for multiple teams on oppo
 })
 
 test('/matches create endpoint', async () => {
-  expect(api.config.seedUser.roles.isAdmin).toBe(true)
+  expect(api.seedUser.roles.isAdmin).toBe(true)
 
   const event = {
     key: '1970flir',

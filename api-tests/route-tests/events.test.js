@@ -34,7 +34,7 @@ test('/events endpoint', async () => {
 })
 
 test('/events create endpoint', async () => {
-  expect(api.config.seedUser.roles.isAdmin).toBe(true)
+  expect(api.seedUser.roles.isAdmin).toBe(true)
 
   const event = {
     key: '1970flir',
