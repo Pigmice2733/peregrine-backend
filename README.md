@@ -4,101 +4,160 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/Pigmice2733/peregrine-backend)](https://goreportcard.com/report/github.com/Pigmice2733/peregrine-backend)
 [![GitHub](https://img.shields.io/github/license/Pigmice2733/peregrine-backend.svg)](https://github.com/Pigmice2733/peregrine-backend/blob/master/LICENSE.md)
 
-Peregrine is a REST API server written in Go for scouting and analysis of FIRST Robotics competitions. 
+Peregrine is a REST API server written in Go for scouting and analysis of FIRST Robotics competitions.
 
-# Scouting
+For a description of what scouting is, please view the [SCOUTING.md](SCOUTING.md).
 
-## What's Scouting?
+# Preface
 
-Scouting is when teams observe the behaviors of a team’s robot throughout matches they compete in within an event. When scouting other teams, scouts look for how a robot performs certain actions during a match, the overall functionality of the team's robot, and how efficient the performance of drive teams are. 
+Working on Peregrine requires an understanding of the command line and of git. The documentation here is written with Linux in mind (specifically Fedora), so while it is possible to work on peregrine on Windows, it's not recommended for beginners.
 
-## Why Do We Scout?
+# Initial Setup
 
-The most basic reason we scout is that data we receive from scouting assists us in alliance selections, where highly ranked teams select other teams to join their alliance and compete in playoff matches in hopes to exit the event as the finalist winner. The alliance captains, those who choose other robots to join their alliance, rely on scouting data to strategize which teams will complement their robot's abilities in a game. Cooperating well as a team is critical to playoff matches, as not doing so can cost an alliance many points in a match. Before a match, it's helpful for Drive Captains to know which teams they are competing against as well as who is on their alliance. Scouting gives Drive Captains that insight, and they use the data to strategize with other teams on their alliance to win the upcoming match. 
+1. [Install Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+2. [Install Go](https://golang.org/doc/install).
+3. Clone the repo using go get:
 
-## Why Use a Scouting App?
+```
+go get github.com/Pigmice2733/peregrine-backend
+```
 
-A scouting app solves many problems found in traditional paper scouting methods. Most FRC teams use a certain, inefficient process to scout matches; while matches are playing, scouts write data onto paper by checking boxes or filling in numbers based on how a robot competed during the match. Afterward, the data is manually entered into a spreadsheet, tending to be disorganized and difficult to interpret. Because manually entering data into a spreadsheet takes up extra time, the process of strategizing for alliance selections is delayed. In addition, a disorderly spreadsheet makes tracking a team's progress throughout an event challenging. Through a scouting app, the process of manually entering data after matches is eliminated, which allows for the pre-alliance selection process to begin much earlier. The data is immediately uploaded to an organized, easy-to-follow spreadsheet, and multiple graphs are created that display a robot's progress during an event. These components allow for Drive Captains to analyze their opponents quickly. 
+4. Change directory to the repo root:
 
+```
+cd $HOME/go/src/github.com/Pigmice2733/peregrine-backend
+```
 
 # Setup
 
-### GOPATH
+There are two ways to get Peregrine runnning for development. You can either run it in docker (recommended for beginners), or you can run it natively on your machine. If you are having issues with Docker, you may want to try running the app natively. If you chose the docker route, stay in this section. Otherwise, go to the [native setup section](#native-setup-not-recommended-for-beginners).
 
-> **NOTE**: These instructions assume that you already have Go installed and your environment setup. If you do not, you can get more info at [golang.org's install guide](http://golang.org/doc/install).
+1. [Install Docker](https://docs.docker.com/install/) and start the daemon. Also, install [docker-compose](https://docs.docker.com/compose/install/).
 
-Pull Peregrine from GitHub:
+2. Go to the [TBA account page](https://www.thebluealliance.com/account) and get a read API key. Set the TBA API key environment variable (you will need to do this each time you close and reopen your terminal):
 
-    go get github.com/Pigmice2733/peregrine-backend
+```
+export PRGN_TBA_API_KEY="your-api-key-goes-here"
+```
 
-### Vendoring
+3. Build the docker image:
 
-> **NOTE**: These instructions assume that you already have dep installed. If you
-> do not, you can get more info at [dep's install guide](https://github.com/golang/dep/blob/master/docs/installation.md).
+```
+docker-compose build
+```
 
-Install vendored dependencies:
+4. Use docker-compose to start the app:
 
-    dep ensure
+```
+docker-compose up
+```
 
-### Building
+5. Party! The application will start running on port 8080. You should be able to access the API at http://localhost:8080/. The app will also expose the PostgreSQL database on port 5432.
 
-    cd cmd/peregrine
-    go build
+# Native Setup (not recommended for beginners)
 
-# Database
+1. [Install PostgreSQL](https://www.postgresql.org/download/) and start the server.
+2. [Install Dep](https://github.com/golang/dep#installation).
+3. Run the following command to fetch vendored dependencies:
 
-See the postgresql first steps guide here: https://wiki.postgresql.org/wiki/First_steps
+```
+dep ensure
+```
 
-    sudo -i -u postgres
-    psql
-    CREATE DATABASE peregrine;
+4. Install the `migrate` and `peregrine` binaries:
 
-Build and run migrate:
+```
+go install ./...
+```
 
-    cd cmd/migrate
-    go build
-    ./migrate -up -basePath ../..
+5. Create the postgres database:
 
-# Config File
+```
+sudo -iu postgres psql -c "CREATE DATABASE peregrine"
+```
 
-Copy `./etc/config.json.template` to `./etc/config.development.json` as a starting point.
+5. Copy the config template:
 
-You must set the field `tba.apiKey` to your TBA API key. If you don't have one, go to The Blue Alliance and signup/login. From the account overview page you should be able to request a read-only API key.
-You must also configure the `database` section with the credentials and details of the database you are using. If you've just setup postgres the config file will likely work without any modifications.
-If the `TBA_API_KEY` environment variable is set, it will override the one in the config file. This is mostly just used for CI, you shouldn't need to use it in development. To see the full config schema, you can run `go doc "peregrine-backend/internal/config".Config`
+```
+cp etc/config.yaml.template etc/config.development.yaml
+```
 
-# Environment Variables and Flags
+6. Modify the config file as neccesary. You will need to go to the [TBA account page](https://www.thebluealliance.com/account) and get a read API key and set `apiKey` under the `tba` section to the read API key you register.
+7. Run the database migrations:
 
-The environment variable `GO_ENV` can be optionally used to choose which config file to use. If it is set to "developement", `./etc/config.development.json` will be used, if "production", then `./etc/config.production.json`, etc.
+```
+migrate -up
+```
 
-The flag `-basePath` will set the directory where `/etc/config.{environment}.json` is, and is available for both `peregrine` and `migrate`.
+8. Run the app:
 
-# Running
-
-After building:
-
-    cd cmd/peregrine
-    ./peregrine
-
-# Development
-
-All new development should be done in a branch named `<description>`
-
-    git checkout -b <description>
-
-When the feature is complete, tests pass, and you are ready for it to be merged, create a PR.
-
-Pull requests must have at least one approving review (ideally two), and the CircleCI tests must pass.
+```
+peregrine
+```
 
 # Testing
 
-You can run all peregrine-backend unit tests by simply running `go test ./...` in the root project directory. These will be the same tests that CircleCI runs so before you even _think_ about pushing a branch, make sure you've tested it.
+Peregrine has both unit tests and integration tests. Both should be passing for a new feature.
 
-You can run API blackbox integration tests by going to the api-tests folder and doing the following:
+## Unit tests
+
+Run go test:
+
+```
+go test ./...
+```
+
+## Integration (jest) tests
+
+You must have a server running for integration tests. See the [setup section](#setup).
+
+1. Go to the api-tests folder:
+
+```
+cd api-tests
+```
+
+2. Install dependencies:
 
 ```
 npm i
+```
+
+3. Set the `GO_ENV` environment variable if you used Docker to setup the app:
+
+```
+export GO_ENV="docker"
+```
+
+4. Run the tests:
+
+```
 npm test
 ```
 
-After the first time, you don't need to do `npm i`, just `npm test`.
+# Contributing
+
+1. Create a branch with a name that briefly describes the feature (e.g. `report-endpoints`):
+
+```
+git checkout -b report-endpoints
+```
+
+2. Add your commits to the branch:
+
+```
+git add internal/foo/bar.go
+git commit -m "Add the initial report endpoints"
+```
+
+3. Verify that your tests pass (see the [testing section](#testing)). If they don't then fix them and add a commit.
+
+4. Push the branch to the remote github repo:
+
+```
+git push -u origin report-endpoints
+```
+
+4. Visit the project on Github, go to Pull Requests, and hit New Pull Request.
+5. Fill out the template.
+6. Assign relevant reviewers, assign yourself, add any applicable labels, assign any applicable projects, and hit Create Pull Request.

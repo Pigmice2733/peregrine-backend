@@ -18,24 +18,9 @@ type Service struct {
 	db *sqlx.DB
 }
 
-// Options holds information for connecting to a PostgreSQL instance.
-type Options struct {
-	User    string `yaml:"user"`
-	Pass    string `yaml:"pass"`
-	Host    string `yaml:"host"`
-	Port    int    `yaml:"port"`
-	Name    string `yaml:"name"`
-	SSLMode string `yaml:"sslMode"`
-}
-
-// ConnectionInfo returns the PostgreSQL connection string from an options struct.
-func (o Options) ConnectionInfo() string {
-	return fmt.Sprintf("host='%s' port='%d' user='%s' password='%s' dbname='%s' sslmode='%s'", o.Host, o.Port, o.User, o.Pass, o.Name, o.SSLMode)
-}
-
-// New creates a new store service.
-func New(o Options) (Service, error) {
-	db, err := sqlx.Open("postgres", o.ConnectionInfo())
+// New creates a new store service from a dataSourceName.
+func New(dsn string) (Service, error) {
+	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
 		return Service{}, err
 	}

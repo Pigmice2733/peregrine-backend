@@ -1,12 +1,12 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"path"
+	"time"
 
-	"github.com/Pigmice2733/peregrine-backend/internal/store"
-	yaml "gopkg.in/yaml.v2"
+	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 )
 
 // Server holds information about the peregrine backend HTTP server.
@@ -29,15 +29,7 @@ type Config struct {
 		APIKey string `yaml:"apiKey"`
 	} `yaml:"tba"`
 
-	SeedUser *struct {
-		Username  string      `yaml:"username"`
-		Password  string      `yaml:"password"`
-		FirstName string      `yaml:"firstName"`
-		LastName  string      `yaml:"lastName"`
-		Roles     store.Roles `yaml:"roles"`
-	} `yaml:"seedUser"`
-
-	Database store.Options `yaml:"database"`
+	DSN string `yaml:"dsn"`
 }
 
 // Open opens basePath/etc/config.$GO_ENV.json as a Config
@@ -47,19 +39,27 @@ func Open(basePath string) (Config, error) {
 		environment = goEnv
 	}
 
-	f, err := os.Open(path.Join(basePath, "etc", fmt.Sprintf("config.%s.yaml", environment)))
-	if err != nil {
-		return Config{}, err
+	viper.AddConfigPath(path.Join(basePath, "etc"))
+	viper.SetConfigName("config." + environment)
+
+	viper.SetDefault("server", map[string]interface{}{
+		"httpAddress": ":8080",
+		"origin":      "*",
+		"year":        time.Now().Year(),
+		"logJSON":     false,
+	})
+	viper.SetDefault("tba.url", "https://www.thebluealliance.com/api/v3")
+	if err := viper.BindEnv("tba.apiKey", "PRGN_TBA_API_KEY"); err != nil {
+		return Config{}, errors.Wrap(err, "unable to bind viper env var for api key")
 	}
-	defer f.Close()
+
+	if err := viper.ReadInConfig(); err != nil {
+		return Config{}, errors.Wrap(err, "unable to read in config file")
+	}
 
 	var c Config
-	if err := yaml.NewDecoder(f).Decode(&c); err != nil {
-		return c, err
-	}
-
-	if apiKey, ok := os.LookupEnv("TBA_API_KEY"); ok {
-		c.TBA.APIKey = apiKey
+	if err := viper.Unmarshal(&c); err != nil {
+		return c, errors.Wrap(err, "unable to unmarshal config from viper")
 	}
 
 	return c, nil

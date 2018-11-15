@@ -1,0 +1,61 @@
+version: "3"
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_DB: peregrine
+      POSTGRES_USER: peregrine
+      POSTGRES_PASSWORD: ""
+    ports:
+      - "5432:5432"
+
+  migrate:
+    environment:
+      - GO_ENV=docker
+    build: .
+    command:
+      ["./wait-for-it.sh", "-h", "db", "-p", "5432", "--", "migrate", "-up"]
+    depends_on:
+      - db
+    links:
+      - db
+
+  seed:
+    environment:
+      - GO_ENV=docker
+    build: .
+    command:
+      [
+        "./wait-for-it.sh",
+        "-h",
+        "db",
+        "-p",
+        "5432",
+        "--",
+        "migrate",
+        "-up",
+        "-migrationsTable",
+        "seedmigrations",
+        "-migrationsPath",
+        "seed-migrations",
+      ]
+    depends_on:
+      - db
+      - migrate
+    links:
+      - db
+
+  app:
+    environment:
+      - GO_ENV=docker
+      - PRGN_TBA_API_KEY=${PRGN_TBA_API_KEY}
+    build: .
+    command: ["./wait-for-it.sh", "-h", "db", "-p", "5432", "--", "peregrine"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - migrate
+      - seed
+    links:
+      - db

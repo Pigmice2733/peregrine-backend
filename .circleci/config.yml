@@ -32,6 +32,7 @@ jobs:
       - run: go build -o migrate cmd/migrate/main.go
       - run: go build -o peregrine cmd/peregrine/main.go
       - run: ./migrate -up
+      - run: ./migrate -up -migrationsTable seedmigrations -migrationsPath seed-migrations
       - run:
           command: ./peregrine
           background: true
