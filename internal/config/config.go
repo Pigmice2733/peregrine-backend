@@ -49,7 +49,9 @@ func Open(basePath string) (Config, error) {
 		"logJSON":     false,
 	})
 	viper.SetDefault("tba.url", "https://www.thebluealliance.com/api/v3")
-	viper.BindEnv("tba.apiKey", "PRGN_TBA_API_KEY")
+	if err := viper.BindEnv("tba.apiKey", "PRGN_TBA_API_KEY"); err != nil {
+		return Config{}, errors.Wrap(err, "unable to bind viper env var for api key")
+	}
 
 	if err := viper.ReadInConfig(); err != nil {
 		return Config{}, errors.Wrap(err, "unable to read in config file")
