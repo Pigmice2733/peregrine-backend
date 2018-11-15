@@ -1,5 +1,5 @@
 server:
-  httpAddress: :8080
+  httpAddress: 0.0.0.0:8080
   origin: "*"
   logJSON: false
 
@@ -12,3 +12,12 @@ database:
   port: 5432
   name: peregrine
   sslMode: disable
+
+seedUser:
+  username: test
+  password: testpassword
+  firstName: John
+  lastName: Doe
+  roles:
+    isVerified: true
+    isAdmin: true

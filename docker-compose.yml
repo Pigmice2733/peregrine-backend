@@ -26,8 +26,8 @@ services:
       - GO_ENV=docker
       - TBA_API_KEY=${TBA_API_KEY}
     build: .
-    working_dir: /go/src/github.com/Pigmice2733/peregrine-backend/cmd/peregrine
-    command: ["watcher", "-basePath", "../.."]
+    working_dir: /go/src/github.com/Pigmice2733/peregrine-backend
+    command: ["./watch.sh", "peregrine"]
     volumes:
       - .:/go/src/github.com/Pigmice2733/peregrine-backend
     ports:
