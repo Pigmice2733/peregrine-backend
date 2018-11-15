@@ -13,7 +13,6 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
@@ -41,26 +40,6 @@ func run(basePath string) error {
 	sto, err := store.New(c.Database)
 	if err != nil {
 		return errors.Wrap(err, "opening postgres server")
-	}
-
-	if c.SeedUser != nil {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(c.SeedUser.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return errors.Wrap(err, "creating seed user hashed password")
-		}
-
-		u := store.User{
-			Username:       c.SeedUser.Username,
-			HashedPassword: string(hashedPassword),
-			FirstName:      c.SeedUser.FirstName,
-			LastName:       c.SeedUser.LastName,
-			Roles:          c.SeedUser.Roles,
-		}
-
-		err = sto.CreateUser(u)
-		if err != nil && err != store.ErrExists {
-			return errors.Wrap(err, "creating seed user")
-		}
 	}
 
 	if c.Server.Year == 0 {

@@ -19,6 +19,25 @@ services:
     links:
       - db
 
+  seed:
+    environment:
+      - GO_ENV=docker
+    build: .
+    command:
+      [
+        "migrate",
+        "-up",
+        "-migrationsTable",
+        "seedmigrations",
+        "-migrationsPath",
+        "seed-migrations",
+      ]
+    depends_on:
+      - db
+      - migrate
+    links:
+      - db
+
   app:
     environment:
       - GO_ENV=docker
@@ -30,6 +49,6 @@ services:
     depends_on:
       - db
       - migrate
+      # - seed
     links:
       - db
-      - migrate

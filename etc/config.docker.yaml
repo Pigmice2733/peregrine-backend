@@ -12,12 +12,3 @@ database:
   port: 5432
   name: peregrine
   sslMode: disable
-
-seedUser:
-  username: test
-  password: testpassword
-  firstName: John
-  lastName: Doe
-  roles:
-    isVerified: true
-    isAdmin: true

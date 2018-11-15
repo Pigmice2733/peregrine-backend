@@ -46,13 +46,19 @@ export TBA_API_KEY="your-api-key-goes-here"
 docker-compose build
 ```
 
-3. Use docker-compose to start the app:
+3. Use docker-compose to start the database:
+
+```
+docker-compose up -d db
+```
+
+4. Use docker-compose to start the app:
 
 ```
 docker-compose up
 ```
 
-4. Party! The application will start running on port 8080. You should be able to access the API at http://localhost:8080/. The app will also expose the PostgreSQL database on port 5432.
+5. Party! The application will start running on port 8080. You should be able to access the API at http://localhost:8080/. The app will also expose the PostgreSQL database on port 5432.
 
 # Native Setup (not recommended for beginners)
 

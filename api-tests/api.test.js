@@ -15,11 +15,16 @@ const address = `http://${config.server.httpAddress}`
 
 const youtubeOrTwitch = /^(youtube|twitch)$/
 
+const seedUser = {
+  username: 'test',
+  password: 'testpassword',
+}
+
 module.exports = {
   address,
   config,
   youtubeOrTwitch,
-  getJWT: async (user = config.seedUser) => {
+  getJWT: async (user = seedUser) => {
     const resp = await fetch(address + '/authenticate', {
       method: 'POST',
       body: JSON.stringify({

@@ -21,16 +21,17 @@ func main() {
 	var down = flag.Bool("down", false, "Migrate down. Cannot be used with -up.")
 	var migrationsTable = flag.String("migrationsTable", "migrations", "Name of SQL table to store migrations in.")
 	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
+	var migrationsPath = flag.String("migrationsPath", "migrations", "Path to migrations from etc directory.")
 
 	flag.Parse()
 
-	if err := run(*steps, *up, *down, *migrationsTable, *basePath); err != nil {
+	if err := run(*steps, *up, *down, *migrationsTable, *basePath, *migrationsPath); err != nil {
 		fmt.Printf("got error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(steps int, up, down bool, migrationsTable, basePath string) error {
+func run(steps int, up, down bool, migrationsTable, basePath, migrationsPath string) error {
 	// Neither are set or both are set
 	if up == down {
 		return fmt.Errorf("must specify either -up or -down")
@@ -59,7 +60,7 @@ func run(steps int, up, down bool, migrationsTable, basePath string) error {
 	} else {
 		migrationsSource += "./"
 	}
-	migrationsSource += "migrations"
+	migrationsSource += migrationsPath
 
 	m, err := migrate.NewWithDatabaseInstance(
 		migrationsSource,
