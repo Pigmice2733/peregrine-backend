@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+
 while true; do
   go install ./...
   $@ &
