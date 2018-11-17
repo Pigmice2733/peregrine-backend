@@ -15,6 +15,8 @@ services:
     build: .
     command:
       ["./wait-for-it.sh", "-h", "db", "-p", "5432", "--", "migrate", "-up"]
+    volumes:
+      - .:/go/src/github.com/Pigmice2733/peregrine-backend
     depends_on:
       - db
     links:
@@ -47,10 +49,15 @@ services:
 
   app:
     environment:
+      - CGO_ENABLED=0
+      - GOOS=linux
       - GO_ENV=docker
       - PRGN_TBA_API_KEY=${PRGN_TBA_API_KEY}
     build: .
     command: ["./wait-for-it.sh", "-h", "db", "-p", "5432", "--", "peregrine"]
+    working_dir: /go/src/github.com/Pigmice2733/peregrine-backend
+    volumes:
+      - .:/go/src/github.com/Pigmice2733/peregrine-backend
     ports:
       - "8080:8080"
     depends_on:

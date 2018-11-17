@@ -52,6 +52,8 @@ docker-compose build
 docker-compose up
 ```
 
+> **TIP**: If you get a permissions error with opening your config files or `watch.sh` you may need to set SELinux to permissive mode with: `sudo setenforce 0`.
+
 5. Party! The application will start running on port 8080. You should be able to access the API at http://localhost:8080/. The app will also expose the PostgreSQL database on port 5432.
 
 # Native Setup (not recommended for beginners)
