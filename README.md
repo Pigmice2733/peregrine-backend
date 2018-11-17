@@ -1,4 +1,4 @@
-<h1 align="center"><img src="https://raw.githubusercontent.com/Pigmice2733/peregrine-logo/master/logo-with-text.png" alt="Peregrine"></h1>
+# Peregrine
 
 ![CircleCI](https://circleci.com/gh/Pigmice2733/peregrine-backend.svg?style=shield&circle-token=:circle-token)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Pigmice2733/peregrine-backend)](https://goreportcard.com/report/github.com/Pigmice2733/peregrine-backend)
@@ -8,11 +8,11 @@ Peregrine is a REST API server written in Go for scouting and analysis of FIRST 
 
 For a description of what scouting is, please view the [SCOUTING.md](SCOUTING.md).
 
-# Preface
+## Preface
 
 Working on Peregrine requires an understanding of the command line and of git. The documentation here is written with Linux in mind (specifically Fedora), so while it is possible to work on peregrine on Windows, it's not recommended for beginners.
 
-# Initial Setup
+## Initial Setup
 
 1. [Install Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
 2. [Install Go](https://golang.org/doc/install).
@@ -28,7 +28,7 @@ go get github.com/Pigmice2733/peregrine-backend
 cd $HOME/go/src/github.com/Pigmice2733/peregrine-backend
 ```
 
-# Setup
+## Setup
 
 There are two ways to get Peregrine runnning for development. You can either run it in docker (recommended for beginners), or you can run it natively on your machine. If you are having issues with Docker, you may want to try running the app natively. If you chose the docker route, stay in this section. Otherwise, go to the [native setup section](#native-setup-not-recommended-for-beginners).
 
@@ -54,7 +54,7 @@ docker-compose up
 
 5. Party! The application will start running on port 8080. You should be able to access the API at http://localhost:8080/. The app will also expose the PostgreSQL database on port 5432.
 
-# Native Setup (not recommended for beginners)
+## Native Setup (not recommended for beginners)
 
 1. [Install PostgreSQL](https://www.postgresql.org/download/) and start the server.
 2. [Install Dep](https://github.com/golang/dep#installation).
@@ -95,11 +95,11 @@ migrate -up
 peregrine
 ```
 
-# Testing
+## Testing
 
 Peregrine has both unit tests and integration tests. Both should be passing for a new feature.
 
-## Unit tests
+### Unit tests
 
 Run go test:
 
@@ -107,7 +107,7 @@ Run go test:
 go test ./...
 ```
 
-## Integration (jest) tests
+### Integration (jest) tests
 
 You must have a server running for integration tests. See the [setup section](#setup).
 
@@ -135,7 +135,7 @@ export GO_ENV="docker"
 npm test
 ```
 
-# Contributing
+## Contributing
 
 1. Create a branch with a name that briefly describes the feature (e.g. `report-endpoints`):
 
