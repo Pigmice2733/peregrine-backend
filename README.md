@@ -73,7 +73,7 @@ go install ./...
 5. Create the postgres database:
 
 ```
-sudo -iu postgres psql -c "CREATE DATABASE peregrine"
+createdb -U postgres peregrine
 ```
 
 5. Copy the config template:
