@@ -2,6 +2,8 @@ const fetch = require('node-fetch')
 const jsyaml = require('js-yaml')
 const fs = require('fs')
 
+jest.setTimeout(30000)
+
 expect.extend(require('./matchers.js'))
 
 const config = jsyaml.safeLoad(
