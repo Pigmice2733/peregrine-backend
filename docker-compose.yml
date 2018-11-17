@@ -50,7 +50,7 @@ services:
   app:
     environment:
       - GO_ENV=docker
-      - PRGN_TBA_API_KEY=${PRGN_TBA_API_KEY}
+      - PEREGRINE_TBA_API_KEY=${PEREGRINE_TBA_API_KEY}
     build: .
     command:
       [
