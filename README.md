@@ -96,7 +96,7 @@ sudo -iu postgres psql -c "CREATE DATABASE peregrine"
 cp etc/config.yaml.template etc/config.development.yaml
 ```
 
-7. Modify the config file as neccesary. You will need to go to the [TBA account page](https://www.thebluealliance.com/account) and get a read API key and set `apiKey` under the `tba` section to the read API key you register.
+7. Modify `etc/config.development.yaml` as neccesary. You will likely not need to change anything besides the TBA API key if you followed the instructions here. You will need to go to the [TBA account page](https://www.thebluealliance.com/account) and get a read API key and set `apiKey` under the `tba` section to the read API key you register.
 8. Run the database migrations:
 
 ```
