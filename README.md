@@ -28,16 +28,16 @@ go get github.com/Pigmice2733/peregrine-backend
 cd $HOME/go/src/github.com/Pigmice2733/peregrine-backend
 ```
 
-# Setup
+# Setup (Linux and OS X)
 
-There are two ways to get Peregrine runnning for development. You can either run it in docker (recommended for beginners), or you can run it natively on your machine. If you are having issues with Docker, you may want to try running the app natively. If you chose the docker route, stay in this section. Otherwise, go to the [native setup section](#native-setup-not-recommended-for-beginners).
+There are two ways to get Peregrine runnning for development. You can either run it in docker (recommended for beginners), or you can run it natively on your machine. If you are having issues with Docker, you may want to try running the app natively. If you chose the docker route, stay in this section. Otherwise, go to the [native setup section](#native-setup-not-recommended-for-beginners). While you can use docker on Windows, it's usually a pain, so we recommend only using docker on Linux or OS X.
 
 1. [Install Docker](https://docs.docker.com/install/) and start the daemon. Also, install [docker-compose](https://docs.docker.com/compose/install/).
 
 2. Go to the [TBA account page](https://www.thebluealliance.com/account) and get a read API key. Set the TBA API key environment variable (you will need to do this each time you close and reopen your terminal):
 
 ```
-export PRGN_TBA_API_KEY="your-api-key-goes-here"
+export PEREGRINE_TBA_API_KEY="your-api-key-goes-here"
 ```
 
 3. Build the docker image:
@@ -48,13 +48,27 @@ docker-compose build
 
 4. Use docker-compose to start the app:
 
+> **TIP**: If you get a permissions error with opening your config files or `watch.sh` you may need to set SELinux to permissive mode with: `sudo setenforce 0`.
+
 ```
-docker-compose up
+docker-compose up -d
 ```
 
-5. Party! The application will start running on port 8080. You should be able to access the API at http://localhost:8080/. The app will also expose the PostgreSQL database on port 5432.
+5. Party! The application will start running on port 8080. You should be able to access the API at http://localhost:8080/. The app will also expose the PostgreSQL database on port 5432. The app will automatically rebuild and restart on changes to any \*.go files.
 
-# Native Setup (not recommended for beginners)
+To stop the app:
+
+```
+docker-compose down
+```
+
+To view logs:
+
+```
+docker-compose logs app
+```
+
+# Setup (all platforms)
 
 1. [Install PostgreSQL](https://www.postgresql.org/download/) and start the server.
 2. [Install Dep](https://github.com/golang/dep#installation).
@@ -76,20 +90,20 @@ go install ./...
 createdb -U postgres peregrine
 ```
 
-5. Copy the config template:
+6. Copy the config template:
 
 ```
 cp etc/config.yaml.template etc/config.development.yaml
 ```
 
-6. Modify the config file as neccesary. You will need to go to the [TBA account page](https://www.thebluealliance.com/account) and get a read API key and set `apiKey` under the `tba` section to the read API key you register.
-7. Run the database migrations:
+7. Modify `etc/config.development.yaml` as neccesary. You will likely not need to change anything besides the TBA API key if you followed the instructions here. You will need to go to the [TBA account page](https://www.thebluealliance.com/account) and get a read API key and set `apiKey` under the `tba` section to the read API key you register.
+8. Run the database migrations:
 
 ```
 migrate -up
 ```
 
-8. Run the app:
+9. Run the app:
 
 ```
 peregrine

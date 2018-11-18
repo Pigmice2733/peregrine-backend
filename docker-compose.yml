@@ -1,4 +1,6 @@
 version: "3"
+volumes:
+  vendor:
 services:
   db:
     image: postgres
@@ -13,6 +15,7 @@ services:
     environment:
       - GO_ENV=docker
     build: .
+    image: peregrine
     command:
       ["./wait-for-it.sh", "-h", "db", "-p", "5432", "--", "migrate", "-up"]
     depends_on:
@@ -20,10 +23,11 @@ services:
     links:
       - db
 
-  seed:
+  app:
+    image: peregrine
     environment:
       - GO_ENV=docker
-    build: .
+      - PEREGRINE_TBA_API_KEY=${PEREGRINE_TBA_API_KEY}
     command:
       [
         "./wait-for-it.sh",
@@ -32,30 +36,17 @@ services:
         "-p",
         "5432",
         "--",
-        "migrate",
-        "-up",
-        "-migrationsTable",
-        "seedmigrations",
-        "-migrationsPath",
-        "seed-migrations",
+        "./watch.sh",
+        "peregrine",
       ]
-    depends_on:
-      - db
-      - migrate
-    links:
-      - db
-
-  app:
-    environment:
-      - GO_ENV=docker
-      - PRGN_TBA_API_KEY=${PRGN_TBA_API_KEY}
-    build: .
-    command: ["./wait-for-it.sh", "-h", "db", "-p", "5432", "--", "peregrine"]
+    working_dir: /go/src/github.com/Pigmice2733/peregrine-backend
+    volumes:
+      - .:/go/src/github.com/Pigmice2733/peregrine-backend
+      - vendor:/go/src/github.com/Pigmice2733/peregrine-backend/vendor
     ports:
       - "8080:8080"
     depends_on:
       - db
       - migrate
-      - seed
     links:
       - db
