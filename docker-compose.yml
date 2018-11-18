@@ -15,8 +15,6 @@ services:
     build: .
     command:
       ["./wait-for-it.sh", "-h", "db", "-p", "5432", "--", "migrate", "-up"]
-    volumes:
-      - .:/go/src/github.com/Pigmice2733/peregrine-backend
     depends_on:
       - db
     links:
@@ -66,6 +64,7 @@ services:
     working_dir: /go/src/github.com/Pigmice2733/peregrine-backend
     volumes:
       - .:/go/src/github.com/Pigmice2733/peregrine-backend
+      - /go/src/github.com/Pigmice2733/peregrine-backend/vendor
     ports:
       - "8080:8080"
     depends_on:
