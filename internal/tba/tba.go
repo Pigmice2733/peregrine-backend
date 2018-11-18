@@ -16,7 +16,7 @@ import (
 type Service struct {
 	URL       string
 	APIKey    string
-	etagStore sync.Map
+	etagStore *sync.Map
 }
 
 type district struct {
@@ -91,6 +91,10 @@ func (s *Service) makeRequest(path string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", s.URL+path, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if s.etagStore == nil {
+		s.etagStore = new(sync.Map)
 	}
 
 	if v, ok := s.etagStore.Load(path); ok {
