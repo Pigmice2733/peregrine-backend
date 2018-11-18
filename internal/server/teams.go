@@ -5,6 +5,7 @@ import (
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
+	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/gorilla/mux"
 )
 
@@ -90,9 +91,12 @@ func (s *Server) updateTeamKeys(eventKey string) error {
 	}
 
 	teams, err := s.TBA.GetTeamKeys(eventKey)
-	if err != nil {
+	if _, ok := err.(tba.ErrNotModified); ok {
+		return nil
+	} else if err != nil {
 		return err
 	}
+
 	return s.Store.TeamKeysUpsert(eventKey, teams)
 }
 
@@ -107,8 +111,11 @@ func (s *Server) updateTeamRankings(eventKey string) error {
 	}
 
 	teams, err := s.TBA.GetTeamRankings(eventKey)
-	if err != nil {
+	if _, ok := err.(tba.ErrNotModified); ok {
+		return nil
+	} else if err != nil {
 		return err
 	}
+
 	return s.Store.TeamsUpsert(teams)
 }

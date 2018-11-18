@@ -8,6 +8,7 @@ import (
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
+	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/gorilla/mux"
 )
 
@@ -156,14 +157,18 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 	}
 }
 
-// Get new event data from TBA only if event data is over 24 hours old.
+const expiry = 3.0
+
+// Get new event data from TBA only if event data is over 3 hours old.
 // Upsert event data into database.
 func (s *Server) updateEvents() error {
 	now := time.Now()
 
-	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > 24.0 {
+	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > expiry {
 		fullEvents, err := s.TBA.GetEvents(s.Year)
-		if err != nil {
+		if _, ok := err.(tba.ErrNotModified); ok {
+			return nil
+		} else if err != nil {
 			return err
 		}
 
