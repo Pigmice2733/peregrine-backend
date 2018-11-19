@@ -23,7 +23,9 @@ const seedUser = {
   roles: {
     isAdmin: true,
     isVerified: true,
+    isSuperAdmin: true,
   },
+  realmId: 1,
 }
 
 module.exports = {
@@ -40,6 +42,7 @@ module.exports = {
       }),
       headers: { 'Content-Type': 'application/json' },
     })
+    expect(resp.status).toBe(200)
     const d = await resp.json()
     return d.data.jwt
   },

@@ -14,11 +14,13 @@ type contextKey string
 const (
 	keyRolesContext   contextKey = "pigmice_roles"
 	keySubjectContext contextKey = "pigmice_subject"
+	keyRealmContext   contextKey = "pigmice_realm"
 )
 
 // Claims holds the standard jwt claims plus the pigmice roles claim.
 type Claims struct {
-	Roles store.Roles `json:"pigmiceRoles"`
+	Roles   store.Roles `json:"pigmiceRoles"`
+	RealmID int64       `json:"pigmiceRealm"`
 	jwt.StandardClaims
 }
 
@@ -55,4 +57,18 @@ func GetRoles(r *http.Request) store.Roles {
 	}
 
 	return roles
+}
+
+// GetRealmID retrieves the ID of the user's realm from the http context.
+func GetRealmID(r *http.Request) (int64, error) {
+	contextRealm := r.Context().Value(keyRealmContext)
+	if contextRealm == nil {
+		return 0, fmt.Errorf("no realm set on context")
+	}
+
+	realmID, ok := contextRealm.(int64)
+	if !ok {
+		return 0, fmt.Errorf("got invalid type for realm")
+	}
+	return realmID, nil
 }

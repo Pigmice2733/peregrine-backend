@@ -1,0 +1,1 @@
+ALTER TABLE events ADD COLUMN manually_added BOOLEAN NOT NULL DEFAULT false;

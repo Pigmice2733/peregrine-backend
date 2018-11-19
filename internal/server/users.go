@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,6 +17,14 @@ import (
 type baseUser struct {
 	Username string `json:"username" validate:"gte=4,lte=32"`
 	Password string `json:"password" validate:"gte=8,lte=128"`
+}
+
+type requestUser struct {
+	baseUser
+	RealmID   int64       `json:"realmId" validate:"required"`
+	FirstName string      `json:"firstName" validate:"required"`
+	LastName  string      `json:"lastName" validate:"required"`
+	Roles     store.Roles `json:"roles"`
 }
 
 func (s *Server) authenticateHandler() http.HandlerFunc {
@@ -36,17 +43,12 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 		}
 
 		user, err := s.Store.GetUserByUsername(ru.Username)
-		if _, ok := err.(store.ErrNoResults); ok {
+		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
 			go s.Logger.WithError(err).Error("retrieving user from database")
 			ihttp.Error(w, http.StatusInternalServerError)
-			return
-		}
-
-		if !user.Roles.IsVerified {
-			ihttp.Respond(w, fmt.Errorf("user has not yet been verified"), http.StatusUnauthorized)
 			return
 		}
 
@@ -65,7 +67,8 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 				ExpiresAt: time.Now().Add(time.Hour * 8).Unix(),
 				Subject:   strconv.FormatInt(user.ID, 10),
 			},
-			Roles: user.Roles,
+			Roles:   user.Roles,
+			RealmID: user.RealmID,
 		}).SignedString(s.JWTSecret)
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt signed string")
@@ -78,13 +81,6 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 }
 
 func (s *Server) createUserHandler() http.HandlerFunc {
-	type requestUser struct {
-		baseUser
-		FirstName string      `json:"firstName" validate:"required"`
-		LastName  string      `json:"lastName" validate:"required"`
-		Roles     store.Roles `json:"roles"`
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		var ru requestUser
 		if err := json.NewDecoder(r.Body).Decode(&ru); err != nil {
@@ -93,8 +89,22 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 		}
 
 		// If the creator user isn't an admin, reset their roles
-		if !ihttp.GetRoles(r).IsAdmin {
+		roles := ihttp.GetRoles(r)
+		if !roles.IsAdmin && !roles.IsSuperAdmin {
 			ru.Roles = store.Roles{}
+		}
+
+		// Only super-admins can create super-admins
+		if !roles.IsSuperAdmin {
+			ru.Roles.IsSuperAdmin = false
+		}
+
+		// Only super-admins can create verified users in realms other than their own.
+		if !roles.IsSuperAdmin {
+			if id, err := ihttp.GetRealmID(r); err != nil || id != ru.RealmID {
+				ru.Roles.IsVerified = false
+				ru.Roles.IsAdmin = false
+			}
 		}
 
 		if err := validator.New().Struct(ru); err != nil {
@@ -102,7 +112,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			return
 		}
 
-		u := store.User{Username: ru.Username, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName}
+		u := store.User{Username: ru.Username, RealmID: ru.RealmID, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcrypt.DefaultCost)
 		if err != nil {
@@ -114,8 +124,11 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 		u.HashedPassword = string(hashedPassword)
 
 		err = s.Store.CreateUser(u)
-		if err == store.ErrExists {
+		if _, ok := err.(*store.ErrExists); ok {
 			ihttp.Respond(w, err, http.StatusConflict)
+			return
+		} else if _, ok := err.(*store.ErrFKeyViolation); ok {
+			ihttp.Respond(w, err, http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {
 			go s.Logger.WithError(err).Error("creating new user")
@@ -129,7 +142,23 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 func (s *Server) getUsersHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		users, err := s.Store.GetUsers()
+		roles := ihttp.GetRoles(r)
+
+		var users []store.User
+		var err error
+
+		if roles.IsSuperAdmin {
+			users, err = s.Store.GetUsers()
+		} else {
+			var realmID int64
+			realmID, err = ihttp.GetRealmID(r)
+			if err != nil {
+				ihttp.Error(w, http.StatusUnauthorized)
+				return
+			}
+			users, err = s.Store.GetUsersByRealm(realmID)
+		}
+
 		if err != nil {
 			go s.Logger.WithError(err).Error("getting users")
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -150,25 +179,33 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 
 		sub, err := ihttp.GetSubject(r)
 		if err != nil {
-			ihttp.Error(w, http.StatusForbidden)
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
+		roles := ihttp.GetRoles(r)
 
-		// if the user is not an admin and their id does not equal the id they
+		// If the user is not an admin and their ID does not equal the ID they
 		// are trying to get, they are forbidden
-		if !ihttp.GetRoles(r).IsAdmin && sub != id {
+		if !roles.IsAdmin && !roles.IsSuperAdmin && sub != id {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
 		user, err := s.Store.GetUserByID(id)
-		if _, ok := err.(store.ErrNoResults); ok {
+		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
 			go s.Logger.WithError(err).Error("getting user by id")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
+		}
+
+		if !roles.IsSuperAdmin && sub != id {
+			if realmID, err := ihttp.GetRealmID(r); err != nil || realmID != user.RealmID {
+				ihttp.Error(w, http.StatusForbidden)
+				return
+			}
 		}
 
 		ihttp.Respond(w, user, http.StatusOK)
@@ -186,16 +223,20 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		targetID, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
 		if err != nil {
 			ihttp.Error(w, http.StatusBadRequest)
 			return
 		}
 
-		creatorIsAdmin := ihttp.GetRoles(r).IsAdmin
+		subjectID, err := ihttp.GetSubject(r)
+		if err != nil {
+			ihttp.Error(w, http.StatusUnauthorized)
+			return
+		}
+		roles := ihttp.GetRoles(r)
 
-		creatorID, err := ihttp.GetSubject(r)
-		if err != nil || (id != creatorID && !creatorIsAdmin) {
+		if targetID != subjectID && !roles.IsAdmin && !roles.IsSuperAdmin {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
@@ -206,9 +247,28 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 			return
 		}
 
+		// Admins can only patch users in the same realm
+		if targetID != subjectID && !roles.IsSuperAdmin {
+			targetUser, err := s.Store.GetUserByID(targetID)
+			if err != nil {
+				go s.Logger.WithError(err).Error("getting user")
+				ihttp.Error(w, http.StatusInternalServerError)
+				return
+			}
+			if realmID, err := ihttp.GetRealmID(r); err != nil || realmID != targetUser.RealmID {
+				ihttp.Error(w, http.StatusForbidden)
+				return
+			}
+		}
+
 		// If the creator user isn't an admin, reset roles
-		if !creatorIsAdmin {
+		if !roles.IsAdmin && !roles.IsSuperAdmin {
 			ru.Roles = nil
+		}
+
+		// Only super-admins can create super-admins
+		if ru.Roles != nil && !roles.IsSuperAdmin {
+			ru.Roles.IsSuperAdmin = false
 		}
 
 		if err := validator.New().Struct(ru); err != nil {
@@ -216,7 +276,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 			return
 		}
 
-		u := store.PatchUser{ID: id, Username: ru.Username, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName, Stars: ru.Stars}
+		u := store.PatchUser{ID: targetID, Username: ru.Username, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName, Stars: ru.Stars}
 
 		if ru.Password != nil {
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*ru.Password), bcrypt.DefaultCost)
@@ -231,11 +291,59 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		}
 
 		err = s.Store.PatchUser(u)
-		if err == store.ErrExists {
-			ihttp.Respond(w, err, http.StatusConflict)
+		if _, ok := err.(*store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if _, ok := err.(*store.ErrFKeyViolation); ok {
+			ihttp.Error(w, http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {
 			go s.Logger.WithError(err).Error("patching user")
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		ihttp.Respond(w, nil, http.StatusNoContent)
+	}
+}
+
+func (s *Server) deleteUserHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		if err != nil {
+			ihttp.Error(w, http.StatusBadRequest)
+			return
+		}
+
+		requestID, err := ihttp.GetSubject(r)
+		if err != nil {
+			ihttp.Error(w, http.StatusUnauthorized)
+			return
+		}
+		roles := ihttp.GetRoles(r)
+
+		if id != requestID && !roles.IsAdmin && !roles.IsSuperAdmin {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
+		// Admins can only delete users in the same realm
+		if id != requestID && !roles.IsSuperAdmin {
+			targetUser, err := s.Store.GetUserByID(id)
+			if err != nil {
+				go s.Logger.WithError(err).Error("getting user")
+				ihttp.Error(w, http.StatusInternalServerError)
+				return
+			}
+			if realmID, err := ihttp.GetRealmID(r); err != nil || realmID != targetUser.RealmID {
+				ihttp.Error(w, http.StatusForbidden)
+				return
+			}
+		}
+
+		err = s.Store.DeleteUser(id)
+		if err != nil {
+			go s.Logger.WithError(err).Error("deleting user")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}

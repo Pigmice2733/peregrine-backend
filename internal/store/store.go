@@ -11,7 +11,34 @@ import (
 )
 
 // ErrNoResults indicates that no data matching the query was found.
-type ErrNoResults error
+type ErrNoResults struct {
+	msg string
+}
+
+func (enr *ErrNoResults) Error() string {
+	return enr.msg
+}
+
+// ErrExists is returned if a unique record already exists.
+type ErrExists struct {
+	msg string
+}
+
+func (eex *ErrExists) Error() string {
+	return eex.msg
+}
+
+// ErrFKeyViolation is returned if inserting a record causes a foreign key violation.
+type ErrFKeyViolation struct {
+	msg string
+}
+
+func (efk *ErrFKeyViolation) Error() string {
+	return efk.msg
+}
+
+const pgExists = "23505"
+const pgFKeyViolation = "23503"
 
 // Service is an interface to manipulate the data store.
 type Service struct {

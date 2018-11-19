@@ -18,10 +18,22 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 
+		event, err := s.Store.GetEvent(eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.RealmID, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
 		// Get new team data from TBA
 		if err := s.updateTeamKeys(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(store.ErrNoResults); ok {
+			if _, ok := err.(*store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -47,10 +59,22 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 		vars := mux.Vars(r)
 		eventKey, teamKey := vars["eventKey"], vars["teamKey"]
 
+		event, err := s.Store.GetEvent(eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.RealmID, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
 		// Get new team rankings data from TBA
 		if err := s.updateTeamRankings(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(store.ErrNoResults); ok {
+			if _, ok := err.(*store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -61,7 +85,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 
 		fullTeam, err := s.Store.GetTeam(teamKey, eventKey)
 		if err != nil {
-			if _, ok := err.(store.ErrNoResults); ok {
+			if _, ok := err.(*store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -82,11 +106,12 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 // Get new team key data from TBA for a particular event. Upsert data into database.
 func (s *Server) updateTeamKeys(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.Store.CheckTBAEventKeyExists(eventKey)
-	if err == store.ErrManuallyAdded {
-		return nil
-	} else if err != nil {
+	valid, err := s.Store.CheckTBAEventKeyExists(eventKey)
+	if err != nil {
 		return err
+	}
+	if !valid {
+		return nil
 	}
 
 	teams, err := s.TBA.GetTeamKeys(eventKey)
@@ -99,11 +124,12 @@ func (s *Server) updateTeamKeys(eventKey string) error {
 // Get new team rankings data from TBA for a particular event. Upsert data into database.
 func (s *Server) updateTeamRankings(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.Store.CheckTBAEventKeyExists(eventKey)
-	if err == store.ErrManuallyAdded {
-		return nil
-	} else if err != nil {
+	valid, err := s.Store.CheckTBAEventKeyExists(eventKey)
+	if err != nil {
 		return err
+	}
+	if !valid {
+		return nil
 	}
 
 	teams, err := s.TBA.GetTeamRankings(eventKey)

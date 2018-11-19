@@ -183,7 +183,6 @@ func (s *Service) UpdateTBAMatches(matches []Match, eventKey string) error {
 			USING events e
 			WHERE e.key = $1 AND
 				  e.key = m.event_key AND
-				  NOT e.manually_added AND
 				  NOT (m.key = ANY($2)) 
 	`, eventKey, pq.Array(matchKeys))
 	} else {
@@ -191,7 +190,6 @@ func (s *Service) UpdateTBAMatches(matches []Match, eventKey string) error {
 		DELETE FROM matches m
 			USING events e
 			WHERE e.key = m.event_key AND
-				  NOT e.manually_added AND
 				  NOT (m.key = ANY($1)) 
 	`, pq.Array(matchKeys))
 	}

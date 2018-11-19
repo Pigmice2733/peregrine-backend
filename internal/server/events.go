@@ -19,6 +19,7 @@ type location struct {
 
 type event struct {
 	Key          string         `json:"key"`
+	RealmID      *int64         `json:"realmId,omitempty"`
 	Name         string         `json:"name"`
 	District     *string        `json:"district,omitempty"`
 	FullDistrict *string        `json:"fullDistrict,omitempty"`
@@ -48,7 +49,22 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 			return
 		}
 
-		fullEvents, err := s.Store.GetEvents()
+		var fullEvents []store.Event
+
+		roles := ihttp.GetRoles(r)
+
+		userRealm, err := ihttp.GetRealmID(r)
+
+		if roles.IsSuperAdmin {
+			fullEvents, err = s.Store.GetEvents()
+		} else {
+			if err != nil {
+				fullEvents, err = s.Store.GetEventsFromRealm(nil)
+			} else {
+				fullEvents, err = s.Store.GetEventsFromRealm(&userRealm)
+			}
+		}
+
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving event data")
@@ -59,6 +75,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		for _, fullEvent := range fullEvents {
 			events = append(events, event{
 				Key:          fullEvent.Key,
+				RealmID:      fullEvent.RealmID,
 				Name:         fullEvent.Name,
 				District:     fullEvent.District,
 				FullDistrict: fullEvent.FullDistrict,
@@ -90,12 +107,17 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 		fullEvent, err := s.Store.GetEvent(eventKey)
 		if err != nil {
-			if _, ok := err.(store.ErrNoResults); ok {
+			if _, ok := err.(*store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("unable to retrieve event data")
+			return
+		}
+
+		if !s.checkEventAccess(fullEvent.RealmID, r) {
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
@@ -110,6 +132,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 		event := webcastEvent{
 			event: event{
 				Key:          fullEvent.Key,
+				RealmID:      fullEvent.RealmID,
 				Name:         fullEvent.Name,
 				District:     fullEvent.District,
 				FullDistrict: fullEvent.FullDistrict,
@@ -138,17 +161,24 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 			return
 		}
 
-		e.ManuallyAdded = true
-
-		// this is redundant since the route should be admin-protected anyways
-		if !ihttp.GetRoles(r).IsAdmin {
-			ihttp.Error(w, http.StatusForbidden)
-			go s.Logger.Error("got non-admin user on admin-protected route")
+		creatorRealm, err := ihttp.GetRealmID(r)
+		if err != nil {
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
 
-		if err := s.Store.EventsUpsert([]store.Event{e}); err != nil {
+		e.RealmID = &creatorRealm
+
+		err = s.Store.EventsUpsert([]store.Event{e})
+		if _, ok := err.(*store.ErrExists); ok {
+			ihttp.Error(w, http.StatusConflict)
+			return
+		} else if _, ok := err.(*store.ErrFKeyViolation); ok {
+			ihttp.Error(w, http.StatusUnprocessableEntity)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("unable to upsert event data")
 			return
 		}
 
@@ -175,4 +205,23 @@ func (s *Server) updateEvents() error {
 	}
 
 	return nil
+}
+
+// Returns whether a user can access an event or its matches
+func (s *Server) checkEventAccess(eventRealm *int64, r *http.Request) bool {
+	if eventRealm == nil {
+		return true
+	}
+
+	roles := ihttp.GetRoles(r)
+
+	if roles.IsSuperAdmin {
+		return true
+	}
+
+	userRealm, err := ihttp.GetRealmID(r)
+	if err != nil {
+		return false
+	}
+	return *eventRealm != userRealm
 }

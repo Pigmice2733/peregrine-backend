@@ -28,10 +28,22 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 
 		teams := r.URL.Query()["team"]
 
+		event, err := s.Store.GetEvent(eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.RealmID, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(store.ErrNoResults); ok {
+			if _, ok := err.(*store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -73,6 +85,18 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		vars := mux.Vars(r)
 		eventKey, matchKey := vars["eventKey"], vars["matchKey"]
 
+		event, err := s.Store.GetEvent(eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.RealmID, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
@@ -80,7 +104,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(store.ErrNoResults); ok {
+			if _, ok := err.(*store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -91,7 +115,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 
 		fullMatch, err := s.Store.GetMatch(matchKey)
 		if err != nil {
-			if _, ok := err.(store.ErrNoResults); ok {
+			if _, ok := err.(*store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -126,16 +150,21 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 
 		eventKey := mux.Vars(r)["eventKey"]
 
+		event, err := s.Store.GetEvent(eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.RealmID, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		m.Key = fmt.Sprintf("%s_%s", eventKey, m.Key)
-
-		// this is redundant since the route should be admin-protected anyways
-		if !ihttp.GetRoles(r).IsAdmin {
-			ihttp.Error(w, http.StatusForbidden)
-			go s.Logger.Error("got non-admin user on admin-protected route")
-			return
-		}
 
 		sm := store.Match{
 			Key:           m.Key,
@@ -161,11 +190,12 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 // Get new match data from TBA for a particular event. Upsert match data into database.
 func (s *Server) updateMatches(eventKey string) error {
 	// Check that eventKey is a valid event key
-	err := s.Store.CheckTBAEventKeyExists(eventKey)
-	if err == store.ErrManuallyAdded {
-		return nil
-	} else if err != nil {
+	valid, err := s.Store.CheckTBAEventKeyExists(eventKey)
+	if err != nil {
 		return err
+	}
+	if !valid {
+		return nil
 	}
 
 	fullMatches, err := s.TBA.GetMatches(eventKey)

@@ -3,21 +3,23 @@ package store
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/lib/pq"
 )
 
 // Event holds information about an FRC event such as webcast associated with
 // it, the location, its start date, and more.
 type Event struct {
-	Key           string    `json:"key" db:"key"`
-	Name          string    `json:"name" db:"name"`
-	District      *string   `json:"district" db:"district"`
-	FullDistrict  *string   `json:"fullDistrict" db:"full_district"`
-	Week          *int      `json:"week" db:"week"`
-	ManuallyAdded bool      `json:"manuallyAdded" db:"manually_added"`
-	StartDate     UnixTime  `json:"startDate" db:"start_date"`
-	EndDate       UnixTime  `json:"endDate" db:"end_date"`
-	Webcasts      []Webcast `json:"webcasts"`
-	Location      `json:"location"`
+	Key          string    `json:"key" db:"key"`
+	RealmID      *int64    `db:"realm_id"`
+	Name         string    `json:"name" db:"name"`
+	District     *string   `json:"district" db:"district"`
+	FullDistrict *string   `json:"fullDistrict" db:"full_district"`
+	Week         *int      `json:"week" db:"week"`
+	StartDate    UnixTime  `json:"startDate" db:"start_date"`
+	EndDate      UnixTime  `json:"endDate" db:"end_date"`
+	Webcasts     []Webcast `json:"webcasts"`
+	Location     `json:"location"`
 }
 
 // WebcastType represents a data source for a webcast such as twitch or youtube.
@@ -51,27 +53,31 @@ func (s *Service) GetEvents() ([]Event, error) {
 	return events, s.db.Select(&events, "SELECT * FROM events")
 }
 
-// ErrManuallyAdded is returned when an event has been manually inserted into
-// the DB rather than returned from TBA.
-var ErrManuallyAdded = fmt.Errorf("store: manually added event")
+// GetEventsFromRealm returns all events from a specific realm. Additionally all
+// TBA events will be retrieved. If no realm is specified (nil) then just the TBA
+// events will be retrieved. event.Webcasts will be nil for every event.
+func (s *Service) GetEventsFromRealm(realm *int64) ([]Event, error) {
+	events := []Event{}
+
+	if realm == nil {
+		return events, s.db.Select(&events, "SELECT * FROM events WHERE realm_id IS NULL")
+	}
+	return events, s.db.Select(&events, "SELECT * FROM events WHERE realm_id IS NULL OR realm_id = $1", *realm)
+}
 
 // CheckTBAEventKeyExists checks whether a specific event key exists and is from
 // TBA rather than manually added.
-func (s *Service) CheckTBAEventKeyExists(eventKey string) error {
-	var manuallyAdded bool
+func (s *Service) CheckTBAEventKeyExists(eventKey string) (bool, error) {
+	var realmID *int64
 
-	err := s.db.Get(&manuallyAdded, "SELECT manually_added FROM events WHERE key = $1", eventKey)
+	err := s.db.Get(&realmID, "SELECT realm_id FROM events WHERE key = $1", eventKey)
 	if err == sql.ErrNoRows {
-		return ErrNoResults(fmt.Errorf("event key %s does not exist", eventKey))
+		return false, &ErrNoResults{msg: fmt.Sprintf("event key %s not found", eventKey)}
 	} else if err != nil {
-		return err
+		return false, err
 	}
 
-	if manuallyAdded {
-		return ErrManuallyAdded
-	}
-
-	return nil
+	return realmID == nil, nil
 }
 
 // GetEvent retrieves a specific event.
@@ -79,7 +85,7 @@ func (s *Service) GetEvent(eventKey string) (Event, error) {
 	var event Event
 	if err := s.db.Get(&event, "SELECT * FROM events WHERE key = $1", eventKey); err != nil {
 		if err == sql.ErrNoRows {
-			return event, ErrNoResults(fmt.Errorf("event %s does not exist", event.Key))
+			return event, &ErrNoResults{msg: fmt.Sprintf("event %s does not exist", event.Key)}
 		}
 		return event, err
 	}
@@ -96,8 +102,8 @@ func (s *Service) EventsUpsert(events []Event) error {
 	}
 
 	eventStmt, err := tx.PrepareNamed(`
-		INSERT INTO events (key, name, district, full_district, week, manually_added, start_date, end_date, location_name, lat, lon)
-		VALUES (:key, :name, :district, :full_district, :week, :manually_added, :start_date, :end_date, :location_name, :lat, :lon)
+		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, realm_id)
+		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :realm_id)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -106,12 +112,12 @@ func (s *Service) EventsUpsert(events []Event) error {
 					district = :district,
 					full_district = :full_district,
 					week = :week,
-					manually_added = :manually_added,
 					start_date = :start_date,
 					end_date = :end_date,
 					location_name = :location_name,
 					lat = :lat,
-					lon = :lon
+					lon = :lon,
+                    realm_id = :realm_id
 	`)
 	if err != nil {
 		_ = tx.Rollback()
@@ -141,6 +147,13 @@ func (s *Service) EventsUpsert(events []Event) error {
 	for _, event := range events {
 		if _, err = eventStmt.Exec(event); err != nil {
 			_ = tx.Rollback()
+			if err, ok := err.(*pq.Error); ok {
+				if err.Code == pgExists {
+					return &ErrExists{msg: fmt.Sprintf("event with key %s already exists", event.Key)}
+				} else if err.Code == pgFKeyViolation {
+					return &ErrFKeyViolation{msg: fmt.Sprintf("foreign key violation: %v", err.Error())}
+				}
+			}
 			return err
 		}
 

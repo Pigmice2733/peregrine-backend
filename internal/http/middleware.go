@@ -57,6 +57,8 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 		next.ServeHTTP(rr, r)
 		end := time.Now()
 
+		roles := GetRoles(r)
+
 		fields := logrus.Fields{
 			"method":       r.Method,
 			"remote_addr":  r.RemoteAddr,
@@ -65,12 +67,17 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 			"request_time": end.Sub(start).Seconds(),
 			"status_code":  rr.code,
 			"body_size":    rr.len,
-			"admin":        GetRoles(r).IsAdmin,
+			"admin":        roles.IsAdmin,
+			"super_admin":  roles.IsSuperAdmin,
 			"user_agent":   r.Header.Get("User-Agent"),
 		}
 
 		if sub, err := GetSubject(r); err != nil {
 			fields["user_id"] = sub
+		}
+
+		if realm, err := GetRealmID(r); err != nil {
+			fields["realm_id"] = realm
 		}
 
 		l.WithFields(fields).Info("got request")
@@ -111,18 +118,25 @@ func Auth(next http.HandlerFunc, jwtSecret []byte) http.HandlerFunc {
 
 		ctx := context.WithValue(r.Context(), keyRolesContext, claims.Roles)
 		ctx = context.WithValue(ctx, keySubjectContext, claims.Subject)
+		ctx = context.WithValue(ctx, keyRealmContext, claims.RealmID)
 
 		next(w, r.WithContext(ctx))
 	}
 }
 
 // ACL returns a middleware that must be used inside of an Auth middleware for
-// checking user roles.
-func ACL(next http.HandlerFunc, requireAdmin, requireVerified bool) http.HandlerFunc {
+// checking user roles. The SuperOrAdmin requirement will be satisfied by any
+// user who is either a SuperAdmin or a realm Admin.
+func ACL(next http.HandlerFunc, requireSuperOrAdmin, requireVerified, requireLoggedIn bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		roles := GetRoles(r)
+		_, err := GetSubject(r)
+		if err != nil && requireLoggedIn {
+			Error(w, http.StatusUnauthorized)
+			return
+		}
 
-		if (requireAdmin && !roles.IsAdmin) || (requireVerified && !roles.IsVerified) {
+		roles := GetRoles(r)
+		if (requireSuperOrAdmin && !roles.IsSuperAdmin && !roles.IsAdmin) || (requireVerified && !roles.IsVerified) {
 			Error(w, http.StatusForbidden)
 			return
 		}

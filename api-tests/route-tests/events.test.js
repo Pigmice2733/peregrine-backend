@@ -1,11 +1,12 @@
 const api = require('./../api.test')
 const fetch = require('node-fetch')
 
-test('/events endpoint', async () => {
-  const resp = await fetch(api.address + '/events')
+test('events', async () => {
+  // /events endpoint
+  let resp = await fetch(api.address + '/events')
   expect(resp.status).toBe(200)
 
-  const d = await resp.json()
+  let d = await resp.json()
 
   expect(d).toEqual({ data: expect.any(Array) })
   expect(d.data.length).toBeGreaterThan(1)
@@ -22,6 +23,7 @@ test('/events endpoint', async () => {
     expect(event.week).toBeUndefinedOr(Number)
     expect(Object.keys(event)).toBeASubsetOf([
       'key',
+      'realmId',
       'name',
       'week',
       'startDate',
@@ -31,12 +33,11 @@ test('/events endpoint', async () => {
       'fullDistrict',
     ])
   })
-})
 
-test('/events create endpoint', async () => {
-  expect(api.seedUser.roles.isAdmin).toBe(true)
+  // /events create endpoint
+  expect(api.seedUser.roles.isSuperAdmin).toBe(true)
 
-  const event = {
+  let event = {
     key: '1970flir',
     name: 'FLIR x Daimler',
     district: 'pnw',
@@ -57,8 +58,8 @@ test('/events create endpoint', async () => {
     ],
   }
 
-  const resp = await fetch(api.address + '/events', {
-    method: 'PUT',
+  resp = await fetch(api.address + '/events', {
+    method: 'POST',
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',
@@ -68,13 +69,19 @@ test('/events create endpoint', async () => {
 
   expect(resp.status).toBe(201)
 
-  const respInfo = await fetch(api.address + `/events/${event.key}`)
+  let respInfo = await fetch(api.address + `/events/${event.key}`, {
+    method: 'GET',
+    headers: {
+      Authentication: 'Bearer ' + (await api.getJWT()),
+    },
+  })
   expect(respInfo.status).toBe(200)
 
-  const d = await respInfo.json()
+  d = await respInfo.json()
 
   expect(d.data).toEqual({
     key: event.key,
+    realmId: api.seedUser.realmId,
     name: event.name,
     district: event.district,
     fullDistrict: event.fullDistrict,
@@ -84,15 +91,14 @@ test('/events create endpoint', async () => {
     location: event.location,
     webcasts: event.webcasts,
   })
-})
 
-test('/events/{eventKey} endpoint', async () => {
-  const resp = await fetch(api.address + '/events/2018flor')
+  // /events/{eventKey} endpoint
+  resp = await fetch(api.address + '/events/2018flor')
   expect(resp.status).toBe(200)
 
-  const d = await resp.json()
+  d = await resp.json()
 
-  const info = d.data
+  let info = d.data
   expect(info.key).toEqual('2018flor')
   expect(info.name).toBeA(String)
   expect(info.startDate).toBeADateString()
@@ -114,6 +120,7 @@ test('/events/{eventKey} endpoint', async () => {
   })
   expect(Object.keys(info)).toBeASubsetOf([
     'key',
+    'realmId',
     'name',
     'week',
     'startDate',
