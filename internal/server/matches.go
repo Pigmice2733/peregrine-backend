@@ -8,6 +8,7 @@ import (
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
+	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/gorilla/mux"
 )
 
@@ -199,7 +200,9 @@ func (s *Server) updateMatches(eventKey string) error {
 	}
 
 	fullMatches, err := s.TBA.GetMatches(eventKey)
-	if err != nil {
+	if _, ok := err.(tba.ErrNotModified); ok {
+		return nil
+	} else if err != nil {
 		return err
 	}
 

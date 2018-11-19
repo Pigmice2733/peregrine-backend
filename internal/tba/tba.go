@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -13,8 +14,9 @@ import (
 // Service provides an interface to retrieve data from
 // The Blue Alliance's API
 type Service struct {
-	URL    string
-	APIKey string
+	URL       string
+	APIKey    string
+	etagStore *sync.Map
 }
 
 type district struct {
@@ -81,15 +83,40 @@ var tbaClient = &http.Client{
 	Timeout: time.Second * 10,
 }
 
+// ErrNotModified is returned when a resource has not been modified since it was
+// last retrieved from TBA.
+type ErrNotModified error
+
 func (s *Service) makeRequest(path string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", s.URL+path, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	if s.etagStore == nil {
+		s.etagStore = new(sync.Map)
+	}
+
+	if v, ok := s.etagStore.Load(path); ok {
+		req.Header.Set("If-None-Match", v.(string))
+	}
+
 	req.Header.Set("X-TBA-Auth-Key", s.APIKey)
 
-	return tbaClient.Do(req)
+	resp, err := tbaClient.Do(req)
+	if err != nil {
+		return resp, err
+	}
+
+	if resp.StatusCode == http.StatusNotModified {
+		return resp, ErrNotModified(fmt.Errorf("tba: got not modified for path: %s", path))
+	}
+
+	if etag := resp.Header.Get("etag"); etag != "" {
+		s.etagStore.Store(path, etag)
+	}
+
+	return resp, nil
 }
 
 func webcastURL(webcastType store.WebcastType, channel string) (string, error) {
@@ -105,7 +132,7 @@ func webcastURL(webcastType store.WebcastType, channel string) (string, error) {
 
 // Ping pings the TBA /status endpoint
 func (s *Service) Ping() error {
-	_, err := s.makeRequest("/status")
+	_, err := tbaClient.Get(s.URL + "/status")
 	return err
 }
 
