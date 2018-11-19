@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"flag"
 	"fmt"
@@ -41,6 +42,7 @@ func run(basePath string) error {
 	if err != nil {
 		return errors.Wrap(err, "opening postgres server")
 	}
+	defer sto.Close()
 
 	if c.Server.Year == 0 {
 		c.Server.Year = time.Now().Year()
@@ -64,5 +66,5 @@ func run(basePath string) error {
 		JWTSecret: jwtSecret,
 	}
 
-	return errors.Wrap(s.Run(), "running server")
+	return errors.Wrap(s.Run(context.Background()), "running server")
 }

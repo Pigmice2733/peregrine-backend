@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -25,7 +26,7 @@ type Server struct {
 }
 
 // Run starts the server, and returns if it runs into an error
-func (s *Server) Run() error {
+func (s *Server) Run(ctx context.Context) error {
 	router := s.registerRoutes()
 	handler := ihttp.Auth(ihttp.Log(gziphandler.GzipHandler(ihttp.CORS(ihttp.LimitBody(router), s.Origin)), s.Logger), s.JWTSecret)
 
@@ -72,7 +73,12 @@ func (s *Server) Run() error {
 		}()
 	}
 
-	return <-errs
+	select {
+	case err := <-errs:
+		return err
+	case <-ctx.Done():
+		return nil
+	}
 }
 
 type listen struct {
