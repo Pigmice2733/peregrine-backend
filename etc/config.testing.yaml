@@ -2,4 +2,4 @@ server:
   httpAddress: localhost:8080
   year: 2018
 
-dsn: user=brendan port=5432 dbname=peregrine sslmode=disable
+dsn: user=peregrine port=5432 dbname=peregrine sslmode=disable
