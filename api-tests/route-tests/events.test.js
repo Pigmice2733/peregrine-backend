@@ -23,7 +23,7 @@ test('events', async () => {
     expect(event.week).toBeUndefinedOr(Number)
     expect(Object.keys(event)).toBeASubsetOf([
       'key',
-      'realmID',
+      'realmId',
       'name',
       'week',
       'startDate',
@@ -81,7 +81,7 @@ test('events', async () => {
 
   expect(d.data).toEqual({
     key: event.key,
-    realmID: api.seedUser.realmID,
+    realmId: api.seedUser.realmId,
     name: event.name,
     district: event.district,
     fullDistrict: event.fullDistrict,
@@ -120,7 +120,7 @@ test('events', async () => {
   })
   expect(Object.keys(info)).toBeASubsetOf([
     'key',
-    'realmID',
+    'realmId',
     'name',
     'week',
     'startDate',

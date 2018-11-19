@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -22,7 +21,7 @@ type baseUser struct {
 
 type requestUser struct {
 	baseUser
-	RealmID   int64       `json:"realmID" validate:"required"`
+	RealmID   int64       `json:"realmId" validate:"required"`
 	FirstName string      `json:"firstName" validate:"required"`
 	LastName  string      `json:"lastName" validate:"required"`
 	Roles     store.Roles `json:"roles"`
@@ -43,8 +42,6 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		fmt.Println(ru.Username)
-		fmt.Println()
 		user, err := s.Store.GetUserByUsername(ru.Username)
 		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusUnauthorized)

@@ -40,7 +40,7 @@ type User struct {
 	ID             int64          `json:"id" db:"id"`
 	Username       string         `json:"username" db:"username"`
 	HashedPassword string         `json:"-" db:"hashed_password"`
-	RealmID        int64          `json:"realmID" db:"realm_id"`
+	RealmID        int64          `json:"realmId" db:"realm_id"`
 	FirstName      string         `json:"firstName" db:"first_name"`
 	LastName       string         `json:"lastName" db:"last_name"`
 	Roles          Roles          `json:"roles" db:"roles"`

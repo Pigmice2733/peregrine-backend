@@ -34,7 +34,7 @@ test('realms', async () => {
   realmAdmin = {
     username: 'realm-admin',
     password: 'password',
-    realmID: realm.id,
+    realmId: realm.id,
     firstName: 'foo',
     lastName: 'bar',
     roles: { isVerified: true, isAdmin: true, isSuperAdmin: false },
@@ -53,7 +53,7 @@ test('realms', async () => {
   expect(realmAdmin.roles.isAdmin).toEqual(true)
   expect(realmAdmin.roles.isSuperAdmin).toEqual(false)
   expect(realmAdmin.roles.isVerified).toEqual(true)
-  expect(realmAdmin.realmID).toEqual(realm.id)
+  expect(realmAdmin.realmId).toEqual(realm.id)
 
   // /realms create unathorized
   realmResp = await fetch(api.address + '/realms', {

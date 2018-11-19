@@ -19,7 +19,7 @@ type location struct {
 
 type event struct {
 	Key          string         `json:"key"`
-	RealmID      *int64         `json:"realmID,omitempty"`
+	RealmID      *int64         `json:"realmId,omitempty"`
 	Name         string         `json:"name"`
 	District     *string        `json:"district,omitempty"`
 	FullDistrict *string        `json:"fullDistrict,omitempty"`

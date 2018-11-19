@@ -37,7 +37,7 @@ test('users CRUD', async () => {
   let otherRealmUser
   let otherRealmAdmin
   let unverifiedSuperAdmin
-  let otherRealmID
+  let otherRealmId
 
   let otherRealm = {
     name: 'TMM',
@@ -49,7 +49,7 @@ test('users CRUD', async () => {
   sameRealmUser = {
     username: 'users-create' + Number(new Date()),
     password: 'password',
-    realmID: 1,
+    realmId: 1,
     firstName: 'test',
     lastName: 'test',
     roles: { isVerified: true },
@@ -77,12 +77,12 @@ test('users CRUD', async () => {
   })
   expect(realmResp.status).toBe(200)
   let d = await realmResp.json()
-  otherRealmID = d.data
+  otherRealmId = d.data
 
   otherRealmAdmin = {
     username: 'users-other-admin',
     password: 'password',
-    realmID: otherRealmID,
+    realmId: otherRealmId,
     firstName: 'foo',
     lastName: 'bar',
     roles: { isVerified: true, isAdmin: true, isSuperAdmin: false },
@@ -101,7 +101,7 @@ test('users CRUD', async () => {
   otherRealmUser = {
     username: 'users-other-user',
     password: 'password',
-    realmID: otherRealmID,
+    realmId: otherRealmId,
     firstName: 'test',
     lastName: 'test',
     roles: { isVerified: true, isAdmin: true, isSuperAdmin: true },
@@ -122,7 +122,7 @@ test('users CRUD', async () => {
   unverifiedSuperAdmin = {
     username: 'users-super',
     password: 'password',
-    realmID: 1,
+    realmId: 1,
     firstName: 'test',
     lastName: 'test',
     roles: { isAdmin: false, isSuperAdmin: true, isVerified: true },
@@ -233,7 +233,7 @@ test('users CRUD', async () => {
   expect(d.data).toEqual({
     id: sameRealmUser.id,
     username: sameRealmUser.username,
-    realmID: sameRealmUser.realmID,
+    realmId: sameRealmUser.realmId,
     firstName: sameRealmUser.firstName,
     lastName: sameRealmUser.lastName,
     stars: sameRealmUser.stars,
@@ -324,7 +324,7 @@ test('users CRUD', async () => {
   expect(d.data).toEqual({
     id: sameRealmUser.id,
     username: sameRealmUser.username,
-    realmID: sameRealmUser.realmID,
+    realmId: sameRealmUser.realmId,
     firstName: sameRealmUser.firstName,
     lastName: sameRealmUser.lastName,
     stars: sameRealmUser.stars,
@@ -384,7 +384,7 @@ test('users CRUD', async () => {
   expect(d.data).toEqual({
     id: sameRealmUser.id,
     username: sameRealmUser.username,
-    realmID: sameRealmUser.realmID,
+    realmId: sameRealmUser.realmId,
     firstName: sameRealmUser.firstName,
     lastName: sameRealmUser.lastName,
     stars: sameRealmUser.stars,

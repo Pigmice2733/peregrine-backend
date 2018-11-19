@@ -25,7 +25,7 @@ const seedUser = {
     isVerified: true,
     isSuperAdmin: true,
   },
-  realmID: 1,
+  realmId: 1,
 }
 
 module.exports = {
