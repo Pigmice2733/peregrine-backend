@@ -35,7 +35,7 @@ test('events', async () => {
   })
 
   // /events create endpoint
-  expect(api.config.seedUser.roles.isSuperAdmin).toBe(true)
+  expect(api.seedUser.roles.isSuperAdmin).toBe(true)
 
   let event = {
     key: '1970flir',
@@ -81,7 +81,7 @@ test('events', async () => {
 
   expect(d.data).toEqual({
     key: event.key,
-    realmID: api.config.seedUser.realmID,
+    realmID: api.seedUser.realmID,
     name: event.name,
     district: event.district,
     fullDistrict: event.fullDistrict,

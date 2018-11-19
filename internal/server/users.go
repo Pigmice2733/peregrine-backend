@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -42,6 +43,8 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
+		fmt.Println(ru.Username)
+		fmt.Println()
 		user, err := s.Store.GetUserByUsername(ru.Username)
 		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusUnauthorized)

@@ -1,0 +1,4 @@
+server:
+  httpAddress: 0.0.0.0:8080
+
+dsn: user=peregrine host=db port=5432 dbname=peregrine sslmode=disable

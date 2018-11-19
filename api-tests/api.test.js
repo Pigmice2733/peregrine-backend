@@ -2,6 +2,8 @@ const fetch = require('node-fetch')
 const jsyaml = require('js-yaml')
 const fs = require('fs')
 
+jest.setTimeout(30000)
+
 expect.extend(require('./matchers.js'))
 
 const config = jsyaml.safeLoad(
@@ -15,11 +17,23 @@ const address = `http://${config.server.httpAddress}`
 
 const youtubeOrTwitch = /^(youtube|twitch)$/
 
+const seedUser = {
+  username: 'test',
+  password: 'testpassword',
+  roles: {
+    isAdmin: true,
+    isVerified: true,
+    isSuperAdmin: true,
+  },
+  realmID: 1,
+}
+
 module.exports = {
   address,
   config,
   youtubeOrTwitch,
-  getJWT: async (user = config.seedUser) => {
+  seedUser,
+  getJWT: async (user = seedUser) => {
     const resp = await fetch(address + '/authenticate', {
       method: 'POST',
       body: JSON.stringify({
