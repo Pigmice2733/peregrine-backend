@@ -21,6 +21,7 @@ type location struct {
 type event struct {
 	Key          string         `json:"key"`
 	RealmID      *int64         `json:"realmId,omitempty"`
+	SchemaID     *int64         `json:"schemaId,omitempty"`
 	Name         string         `json:"name"`
 	District     *string        `json:"district,omitempty"`
 	FullDistrict *string        `json:"fullDistrict,omitempty"`
@@ -77,6 +78,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 			events = append(events, event{
 				Key:          fullEvent.Key,
 				RealmID:      fullEvent.RealmID,
+				SchemaID:     fullEvent.SchemaID,
 				Name:         fullEvent.Name,
 				District:     fullEvent.District,
 				FullDistrict: fullEvent.FullDistrict,
@@ -134,6 +136,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 			event: event{
 				Key:          fullEvent.Key,
 				RealmID:      fullEvent.RealmID,
+				SchemaID:     fullEvent.SchemaID,
 				Name:         fullEvent.Name,
 				District:     fullEvent.District,
 				FullDistrict: fullEvent.FullDistrict,
@@ -195,7 +198,18 @@ func (s *Server) updateEvents() error {
 	now := time.Now()
 
 	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > expiry {
-		fullEvents, err := s.TBA.GetEvents(s.Year)
+		schema, err := s.Store.GetSchemaByYear(s.Year)
+		var schemaID *int64
+		if err != nil {
+			_, ok := err.(*store.ErrNoResults)
+			if !ok {
+				return err
+			}
+		} else {
+			schemaID = &schema.ID
+		}
+
+		fullEvents, err := s.TBA.GetEvents(s.Year, schemaID)
 		if _, ok := err.(tba.ErrNotModified); ok {
 			return nil
 		} else if err != nil {

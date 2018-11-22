@@ -12,6 +12,7 @@ import (
 type Event struct {
 	Key          string    `json:"key" db:"key"`
 	RealmID      *int64    `db:"realm_id"`
+	SchemaID     *int64    `json:"schemaId" db:"schema_id"`
 	Name         string    `json:"name" db:"name"`
 	District     *string   `json:"district" db:"district"`
 	FullDistrict *string   `json:"fullDistrict" db:"full_district"`
@@ -102,8 +103,8 @@ func (s *Service) EventsUpsert(events []Event) error {
 	}
 
 	eventStmt, err := tx.PrepareNamed(`
-		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, realm_id)
-		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :realm_id)
+		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, realm_id, schema_id)
+		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :realm_id, :schema_id)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -117,7 +118,8 @@ func (s *Service) EventsUpsert(events []Event) error {
 					location_name = :location_name,
 					lat = :lat,
 					lon = :lon,
-                    realm_id = :realm_id
+					realm_id = :realm_id,
+					schema_id = :schema_id
 	`)
 	if err != nil {
 		_ = tx.Rollback()

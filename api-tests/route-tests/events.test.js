@@ -121,6 +121,7 @@ test('events', async () => {
   expect(Object.keys(info)).toBeASubsetOf([
     'key',
     'realmId',
+    'schemaId',
     'name',
     'week',
     'startDate',
