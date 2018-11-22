@@ -30,7 +30,10 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 		teams := r.URL.Query()["team"]
 
 		event, err := s.Store.GetEvent(eventKey)
-		if err != nil {
+		if err, ok := err.(*store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving event")
 			return
@@ -87,7 +90,10 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		eventKey, matchKey := vars["eventKey"], vars["matchKey"]
 
 		event, err := s.Store.GetEvent(eventKey)
-		if err != nil {
+		if err, ok := err.(*store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving event")
 			return
@@ -152,7 +158,10 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 		eventKey := mux.Vars(r)["eventKey"]
 
 		event, err := s.Store.GetEvent(eventKey)
-		if err != nil {
+		if err, ok := err.(*store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving event")
 			return
