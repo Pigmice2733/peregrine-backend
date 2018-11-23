@@ -187,6 +187,10 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 			return
 		}
 
+		if pr.ShareReports != nil && *pr.ShareReports {
+			s.Store.DeleteRealmSchemaOverrides(id)
+		}
+
 		ihttp.Respond(w, nil, http.StatusNoContent)
 	}
 }

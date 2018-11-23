@@ -67,11 +67,39 @@ func (s *Service) GetSchemaByYear(year int) (Schema, error) {
 	return schema, errors.Wrap(err, "unable to retrieve schema")
 }
 
-// GetSchemas retrieves all schemas from the database
+// GetVisibleSchemas retrieves schemas from the database frm a specific realm,
+// from realms with public events, and standard FRC schemas. If the realm ID is
+// nil, no private realms' schemas will be retrieved.
+func (s *Service) GetVisibleSchemas(realmID *int64) ([]Schema, error) {
+	schemas := []Schema{}
+	var err error
+
+	if realmID == nil {
+		err = s.db.Select(&schemas, `
+		WITH public_realms AS (
+			SELECT id FROM realms WHERE share_reports = true
+		)
+		SELECT * 
+			FROM schemas
+				WHERE year IS NULL OR realm_id IN (SELECT id FROM public_realms)
+		`)
+	} else {
+		err = s.db.Select(&schemas, `
+		WITH public_realms AS (
+			SELECT id FROM realms WHERE share_reports = true
+		)
+		SELECT * 
+			FROM schemas
+			    WHERE year IS NULL OR realm_id = $1 OR (SELECT id FROM public_realms)
+		`, *realmID)
+	}
+
+	return schemas, errors.Wrap(err, "unable to retrieve schemas")
+}
+
+// GetSchemas retrieves all schemas from the database.
 func (s *Service) GetSchemas() ([]Schema, error) {
 	schemas := []Schema{}
-
 	err := s.db.Select(&schemas, "SELECT * FROM schemas")
-
 	return schemas, errors.Wrap(err, "unable to retrieve schemas")
 }

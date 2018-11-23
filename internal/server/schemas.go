@@ -78,13 +78,32 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 	}
 }
 
-func (s *Server) getSchemaIDsHandler() http.HandlerFunc {
+func (s *Server) getSchemasHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		schemas, err := s.Store.GetSchemas()
-		if err != nil {
-			go s.Logger.WithError(err).Error("getting schemas")
-			ihttp.Error(w, http.StatusInternalServerError)
-			return
+		var schemas []store.Schema
+		var err error
+		roles := ihttp.GetRoles(r)
+		if roles.IsSuperAdmin {
+			schemas, err = s.Store.GetSchemas()
+			if err != nil {
+				go s.Logger.WithError(err).Error("getting schemas")
+				ihttp.Error(w, http.StatusInternalServerError)
+				return
+			}
+		} else {
+			var realmID *int64
+			realm, err := ihttp.GetRealmID(r)
+			if err != nil {
+				realmID = nil
+			} else {
+				realmID = &realm
+			}
+			schemas, err = s.Store.GetVisibleSchemas(realmID)
+			if err != nil {
+				go s.Logger.WithError(err).Error("getting schemas")
+				ihttp.Error(w, http.StatusInternalServerError)
+				return
+			}
 		}
 
 		ihttp.Respond(w, schemas, http.StatusOK)
@@ -106,6 +125,20 @@ func (s *Server) getSchemaByIDHandler() http.HandlerFunc {
 		} else if err != nil {
 			go s.Logger.WithError(err).Error("getting schema by id")
 			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		roles := ihttp.GetRoles(r)
+		var realmID *int64
+		realm, err := ihttp.GetRealmID(r)
+		if err != nil {
+			realmID = nil
+		} else {
+			realmID = &realm
+		}
+
+		if schema.Year == nil && !roles.IsSuperAdmin && schema.RealmID != realmID {
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
