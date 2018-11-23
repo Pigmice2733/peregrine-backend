@@ -67,7 +67,7 @@ func (s *Service) GetEventsFromRealm(realm *int64) ([]Event, error) {
 }
 
 // CheckTBAEventKeyExists checks whether a specific event key exists and is from
-// TBA rather than manually added.
+// TBA rather than manually added. Returns ErrNoResults if event does not exist.
 func (s *Service) CheckTBAEventKeyExists(eventKey string) (bool, error) {
 	var realmID *int64
 

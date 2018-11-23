@@ -2,8 +2,8 @@ CREATE TABLE IF NOT EXISTS schemas (
     id SERIAL PRIMARY KEY,
     year INTEGER UNIQUE,
     realm_id INTEGER REFERENCES realms,
-    auto JSONB,
-    teleop JSONB
+    auto JSONB NOT NULL,
+    teleop JSONB NOT NULL
 );
 
 INSERT INTO schemas (auto, teleop) VALUES ('[]', '[]');

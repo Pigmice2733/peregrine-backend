@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -76,9 +75,6 @@ func (s *Server) getSchemaByIDHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
 		if err != nil {
-			fmt.Println()
-			fmt.Println(mux.Vars(r)["id"])
-			fmt.Println()
 			ihttp.Error(w, http.StatusBadRequest)
 			return
 		}
