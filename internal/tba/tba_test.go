@@ -26,10 +26,6 @@ func newInt(a int) *int {
 	return &a
 }
 
-func newInt64(a int64) *int64 {
-	return &a
-}
-
 func newFloat64(f float64) *float64 {
 	return &f
 }
@@ -245,7 +241,7 @@ func TestGetEvents(t *testing.T) {
 	for index, tt := range testCases {
 		server.getEventsHandler = tt.getEventsHandler
 
-		events, err := s.GetEvents(testingYear, newInt64(1))
+		events, err := s.GetEvents(testingYear, nil)
 		if tt.expectErr != (err != nil) {
 			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
 		}
