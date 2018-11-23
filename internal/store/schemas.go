@@ -2,7 +2,6 @@ package store
 
 import (
 	"database/sql"
-	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 
@@ -10,38 +9,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// StatDescription escribes a single statistic in a schema
-type StatDescription struct {
-	StatName string `json:"statName"`
-	Type     string `json:"type"`
-}
-
-// SchemaSection wraps one section of the schema (auto, teleop) into a type
-// that can be used with PostgreSQL.
-type SchemaSection []StatDescription
-
-// Value converts a SchemaSection into JSON for PostgreSQL's JSONB type.
-func (d *SchemaSection) Value() (driver.Value, error) {
-	return json.Marshal(d)
-}
-
-// Scan converts data from PostgreSQL's JSONB type into SchemaSection.
-func (d *SchemaSection) Scan(src interface{}) error {
-	bytes, ok := src.([]byte)
-	if !ok {
-		return fmt.Errorf("got incorrect type for JSONB")
-	}
-
-	return json.Unmarshal(bytes, d)
-}
-
 // Schema describes the statistics that reports should include
 type Schema struct {
-	ID      int64          `json:"id" db:"id"`
-	Year    *int64         `json:"year,omitempty" db:"year"`
-	RealmID *int64         `json:"realmId,omitempty" db:"realm_id"`
-	Auto    *SchemaSection `json:"auto" db:"auto"`
-	Teleop  *SchemaSection `json:"teleop" db:"teleop"`
+	ID      int64           `json:"id" db:"id"`
+	Year    *int64          `json:"year,omitempty" db:"year"`
+	RealmID *int64          `json:"realmId,omitempty" db:"realm_id"`
+	Auto    json.RawMessage `json:"auto" db:"auto"`
+	Teleop  json.RawMessage `json:"teleop" db:"teleop"`
 }
 
 // CreateSchema creates a new schema

@@ -66,6 +66,14 @@ test('schemas', async () => {
   expect(d.data.auto).not.toBeUndefined()
   expect(d.data.teleop).not.toBeUndefined()
 
+  d.data.auto.forEach(stat => {
+    expect(stat.id).not.toBeUndefined()
+  })
+
+  d.data.teleop.forEach(stat => {
+    expect(stat.id).not.toBeUndefined()
+  })
+
   expect(Object.keys(d.data)).toBeASubsetOf([
     'id',
     'realmId',
@@ -89,6 +97,14 @@ test('schemas', async () => {
   expect(d.data.id).not.toBeUndefined()
   expect(d.data.auto).not.toBeUndefined()
   expect(d.data.teleop).not.toBeUndefined()
+
+  d.data.auto.forEach(stat => {
+    expect(stat.id).not.toBeUndefined()
+  })
+
+  d.data.teleop.forEach(stat => {
+    expect(stat.id).not.toBeUndefined()
+  })
 
   expect(Object.keys(d.data)).toBeASubsetOf([
     'id',

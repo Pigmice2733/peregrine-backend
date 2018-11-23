@@ -2,14 +2,23 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
+	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 )
+
+// StatDescription escribes a single statistic in a schema
+type StatDescription struct {
+	Name string     `json:"name"`
+	ID   *uuid.UUID `json:"id"`
+	Type string     `json:"type"`
+}
 
 func (s *Server) createSchemaHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -35,6 +44,17 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 			schema.RealmID = &realmID
 		} else {
 			schema.RealmID = nil
+		}
+
+		if err := populateStatIDs(&schema.Auto); err != nil {
+			go s.Logger.WithError(err).Error("populating auto stat IDs")
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+		if err := populateStatIDs(&schema.Teleop); err != nil {
+			go s.Logger.WithError(err).Error("populating teleop stat IDs")
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
 		}
 
 		err := s.Store.CreateSchema(schema)
@@ -113,4 +133,40 @@ func (s *Server) getSchemaByYearHandler() http.HandlerFunc {
 
 		ihttp.Respond(w, schema, http.StatusOK)
 	}
+}
+
+func populateStatIDs(j *json.RawMessage) error {
+	if j == nil {
+		return fmt.Errorf("can't populate stat IDs on nil JSON raw message")
+	}
+
+	stats, err := jsonToStatDescription(*j)
+	if err != nil {
+		return err
+	}
+
+	var populatedStats []StatDescription
+
+	for _, stat := range stats {
+		if stat.ID == nil {
+			id, err := uuid.NewV4()
+			if err != nil {
+				return err
+			}
+			stat.ID = &id
+			populatedStats = append(populatedStats, stat)
+		}
+	}
+
+	*j, err = statDescriptionToJSON(populatedStats)
+	return err
+}
+
+func jsonToStatDescription(j json.RawMessage) ([]StatDescription, error) {
+	var stats []StatDescription
+	return stats, json.Unmarshal(j, &stats)
+}
+
+func statDescriptionToJSON(s []StatDescription) (json.RawMessage, error) {
+	return json.Marshal(s)
 }
