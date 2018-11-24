@@ -24,7 +24,7 @@ test('realms', async () => {
     body: JSON.stringify(realm),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(realmResp.status).toBe(200)
@@ -45,7 +45,7 @@ test('realms', async () => {
     body: JSON.stringify(realmAdmin),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(201)
@@ -67,7 +67,7 @@ test('realms', async () => {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(200)
@@ -98,7 +98,7 @@ test('realms', async () => {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(200)
@@ -117,7 +117,7 @@ test('realms', async () => {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(realmAdmin)),
+      Authorization: 'Bearer ' + (await api.getJWT(realmAdmin)),
     },
   })
   expect(resp.status).toBe(200)
@@ -160,7 +160,7 @@ test('realms', async () => {
     body: JSON.stringify(patchRealm),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(404)
@@ -176,7 +176,7 @@ test('realms', async () => {
     body: JSON.stringify(patchRealm),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
 
@@ -196,7 +196,7 @@ test('realms', async () => {
     body: JSON.stringify(patchRealm),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(realmAdmin)),
+      Authorization: 'Bearer ' + (await api.getJWT(realmAdmin)),
     },
   })
 
@@ -209,7 +209,7 @@ test('realms', async () => {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(realmAdmin)),
+      Authorization: 'Bearer ' + (await api.getJWT(realmAdmin)),
     },
   })
   expect(resp.status).toBe(200)
@@ -235,7 +235,7 @@ test('realms', async () => {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
 
@@ -246,7 +246,7 @@ test('realms', async () => {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(200)

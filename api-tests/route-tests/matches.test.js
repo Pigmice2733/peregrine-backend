@@ -87,7 +87,7 @@ test('/events/{eventKey}/matches', async () => {
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
 
@@ -107,7 +107,7 @@ test('/events/{eventKey}/matches', async () => {
     body: JSON.stringify(match),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
 
@@ -121,7 +121,7 @@ test('/events/{eventKey}/matches', async () => {
   respGet = await fetch(api.address + `/events/1970flir/matches/${match.key}`, {
     method: 'GET',
     headers: {
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(respGet.status).toBe(200)

@@ -60,7 +60,7 @@ test('users CRUD', async () => {
     body: JSON.stringify(sameRealmUser),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
 
@@ -72,7 +72,7 @@ test('users CRUD', async () => {
     body: JSON.stringify(otherRealm),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(realmResp.status).toBe(200)
@@ -93,7 +93,7 @@ test('users CRUD', async () => {
     body: JSON.stringify(otherRealmAdmin),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(201)
@@ -112,7 +112,7 @@ test('users CRUD', async () => {
     body: JSON.stringify(otherRealmUser),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(sameRealmUser)),
+      Authorization: 'Bearer ' + (await api.getJWT(sameRealmUser)),
     },
   })
 
@@ -133,7 +133,7 @@ test('users CRUD', async () => {
     body: JSON.stringify(unverifiedSuperAdmin),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(otherRealmAdmin)),
+      Authorization: 'Bearer ' + (await api.getJWT(otherRealmAdmin)),
     },
   })
 
@@ -144,7 +144,7 @@ test('users CRUD', async () => {
   resp = await fetch(api.address + '/users', {
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(200)
@@ -169,7 +169,7 @@ test('users CRUD', async () => {
   resp = await fetch(api.address + '/users', {
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(otherRealmAdmin)),
+      Authorization: 'Bearer ' + (await api.getJWT(otherRealmAdmin)),
     },
   })
   expect(resp.status).toBe(200)
@@ -200,7 +200,7 @@ test('users CRUD', async () => {
   resp = await fetch(api.address + '/users', {
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(otherRealmUser)),
+      Authorization: 'Bearer ' + (await api.getJWT(otherRealmUser)),
     },
   })
   expect(resp.status).toBe(403)
@@ -209,7 +209,7 @@ test('users CRUD', async () => {
   resp = await fetch(api.address + '/users', {
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(unverifiedSuperAdmin)),
+      Authorization: 'Bearer ' + (await api.getJWT(unverifiedSuperAdmin)),
     },
   })
   expect(resp.status).toBe(403)
@@ -223,7 +223,7 @@ test('users CRUD', async () => {
   resp = await fetch(api.address + '/users/' + sameRealmUser.id, {
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(200)
@@ -261,7 +261,7 @@ test('users CRUD', async () => {
     body: JSON.stringify(patchUser),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
 
@@ -285,7 +285,7 @@ test('users CRUD', async () => {
     body: JSON.stringify(patchUser),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
 
@@ -302,7 +302,7 @@ test('users CRUD', async () => {
     body: JSON.stringify(patchUser),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
 
@@ -314,7 +314,7 @@ test('users CRUD', async () => {
   resp = await fetch(api.address + '/users/' + sameRealmUser.id, {
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(sameRealmUser)),
+      Authorization: 'Bearer ' + (await api.getJWT(sameRealmUser)),
     },
   })
   expect(resp.status).toBe(200)
@@ -341,7 +341,7 @@ test('users CRUD', async () => {
     body: JSON.stringify(patchUser),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(sameRealmUser)),
+      Authorization: 'Bearer ' + (await api.getJWT(sameRealmUser)),
     },
   })
 
@@ -362,7 +362,7 @@ test('users CRUD', async () => {
     body: JSON.stringify(patchUser),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(sameRealmUser)),
+      Authorization: 'Bearer ' + (await api.getJWT(sameRealmUser)),
     },
   })
 
@@ -374,7 +374,7 @@ test('users CRUD', async () => {
   resp = await fetch(api.address + '/users/' + sameRealmUser.id, {
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(sameRealmUser)),
+      Authorization: 'Bearer ' + (await api.getJWT(sameRealmUser)),
     },
   })
   expect(resp.status).toBe(200)
@@ -397,7 +397,7 @@ test('users CRUD', async () => {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(sameRealmUser)),
+      Authorization: 'Bearer ' + (await api.getJWT(sameRealmUser)),
     },
   })
   expect(resp.status).toBe(403)
@@ -407,7 +407,7 @@ test('users CRUD', async () => {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(otherRealmAdmin)),
+      Authorization: 'Bearer ' + (await api.getJWT(otherRealmAdmin)),
     },
   })
   expect(resp.status).toBe(403)
@@ -417,7 +417,7 @@ test('users CRUD', async () => {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(sameRealmUser)),
+      Authorization: 'Bearer ' + (await api.getJWT(sameRealmUser)),
     },
   })
   expect(respUser.status).toBe(204)
@@ -428,7 +428,7 @@ test('users CRUD', async () => {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        Authentication: 'Bearer ' + (await api.getJWT(unverifiedSuperAdmin)),
+        Authorization: 'Bearer ' + (await api.getJWT(unverifiedSuperAdmin)),
       },
     },
   )
@@ -439,7 +439,7 @@ test('users CRUD', async () => {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT(otherRealmAdmin)),
+      Authorization: 'Bearer ' + (await api.getJWT(otherRealmAdmin)),
     },
   })
   expect(resp.status).toBe(204)
@@ -449,7 +449,7 @@ test('users CRUD', async () => {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(204)
@@ -459,7 +459,7 @@ test('users CRUD', async () => {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(200)
