@@ -91,12 +91,12 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 // Auth returns a middleware used for jwt authentication.
 func Auth(next http.HandlerFunc, jwtSecret []byte) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authentication") == "" {
+		if r.Header.Get("Authorization") == "" {
 			next(w, r)
 			return
 		}
 
-		ss := strings.TrimPrefix(r.Header.Get("Authentication"), "Bearer ")
+		ss := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		token, err := jwt.ParseWithClaims(ss, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
