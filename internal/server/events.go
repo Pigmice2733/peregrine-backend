@@ -172,15 +172,18 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 		e.RealmID = &creatorRealm
 
 		err = s.Store.EventsUpsert(r.Context(), []store.Event{e})
-		if _, ok := errors.Cause(err).(store.ErrExists); ok {
-			ihttp.Error(w, http.StatusConflict)
-			return
-		} else if _, ok := errors.Cause(err).(store.ErrFKeyViolation); ok {
-			ihttp.Error(w, http.StatusUnprocessableEntity)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("unable to upsert event data")
+
+		if err != nil {
+			switch errors.Cause(err).(type) {
+			case store.ErrNoResults:
+				ihttp.Error(w, http.StatusNotFound)
+			case store.ErrFKeyViolation:
+				ihttp.Error(w, http.StatusUnprocessableEntity)
+			default:
+				go s.Logger.WithError(err).Error("unable to upsert event data")
+				ihttp.Error(w, http.StatusInternalServerError)
+			}
+
 			return
 		}
 
