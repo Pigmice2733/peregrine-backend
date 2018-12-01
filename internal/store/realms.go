@@ -58,13 +58,13 @@ func (s *Service) InsertRealm(realm Realm) (int64, error) {
 	        RETURNING id
     `)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return 0, errors.Wrap(err, "unable to prepare realm insert statement")
 	}
 
 	err = stmt.Get(&realm.ID, realm)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
 			return 0, ErrExists{errors.Wrapf(err, "realm with name: %s already exists", realm.Name)}
 		}
@@ -85,7 +85,7 @@ func (s *Service) DeleteRealm(id int64) error {
 		DELETE FROM realms WHERE id = $1
 	`, id)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 
@@ -108,12 +108,12 @@ func (s *Service) PatchRealm(realm PatchRealm) error {
 		    id = :id
 	`, realm)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to patch realm")
 	}
 
 	if count, err := result.RowsAffected(); err != nil || count == 0 {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return ErrNoResults{errors.Wrapf(err, "realm %d not found", realm.ID)}
 	}
 

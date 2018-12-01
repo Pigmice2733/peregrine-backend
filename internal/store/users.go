@@ -85,13 +85,13 @@ func (s *Service) CreateUser(u User) error {
 		RETURNING id
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to prepare user insert statement")
 	}
 
 	err = userStmt.Get(&u.ID, u)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code == pgExists {
 				return ErrExists{errors.Wrapf(err, "username %s already exists", u.Username)}
@@ -105,13 +105,13 @@ func (s *Service) CreateUser(u User) error {
 
 	starsStmt, err := tx.Prepare("INSERT INTO stars (user_id, event_key) VALUES ($1, $2)")
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to prepare stars insert statement")
 	}
 
 	for _, star := range u.Stars {
 		if _, err := starsStmt.Exec(u.ID, star); err != nil {
-			_ = tx.Rollback()
+			s.logErr(tx.Rollback())
 			if err, ok := err.(*pq.Error); ok && err.Code == pgFKeyViolation {
 				return ErrFKeyViolation{errors.Wrapf(err, "user stars event key fk violation: %v", err)}
 			}
@@ -221,30 +221,30 @@ func (s *Service) PatchUser(pu PatchUser) error {
 		    id = :id
 	`, pu)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to patch user")
 	}
 
 	if count, err := result.RowsAffected(); err != nil || count == 0 {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return ErrNoResults{errors.Wrapf(err, "user ID %d not found", pu.ID)}
 	}
 
 	if pu.Stars != nil {
 		if _, err := tx.Exec("DELETE FROM stars WHERE user_id = $1", pu.ID); err != nil {
-			_ = tx.Rollback()
+			s.logErr(tx.Rollback())
 			return errors.Wrap(err, "unable to remove user stars")
 		}
 
 		starsStmt, err := tx.Prepare("INSERT INTO stars (user_id, event_key) VALUES ($1, $2)")
 		if err != nil {
-			_ = tx.Rollback()
+			s.logErr(tx.Rollback())
 			return errors.Wrap(err, "unable to prepare stars insert statement")
 		}
 
 		for _, star := range pu.Stars {
 			if _, err := starsStmt.Exec(pu.ID, star); err != nil {
-				_ = tx.Rollback()
+				s.logErr(tx.Rollback())
 				if err, ok := err.(*pq.Error); ok && err.Code == pgFKeyViolation {
 					return ErrFKeyViolation{errors.Wrapf(err, "user stars event key fk violation: %v", err)}
 				}
@@ -267,7 +267,7 @@ func (s *Service) DeleteUser(id int64) error {
 	    DELETE FROM stars
 	        WHERE user_id = $1
 	`, id); err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to delete user's stars")
 	}
 
@@ -275,7 +275,7 @@ func (s *Service) DeleteUser(id int64) error {
 	    DELETE FROM users
 		    WHERE id = $1
 	`, id); err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to delete user")
 	}
 	return errors.Wrap(tx.Commit(), "unable to delete user")
