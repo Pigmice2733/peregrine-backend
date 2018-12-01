@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/lib/pq"
@@ -47,30 +48,30 @@ type Location struct {
 }
 
 // GetEvents returns all events from the database. event.Webcasts will be nil for every event.
-func (s *Service) GetEvents() ([]Event, error) {
+func (s *Service) GetEvents(ctx context.Context) ([]Event, error) {
 	events := []Event{}
 
-	return events, s.db.Select(&events, "SELECT * FROM events")
+	return events, s.db.SelectContext(ctx, &events, "SELECT * FROM events")
 }
 
 // GetEventsFromRealm returns all events from a specific realm. Additionally all
 // TBA events will be retrieved. If no realm is specified (nil) then just the TBA
 // events will be retrieved. event.Webcasts will be nil for every event.
-func (s *Service) GetEventsFromRealm(realm *int64) ([]Event, error) {
+func (s *Service) GetEventsFromRealm(ctx context.Context, realm *int64) ([]Event, error) {
 	events := []Event{}
 
 	if realm == nil {
-		return events, s.db.Select(&events, "SELECT * FROM events WHERE realm_id IS NULL")
+		return events, s.db.SelectContext(ctx, &events, "SELECT * FROM events WHERE realm_id IS NULL")
 	}
-	return events, s.db.Select(&events, "SELECT * FROM events WHERE realm_id IS NULL OR realm_id = $1", *realm)
+	return events, s.db.SelectContext(ctx, &events, "SELECT * FROM events WHERE realm_id IS NULL OR realm_id = $1", *realm)
 }
 
 // CheckTBAEventKeyExists checks whether a specific event key exists and is from
 // TBA rather than manually added.
-func (s *Service) CheckTBAEventKeyExists(eventKey string) (bool, error) {
+func (s *Service) CheckTBAEventKeyExists(ctx context.Context, eventKey string) (bool, error) {
 	var realmID *int64
 
-	err := s.db.Get(&realmID, "SELECT realm_id FROM events WHERE key = $1", eventKey)
+	err := s.db.GetContext(ctx, &realmID, "SELECT realm_id FROM events WHERE key = $1", eventKey)
 	if err == sql.ErrNoRows {
 		return false, ErrNoResults{errors.Wrapf(err, "event key %s not found", eventKey)}
 	} else if err != nil {
@@ -81,27 +82,27 @@ func (s *Service) CheckTBAEventKeyExists(eventKey string) (bool, error) {
 }
 
 // GetEvent retrieves a specific event.
-func (s *Service) GetEvent(eventKey string) (Event, error) {
+func (s *Service) GetEvent(ctx context.Context, eventKey string) (Event, error) {
 	var event Event
-	if err := s.db.Get(&event, "SELECT * FROM events WHERE key = $1", eventKey); err != nil {
+	if err := s.db.GetContext(ctx, &event, "SELECT * FROM events WHERE key = $1", eventKey); err != nil {
 		if err == sql.ErrNoRows {
 			return event, ErrNoResults{errors.Wrapf(err, "event %s does not exist", event.Key)}
 		}
 		return event, err
 	}
 
-	err := s.db.Select(&event.Webcasts, "SELECT type, url FROM webcasts WHERE event_key = $1", eventKey)
+	err := s.db.SelectContext(ctx, &event.Webcasts, "SELECT type, url FROM webcasts WHERE event_key = $1", eventKey)
 	return event, err
 }
 
 // EventsUpsert upserts multiple events into the database.
-func (s *Service) EventsUpsert(events []Event) error {
-	tx, err := s.db.Beginx()
+func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
 
-	eventStmt, err := tx.PrepareNamed(`
+	eventStmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, realm_id)
 		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :realm_id)
 		ON CONFLICT (key)
@@ -125,7 +126,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 	}
 	defer eventStmt.Close()
 
-	deleteWebcastsStmt, err := tx.Prepare(`
+	deleteWebcastsStmt, err := tx.PrepareContext(ctx, `
 	    DELETE FROM webcasts WHERE event_key = $1
 	`)
 	if err != nil {
@@ -134,7 +135,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 	}
 	defer deleteWebcastsStmt.Close()
 
-	webcastStmt, err := tx.PrepareNamed(`
+	webcastStmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO webcasts (event_key, type, url)
 		VALUES (:event_key, :type, :url)
 	`)
@@ -145,7 +146,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 	defer webcastStmt.Close()
 
 	for _, event := range events {
-		if _, err = eventStmt.Exec(event); err != nil {
+		if _, err = eventStmt.ExecContext(ctx, event); err != nil {
 			s.logErr(tx.Rollback())
 			if err, ok := err.(*pq.Error); ok {
 				if err.Code == pgExists {
@@ -157,14 +158,14 @@ func (s *Service) EventsUpsert(events []Event) error {
 			return err
 		}
 
-		if _, err = deleteWebcastsStmt.Exec(event.Key); err != nil {
+		if _, err = deleteWebcastsStmt.ExecContext(ctx, event.Key); err != nil {
 			s.logErr(tx.Rollback())
 			return err
 		}
 
 		for _, webcast := range event.Webcasts {
 			webcast.EventKey = event.Key
-			if _, err = webcastStmt.Exec(webcast); err != nil {
+			if _, err = webcastStmt.ExecContext(ctx, webcast); err != nil {
 				s.logErr(tx.Rollback())
 				return err
 			}

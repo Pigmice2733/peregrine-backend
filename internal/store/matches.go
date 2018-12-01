@@ -1,6 +1,8 @@
 package store
 
 import (
+	"context"
+
 	"github.com/lib/pq"
 )
 
@@ -31,13 +33,13 @@ func (m *Match) GetTime() *UnixTime {
 // GetMatches returns all matches from a specific event that include the given
 // teams. If teams is nil or empty a list of all the matches for that event are
 // returned.
-func (s *Service) GetMatches(eventKey string, teamKeys []string) ([]Match, error) {
+func (s *Service) GetMatches(ctx context.Context, eventKey string, teamKeys []string) ([]Match, error) {
 	if teamKeys == nil {
 		teamKeys = []string{}
 	}
 
 	matches := []Match{}
-	err := s.db.Select(&matches, `
+	err := s.db.SelectContext(ctx, &matches, `
 	SELECT
 		key,
 		predicted_time,
@@ -69,9 +71,9 @@ func (s *Service) GetMatches(eventKey string, teamKeys []string) ([]Match, error
 }
 
 // GetMatch returns a specific match.
-func (s *Service) GetMatch(matchKey string) (Match, error) {
+func (s *Service) GetMatch(ctx context.Context, matchKey string) (Match, error) {
 	var m Match
-	err := s.db.Get(&m, `
+	err := s.db.GetContext(ctx, &m, `
 	SELECT
 		key,
 		predicted_time,
@@ -98,13 +100,13 @@ func (s *Service) GetMatch(matchKey string) (Match, error) {
 }
 
 // UpsertMatch upserts a match and its alliances into the database.
-func (s *Service) UpsertMatch(match Match) error {
-	tx, err := s.db.Beginx()
+func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.NamedExec(`
+	_, err = tx.NamedExecContext(ctx, `
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score)
 		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score)
 		ON CONFLICT (key)
@@ -123,10 +125,11 @@ func (s *Service) UpsertMatch(match Match) error {
 		return err
 	}
 
-	if err = s.AlliancesUpsert(match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
+	if err = s.AlliancesUpsert(ctx, match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
 		s.logErr(tx.Rollback())
 		return err
 	}
+
 	return tx.Commit()
 }
 
@@ -135,13 +138,13 @@ func (s *Service) UpsertMatch(match Match) error {
 // and matches deleted from TBA will be deleted from the database. User-created
 // matches will be unaffected. If eventKey is specified, only matches from that
 // event will be affected.
-func (s *Service) UpdateTBAMatches(matches []Match, eventKey string) error {
-	tx, err := s.db.Beginx()
+func (s *Service) UpdateTBAMatches(ctx context.Context, matches []Match, eventKey string) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
 
-	upsert, err := tx.PrepareNamed(`
+	upsert, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score)
 		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score)
 		ON CONFLICT (key)
@@ -164,11 +167,11 @@ func (s *Service) UpdateTBAMatches(matches []Match, eventKey string) error {
 	matchKeys := make([]string, len(matches))
 
 	for i, match := range matches {
-		if _, err = upsert.Exec(match); err != nil {
+		if _, err = upsert.ExecContext(ctx, match); err != nil {
 			s.logErr(tx.Rollback())
 			return err
 		}
-		if err = s.AlliancesUpsert(match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
+		if err = s.AlliancesUpsert(ctx, match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
 			s.logErr(tx.Rollback())
 			return err
 		}
@@ -178,7 +181,7 @@ func (s *Service) UpdateTBAMatches(matches []Match, eventKey string) error {
 	upsert.Close()
 
 	if eventKey != "" {
-		_, err = tx.Exec(`
+		_, err = tx.ExecContext(ctx, `
 		DELETE FROM matches m
 			USING events e
 			WHERE e.key = $1 AND
@@ -186,7 +189,7 @@ func (s *Service) UpdateTBAMatches(matches []Match, eventKey string) error {
 				  NOT (m.key = ANY($2)) 
 	`, eventKey, pq.Array(matchKeys))
 	} else {
-		_, err = tx.Exec(`
+		_, err = tx.ExecContext(ctx, `
 		DELETE FROM matches m
 			USING events e
 			WHERE e.key = m.event_key AND

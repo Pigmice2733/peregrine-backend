@@ -43,7 +43,7 @@ func run(basePath string) error {
 		logger.Formatter = &logrus.JSONFormatter{}
 	}
 
-	sto, err := store.New(c.DSN, logger)
+	sto, err := store.New(context.Background(), c.DSN, logger)
 	if err != nil {
 		return errors.Wrap(err, "opening postgres server")
 	}
