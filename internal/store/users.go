@@ -290,7 +290,7 @@ func (s *Service) CheckSimilarUsernameExists(ctx context.Context, username strin
 		`SELECT EXISTS(SELECT true FROM users WHERE lower(username) = lower($1))`,
 		username).Scan(&ok)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "unable to select whether user exists")
 	}
 
 	if ok {
