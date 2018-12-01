@@ -33,7 +33,8 @@ const pgFKeyViolation = "23503"
 
 // Service is an interface to manipulate the data store.
 type Service struct {
-	db *sqlx.DB
+	db     *sqlx.DB
+	logger *logrus.Logger
 }
 
 // New creates a new store service from a dataSourceName. The logger is used to
@@ -66,6 +67,12 @@ func (s *Service) Close() error {
 	}
 
 	return nil
+}
+
+func (s *Service) logErr(err error) {
+	if err != nil {
+		s.logger.Error(err)
+	}
 }
 
 // UnixTime exists so that we can have times that look like time.Time's to

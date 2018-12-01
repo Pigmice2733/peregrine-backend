@@ -121,7 +121,7 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
                     realm_id = :realm_id
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer eventStmt.Close()
@@ -130,7 +130,7 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 	    DELETE FROM webcasts WHERE event_key = $1
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer deleteWebcastsStmt.Close()
@@ -140,7 +140,7 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 		VALUES (:event_key, :type, :url)
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer webcastStmt.Close()

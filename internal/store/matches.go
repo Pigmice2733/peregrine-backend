@@ -121,7 +121,7 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 					blue_score = :blue_score
 	`, match)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 
@@ -159,7 +159,7 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, matches []Match, eventKe
 					blue_score = :blue_score
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer upsert.Close()
@@ -198,7 +198,7 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, matches []Match, eventKe
 	}
 
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 

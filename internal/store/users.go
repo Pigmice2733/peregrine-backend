@@ -86,13 +86,13 @@ func (s *Service) CreateUser(ctx context.Context, u User) error {
 		RETURNING id
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to prepare user insert statement")
 	}
 
 	err = userStmt.GetContext(ctx, &u.ID, u)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code == pgExists {
 				return ErrExists{errors.Wrapf(err, "username %s already exists", u.Username)}
@@ -106,7 +106,7 @@ func (s *Service) CreateUser(ctx context.Context, u User) error {
 
 	starsStmt, err := tx.PrepareContext(ctx, "INSERT INTO stars (user_id, event_key) VALUES ($1, $2)")
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to prepare stars insert statement")
 	}
 
@@ -222,12 +222,12 @@ func (s *Service) PatchUser(ctx context.Context, pu PatchUser) error {
 		    id = :id
 	`, pu)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to patch user")
 	}
 
 	if count, err := result.RowsAffected(); err != nil || count == 0 {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return ErrNoResults{errors.Wrapf(err, "user ID %d not found", pu.ID)}
 	}
 
@@ -239,7 +239,7 @@ func (s *Service) PatchUser(ctx context.Context, pu PatchUser) error {
 
 		starsStmt, err := tx.PrepareContext(ctx, "INSERT INTO stars (user_id, event_key) VALUES ($1, $2)")
 		if err != nil {
-			_ = tx.Rollback()
+			s.logErr(tx.Rollback())
 			return errors.Wrap(err, "unable to prepare stars insert statement")
 		}
 
@@ -268,7 +268,7 @@ func (s *Service) DeleteUser(ctx context.Context, id int64) error {
 	    DELETE FROM stars
 	        WHERE user_id = $1
 	`, id); err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to delete user's stars")
 	}
 
@@ -276,7 +276,7 @@ func (s *Service) DeleteUser(ctx context.Context, id int64) error {
 	    DELETE FROM users
 		    WHERE id = $1
 	`, id); err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to delete user")
 	}
 	return errors.Wrap(tx.Commit(), "unable to delete user")

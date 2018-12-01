@@ -35,7 +35,7 @@ func (s *Service) TeamKeysUpsert(ctx context.Context, eventKey string, keys []st
 		ON CONFLICT (key, event_key) DO NOTHING
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer stmt.Close()
@@ -66,7 +66,7 @@ func (s *Service) TeamsUpsert(ctx context.Context, teams []Team) error {
 				SET rank = $3, ranking_score = $4
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer stmt.Close()
