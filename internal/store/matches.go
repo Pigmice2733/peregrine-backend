@@ -119,12 +119,12 @@ func (s *Service) UpsertMatch(match Match) error {
 					blue_score = :blue_score
 	`, match)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 
 	if err = s.AlliancesUpsert(match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	return tx.Commit()
@@ -156,7 +156,7 @@ func (s *Service) UpdateTBAMatches(matches []Match, eventKey string) error {
 					blue_score = :blue_score
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer upsert.Close()
@@ -165,11 +165,11 @@ func (s *Service) UpdateTBAMatches(matches []Match, eventKey string) error {
 
 	for i, match := range matches {
 		if _, err = upsert.Exec(match); err != nil {
-			_ = tx.Rollback()
+			s.logErr(tx.Rollback())
 			return err
 		}
 		if err = s.AlliancesUpsert(match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
-			_ = tx.Rollback()
+			s.logErr(tx.Rollback())
 			return err
 		}
 		matchKeys[i] = match.Key
@@ -195,7 +195,7 @@ func (s *Service) UpdateTBAMatches(matches []Match, eventKey string) error {
 	}
 
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 

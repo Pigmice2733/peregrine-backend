@@ -120,7 +120,7 @@ func (s *Service) EventsUpsert(events []Event) error {
                     realm_id = :realm_id
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer eventStmt.Close()
@@ -129,7 +129,7 @@ func (s *Service) EventsUpsert(events []Event) error {
 	    DELETE FROM webcasts WHERE event_key = $1
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer deleteWebcastsStmt.Close()
@@ -139,14 +139,14 @@ func (s *Service) EventsUpsert(events []Event) error {
 		VALUES (:event_key, :type, :url)
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer webcastStmt.Close()
 
 	for _, event := range events {
 		if _, err = eventStmt.Exec(event); err != nil {
-			_ = tx.Rollback()
+			s.logErr(tx.Rollback())
 			if err, ok := err.(*pq.Error); ok {
 				if err.Code == pgExists {
 					return ErrExists{errors.Wrapf(err, "event with key %s already exists", event.Key)}
@@ -158,14 +158,14 @@ func (s *Service) EventsUpsert(events []Event) error {
 		}
 
 		if _, err = deleteWebcastsStmt.Exec(event.Key); err != nil {
-			_ = tx.Rollback()
+			s.logErr(tx.Rollback())
 			return err
 		}
 
 		for _, webcast := range event.Webcasts {
 			webcast.EventKey = event.Key
 			if _, err = webcastStmt.Exec(webcast); err != nil {
-				_ = tx.Rollback()
+				s.logErr(tx.Rollback())
 				return err
 			}
 		}

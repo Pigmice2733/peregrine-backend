@@ -33,14 +33,14 @@ func (s *Service) TeamKeysUpsert(eventKey string, keys []string) error {
 		ON CONFLICT (key, event_key) DO NOTHING
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer stmt.Close()
 
 	for _, key := range keys {
 		if _, err = stmt.Exec(key, eventKey); err != nil {
-			_ = tx.Rollback()
+			s.logErr(tx.Rollback())
 			return err
 		}
 	}
@@ -64,14 +64,14 @@ func (s *Service) TeamsUpsert(teams []Team) error {
 				SET rank = $3, ranking_score = $4
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return err
 	}
 	defer stmt.Close()
 
 	for _, team := range teams {
 		if _, err = stmt.Exec(team); err != nil {
-			_ = tx.Rollback()
+			s.logErr(tx.Rollback())
 			return err
 		}
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Register lib/pq PostreSQL driver
+	"github.com/sirupsen/logrus"
 )
 
 // ErrNoResults indicates that no data matching the query was found.
@@ -31,17 +32,20 @@ const pgFKeyViolation = "23503"
 
 // Service is an interface to manipulate the data store.
 type Service struct {
-	db *sqlx.DB
+	db     *sqlx.DB
+	logger *logrus.Logger
 }
 
-// New creates a new store service from a dataSourceName.
-func New(dsn string) (Service, error) {
+// New creates a new store service from a dataSourceName. The logger is used to
+// log errors that would not otherwise be returned such as issues rolling back
+// transactions.
+func New(dsn string, logger *logrus.Logger) (Service, error) {
 	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
 		return Service{}, err
 	}
 
-	return Service{db: db}, db.Ping()
+	return Service{db: db, logger: logger}, db.Ping()
 }
 
 // Ping pings the underlying postgresql database. You would think we would call
@@ -61,6 +65,12 @@ func (s *Service) Close() error {
 	}
 
 	return nil
+}
+
+func (s *Service) logErr(err error) {
+	if err != nil {
+		s.logger.Error(err)
+	}
 }
 
 // UnixTime exists so that we can have times that look like time.Time's to
