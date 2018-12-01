@@ -10,6 +10,7 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 )
 
 type match struct {
@@ -44,7 +45,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(*store.ErrNoResults); ok {
+			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -105,7 +106,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		// Get new match data from TBA
 		if err := s.updateMatches(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(*store.ErrNoResults); ok {
+			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -116,7 +117,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 
 		fullMatch, err := s.Store.GetMatch(matchKey)
 		if err != nil {
-			if _, ok := err.(*store.ErrNoResults); ok {
+			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -200,7 +201,7 @@ func (s *Server) updateMatches(eventKey string) error {
 	}
 
 	fullMatches, err := s.TBA.GetMatches(eventKey)
-	if _, ok := err.(tba.ErrNotModified); ok {
+	if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
 		return nil
 	} else if err != nil {
 		return err

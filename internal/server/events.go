@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 )
 
 type location struct {
@@ -108,7 +108,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 		fullEvent, err := s.Store.GetEvent(eventKey)
 		if err != nil {
-			if _, ok := err.(*store.ErrNoResults); ok {
+			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -171,10 +171,10 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 		e.RealmID = &creatorRealm
 
 		err = s.Store.EventsUpsert([]store.Event{e})
-		if _, ok := err.(*store.ErrExists); ok {
+		if _, ok := errors.Cause(err).(store.ErrExists); ok {
 			ihttp.Error(w, http.StatusConflict)
 			return
-		} else if _, ok := err.(*store.ErrFKeyViolation); ok {
+		} else if _, ok := errors.Cause(err).(store.ErrFKeyViolation); ok {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {
@@ -196,14 +196,14 @@ func (s *Server) updateEvents() error {
 
 	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > expiry {
 		fullEvents, err := s.TBA.GetEvents(s.Year)
-		if _, ok := err.(tba.ErrNotModified); ok {
+		if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
 			return nil
 		} else if err != nil {
 			return err
 		}
 
 		if err := s.Store.EventsUpsert(fullEvents); err != nil {
-			return fmt.Errorf("upserting events: %v", err)
+			return errors.Wrap(err, "upserting events")
 		}
 
 		s.eventsLastUpdate = &now
