@@ -38,7 +38,12 @@ func run(basePath string) error {
 		APIKey: c.TBA.APIKey,
 	}
 
-	sto, err := store.New(c.DSN)
+	logger := logrus.New()
+	if c.Server.LogJSON {
+		logger.Formatter = &logrus.JSONFormatter{}
+	}
+
+	sto, err := store.New(context.Background(), c.DSN)
 	if err != nil {
 		return errors.Wrap(err, "opening postgres server")
 	}

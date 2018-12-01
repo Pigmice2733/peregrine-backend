@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/lib/pq"
@@ -22,23 +23,23 @@ type PatchRealm struct {
 }
 
 // GetRealms returns all realms in the database.
-func (s *Service) GetRealms() ([]Realm, error) {
+func (s *Service) GetRealms(ctx context.Context) ([]Realm, error) {
 	realms := []Realm{}
 
-	return realms, s.db.Select(&realms, "SELECT * FROM realms")
+	return realms, s.db.SelectContext(ctx, &realms, "SELECT * FROM realms")
 }
 
 // GetPublicRealms returns all public realms in the database.
-func (s *Service) GetPublicRealms() ([]Realm, error) {
+func (s *Service) GetPublicRealms(ctx context.Context) ([]Realm, error) {
 	realms := []Realm{}
 
-	return realms, s.db.Select(&realms, "SELECT * FROM realms WHERE share_reports = TRUE")
+	return realms, s.db.SelectContext(ctx, &realms, "SELECT * FROM realms WHERE share_reports = TRUE")
 }
 
 // GetRealm retrieves a specific realm.
-func (s *Service) GetRealm(id int64) (Realm, error) {
+func (s *Service) GetRealm(ctx context.Context, id int64) (Realm, error) {
 	var realm Realm
-	err := s.db.Get(&realm, "SELECT * FROM realms WHERE id = $1", id)
+	err := s.db.GetContext(ctx, &realm, "SELECT * FROM realms WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		return realm, ErrNoResults{errors.Wrapf(err, "realm with id %d not found", id)}
 	}
@@ -46,13 +47,13 @@ func (s *Service) GetRealm(id int64) (Realm, error) {
 }
 
 // InsertRealm inserts a realm into the database.
-func (s *Service) InsertRealm(realm Realm) (int64, error) {
-	tx, err := s.db.Beginx()
+func (s *Service) InsertRealm(ctx context.Context, realm Realm) (int64, error) {
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return 0, errors.Wrap(err, "unable to begin transaction")
 	}
 
-	stmt, err := tx.PrepareNamed(`
+	stmt, err := tx.PrepareNamedContext(ctx, `
 	    INSERT INTO realms (name, share_reports)
 		    VALUES (:name, :share_reports)
 	        RETURNING id
@@ -62,7 +63,7 @@ func (s *Service) InsertRealm(realm Realm) (int64, error) {
 		return 0, errors.Wrap(err, "unable to prepare realm insert statement")
 	}
 
-	err = stmt.Get(&realm.ID, realm)
+	err = stmt.GetContext(ctx, &realm.ID, realm)
 	if err != nil {
 		_ = tx.Rollback()
 		if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
@@ -75,13 +76,13 @@ func (s *Service) InsertRealm(realm Realm) (int64, error) {
 }
 
 // DeleteRealm deletes a realm from the database.
-func (s *Service) DeleteRealm(id int64) error {
-	tx, err := s.db.Beginx()
+func (s *Service) DeleteRealm(ctx context.Context, id int64) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "unable to begin transaction")
 	}
 
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		DELETE FROM realms WHERE id = $1
 	`, id)
 	if err != nil {
@@ -93,13 +94,13 @@ func (s *Service) DeleteRealm(id int64) error {
 }
 
 // PatchRealm patches a realm.
-func (s *Service) PatchRealm(realm PatchRealm) error {
-	tx, err := s.db.Beginx()
+func (s *Service) PatchRealm(ctx context.Context, realm PatchRealm) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "unable to begin transaction")
 	}
 
-	result, err := tx.NamedExec(`
+	result, err := tx.NamedExecContext(ctx, `
 	UPDATE realms
 	    SET
 		    name = COALESCE(:name, name),

@@ -43,7 +43,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		user, err := s.Store.GetUserByUsername(ru.Username)
+		user, err := s.Store.GetUserByUsername(r.Context(), ru.Username)
 		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
@@ -124,7 +124,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 		u.HashedPassword = string(hashedPassword)
 
-		err = s.Store.CreateUser(u)
+		err = s.Store.CreateUser(r.Context(), u)
 		if _, ok := errors.Cause(err).(store.ErrExists); ok {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
@@ -149,7 +149,7 @@ func (s *Server) getUsersHandler() http.HandlerFunc {
 		var err error
 
 		if roles.IsSuperAdmin {
-			users, err = s.Store.GetUsers()
+			users, err = s.Store.GetUsers(r.Context())
 		} else {
 			var realmID int64
 			realmID, err = ihttp.GetRealmID(r)
@@ -157,7 +157,7 @@ func (s *Server) getUsersHandler() http.HandlerFunc {
 				ihttp.Error(w, http.StatusUnauthorized)
 				return
 			}
-			users, err = s.Store.GetUsersByRealm(realmID)
+			users, err = s.Store.GetUsersByRealm(r.Context(), realmID)
 		}
 
 		if err != nil {
@@ -192,7 +192,7 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 			return
 		}
 
-		user, err := s.Store.GetUserByID(id)
+		user, err := s.Store.GetUserByID(r.Context(), id)
 		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
@@ -250,7 +250,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 
 		// Admins can only patch users in the same realm
 		if targetID != subjectID && !roles.IsSuperAdmin {
-			targetUser, err := s.Store.GetUserByID(targetID)
+			targetUser, err := s.Store.GetUserByID(r.Context(), targetID)
 			if err != nil {
 				go s.Logger.WithError(err).Error("getting user")
 				ihttp.Error(w, http.StatusInternalServerError)
@@ -291,7 +291,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 			u.HashedPassword = &hashedPasswordString
 		}
 
-		err = s.Store.PatchUser(u)
+		err = s.Store.PatchUser(r.Context(), u)
 		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
@@ -330,7 +330,7 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 
 		// Admins can only delete users in the same realm
 		if id != requestID && !roles.IsSuperAdmin {
-			targetUser, err := s.Store.GetUserByID(id)
+			targetUser, err := s.Store.GetUserByID(r.Context(), id)
 			if err != nil {
 				go s.Logger.WithError(err).Error("getting user")
 				ihttp.Error(w, http.StatusInternalServerError)
@@ -342,7 +342,7 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 			}
 		}
 
-		err = s.Store.DeleteUser(id)
+		err = s.Store.DeleteUser(r.Context(), id)
 		if err != nil {
 			go s.Logger.WithError(err).Error("deleting user")
 			ihttp.Error(w, http.StatusInternalServerError)

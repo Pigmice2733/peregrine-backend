@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Register lib/pq PostreSQL driver
+	"github.com/sirupsen/logrus"
 )
 
 // ErrNoResults indicates that no data matching the query was found.
@@ -34,21 +36,24 @@ type Service struct {
 	db *sqlx.DB
 }
 
-// New creates a new store service from a dataSourceName.
-func New(dsn string) (Service, error) {
+// New creates a new store service from a dataSourceName. The logger is used to
+// log errors that would not otherwise be returned such as issues rolling back
+// transactions. The context passed is used for pinging the database.
+func New(ctx context.Context, dsn string, logger *logrus.Logger) (Service, error) {
 	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
 		return Service{}, err
 	}
 
-	return Service{db: db}, db.Ping()
+	s := Service{db: db, logger: logger}
+	return s, s.Ping(ctx)
 }
 
 // Ping pings the underlying postgresql database. You would think we would call
 // db.Ping() here, but that doesn't actually Ping the database because reasons.
-func (s *Service) Ping() error {
+func (s *Service) Ping(ctx context.Context) error {
 	if s.db != nil {
-		return s.db.QueryRow("SELECT 1").Scan(new(bool))
+		return s.db.QueryRowContext(ctx, "SELECT 1").Scan(new(bool))
 	}
 
 	return errors.New("not connected to postgresql")
