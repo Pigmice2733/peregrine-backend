@@ -1,6 +1,7 @@
 package tba
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -241,7 +242,7 @@ func TestGetEvents(t *testing.T) {
 	for index, tt := range testCases {
 		server.getEventsHandler = tt.getEventsHandler
 
-		events, err := s.GetEvents(testingYear)
+		events, err := s.GetEvents(context.TODO(), testingYear)
 		if tt.expectErr != (err != nil) {
 			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
 		}
@@ -429,7 +430,7 @@ func TestGetMatches(t *testing.T) {
 	for index, tt := range testCases {
 		server.getMatchesHandler = tt.getMatchesHandler
 
-		matches, err := s.GetMatches(tt.eventKey)
+		matches, err := s.GetMatches(context.TODO(), tt.eventKey)
 		if tt.expectErr != (err != nil) {
 			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
 		}
@@ -486,7 +487,7 @@ func TestGetTeamKeys(t *testing.T) {
 	for index, tt := range testCases {
 		server.getTeamKeysHandler = tt.getTeamKeysHandler
 
-		teamKeys, err := s.GetTeamKeys("2018abca")
+		teamKeys, err := s.GetTeamKeys(context.TODO(), "2018abca")
 		if tt.expectErr != (err != nil) {
 			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
 		}
@@ -656,7 +657,7 @@ func TestGetTeamRankings(t *testing.T) {
 	for index, tt := range testCases {
 		server.getTeamRankingsHandler = tt.getTeamRankingsHandler
 
-		teams, err := s.GetTeamRankings("2018abca")
+		teams, err := s.GetTeamRankings(context.TODO(), "2018abca")
 		if tt.expectErr != (err != nil) {
 			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
 		}

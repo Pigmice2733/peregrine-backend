@@ -117,7 +117,7 @@ func (s *Server) updateTeamKeys(ctx context.Context, eventKey string) error {
 		return nil
 	}
 
-	teams, err := s.TBA.GetTeamKeys(eventKey)
+	teams, err := s.TBA.GetTeamKeys(ctx, eventKey)
 	if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
 		return nil
 	} else if err != nil {
@@ -138,7 +138,7 @@ func (s *Server) updateTeamRankings(ctx context.Context, eventKey string) error 
 		return nil
 	}
 
-	teams, err := s.TBA.GetTeamRankings(eventKey)
+	teams, err := s.TBA.GetTeamRankings(ctx, eventKey)
 	if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
 		return nil
 	} else if err != nil {

@@ -196,7 +196,7 @@ func (s *Server) updateEvents(ctx context.Context) error {
 	now := time.Now()
 
 	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > expiry {
-		fullEvents, err := s.TBA.GetEvents(s.Year)
+		fullEvents, err := s.TBA.GetEvents(ctx, s.Year)
 		if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
 			return nil
 		} else if err != nil {

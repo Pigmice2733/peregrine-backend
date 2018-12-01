@@ -101,7 +101,7 @@ type status struct {
 
 func (s *Server) healthHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tbaHealthy := s.TBA.Ping() == nil
+		tbaHealthy := s.TBA.Ping(r.Context()) == nil
 		pgHealthy := s.Store.Ping(r.Context()) == nil
 
 		ihttp.Respond(w, status{

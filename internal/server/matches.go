@@ -201,7 +201,7 @@ func (s *Server) updateMatches(ctx context.Context, eventKey string) error {
 		return nil
 	}
 
-	fullMatches, err := s.TBA.GetMatches(eventKey)
+	fullMatches, err := s.TBA.GetMatches(ctx, eventKey)
 	if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
 		return nil
 	} else if err != nil {

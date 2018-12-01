@@ -1,6 +1,7 @@
 package tba
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -90,11 +91,12 @@ type ErrNotModified struct {
 	error
 }
 
-func (s *Service) makeRequest(path string) (*http.Response, error) {
+func (s *Service) makeRequest(ctx context.Context, path string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", s.URL+path, nil)
 	if err != nil {
 		return nil, err
 	}
+	req = req.WithContext(ctx)
 
 	if s.etagStore == nil {
 		s.etagStore = new(sync.Map)
@@ -134,16 +136,22 @@ func webcastURL(webcastType store.WebcastType, channel string) (string, error) {
 }
 
 // Ping pings the TBA /status endpoint
-func (s *Service) Ping() error {
-	_, err := tbaClient.Get(s.URL + "/status")
-	return err
+func (s *Service) Ping(ctx context.Context) error {
+	req, err := http.NewRequest(http.MethodGet, s.URL+"/status", nil)
+	if err != nil {
+		return errors.Wrap(err, "making new request")
+	}
+	req = req.WithContext(ctx)
+
+	_, err = tbaClient.Do(req)
+	return errors.Wrap(err, "doing request")
 }
 
 // GetEvents retrieves all events from the given year (e.g. 2018).
-func (s *Service) GetEvents(year int) ([]store.Event, error) {
+func (s *Service) GetEvents(ctx context.Context, year int) ([]store.Event, error) {
 	path := fmt.Sprintf("/events/%d", year)
 
-	response, err := s.makeRequest(path)
+	response, err := s.makeRequest(ctx, path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to make request")
 	}
@@ -214,10 +222,10 @@ func (s *Service) GetEvents(year int) ([]store.Event, error) {
 }
 
 // GetMatches retrieves all matches from a specific event.
-func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
+func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Match, error) {
 	path := fmt.Sprintf("/event/%s/matches/simple", eventKey)
 
-	response, err := s.makeRequest(path)
+	response, err := s.makeRequest(ctx, path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to make request")
 	}
@@ -278,10 +286,10 @@ func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
 }
 
 // GetTeamKeys retrieves all team keys from a specific event
-func (s *Service) GetTeamKeys(eventKey string) ([]string, error) {
+func (s *Service) GetTeamKeys(ctx context.Context, eventKey string) ([]string, error) {
 	path := fmt.Sprintf("/event/%s/teams/keys", eventKey)
 
-	response, err := s.makeRequest(path)
+	response, err := s.makeRequest(ctx, path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to make request")
 	}
@@ -296,10 +304,10 @@ func (s *Service) GetTeamKeys(eventKey string) ([]string, error) {
 }
 
 // GetTeamRankings retrieves all team rankings from a specific event.
-func (s *Service) GetTeamRankings(eventKey string) ([]store.Team, error) {
+func (s *Service) GetTeamRankings(ctx context.Context, eventKey string) ([]store.Team, error) {
 	path := fmt.Sprintf("/event/%s/rankings", eventKey)
 
-	response, err := s.makeRequest(path)
+	response, err := s.makeRequest(ctx, path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to make request")
 	}
