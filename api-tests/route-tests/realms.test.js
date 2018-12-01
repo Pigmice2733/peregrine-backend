@@ -2,7 +2,7 @@ const api = require('./../api.test')
 const fetch = require('node-fetch')
 
 const realm = {
-  name: 'FRC 1234',
+  name: 'FRC 1234' + Number(new Date()),
   shareReports: false,
 }
 
@@ -32,7 +32,7 @@ test('realms', async () => {
   realm.id = d.data
 
   realmAdmin = {
-    username: 'realm-admin',
+    username: 'realmadmin' + Number(new Date()),
     password: 'password',
     realmId: realm.id,
     firstName: 'foo',

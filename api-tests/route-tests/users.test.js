@@ -47,7 +47,7 @@ test('users CRUD', async () => {
   // users create
   // /users create non-admin for same realm
   sameRealmUser = {
-    username: 'users-create' + Number(new Date()),
+    username: 'userscreate' + Number(new Date()),
     password: 'password',
     realmId: 1,
     firstName: 'test',
@@ -80,7 +80,7 @@ test('users CRUD', async () => {
   otherRealmId = d.data
 
   otherRealmAdmin = {
-    username: 'users-other-admin',
+    username: 'usersotheradmin',
     password: 'password',
     realmId: otherRealmId,
     firstName: 'foo',
@@ -99,7 +99,7 @@ test('users CRUD', async () => {
   expect(resp.status).toBe(201)
 
   otherRealmUser = {
-    username: 'users-other-user',
+    username: 'usersotheruser',
     password: 'password',
     realmId: otherRealmId,
     firstName: 'test',
@@ -120,7 +120,7 @@ test('users CRUD', async () => {
 
   // /users create unverified super-admin
   unverifiedSuperAdmin = {
-    username: 'users-super',
+    username: 'userssuper',
     password: 'password',
     realmId: 1,
     firstName: 'test',
