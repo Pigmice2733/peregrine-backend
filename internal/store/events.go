@@ -2,9 +2,9 @@ package store
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/lib/pq"
+	"github.com/pkg/errors"
 )
 
 // Event holds information about an FRC event such as webcast associated with
@@ -72,7 +72,7 @@ func (s *Service) CheckTBAEventKeyExists(eventKey string) (bool, error) {
 
 	err := s.db.Get(&realmID, "SELECT realm_id FROM events WHERE key = $1", eventKey)
 	if err == sql.ErrNoRows {
-		return false, &ErrNoResults{msg: fmt.Sprintf("event key %s not found", eventKey)}
+		return false, ErrNoResults{errors.Wrapf(err, "event key %s not found", eventKey)}
 	} else if err != nil {
 		return false, err
 	}
@@ -85,7 +85,7 @@ func (s *Service) GetEvent(eventKey string) (Event, error) {
 	var event Event
 	if err := s.db.Get(&event, "SELECT * FROM events WHERE key = $1", eventKey); err != nil {
 		if err == sql.ErrNoRows {
-			return event, &ErrNoResults{msg: fmt.Sprintf("event %s does not exist", event.Key)}
+			return event, ErrNoResults{errors.Wrapf(err, "event %s does not exist", event.Key)}
 		}
 		return event, err
 	}
@@ -149,9 +149,9 @@ func (s *Service) EventsUpsert(events []Event) error {
 			_ = tx.Rollback()
 			if err, ok := err.(*pq.Error); ok {
 				if err.Code == pgExists {
-					return &ErrExists{msg: fmt.Sprintf("event with key %s already exists", event.Key)}
+					return ErrExists{errors.Wrapf(err, "event with key %s already exists", event.Key)}
 				} else if err.Code == pgFKeyViolation {
-					return &ErrFKeyViolation{msg: fmt.Sprintf("foreign key violation: %v", err.Error())}
+					return ErrFKeyViolation{errors.Wrap(err, "foreign key violation")}
 				}
 			}
 			return err

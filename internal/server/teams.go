@@ -7,6 +7,7 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 )
 
 type team struct {
@@ -34,7 +35,7 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 		// Get new team data from TBA
 		if err := s.updateTeamKeys(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(*store.ErrNoResults); ok {
+			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -75,7 +76,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 		// Get new team rankings data from TBA
 		if err := s.updateTeamRankings(eventKey); err != nil {
 			// 404 if eventKey isn't a real event
-			if _, ok := err.(*store.ErrNoResults); ok {
+			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -86,7 +87,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 
 		fullTeam, err := s.Store.GetTeam(teamKey, eventKey)
 		if err != nil {
-			if _, ok := err.(*store.ErrNoResults); ok {
+			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -116,7 +117,7 @@ func (s *Server) updateTeamKeys(eventKey string) error {
 	}
 
 	teams, err := s.TBA.GetTeamKeys(eventKey)
-	if _, ok := err.(tba.ErrNotModified); ok {
+	if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
 		return nil
 	} else if err != nil {
 		return err
@@ -137,7 +138,7 @@ func (s *Server) updateTeamRankings(eventKey string) error {
 	}
 
 	teams, err := s.TBA.GetTeamRankings(eventKey)
-	if _, ok := err.(tba.ErrNotModified); ok {
+	if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
 		return nil
 	} else if err != nil {
 		return err

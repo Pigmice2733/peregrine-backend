@@ -10,6 +10,7 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 	validator "gopkg.in/go-playground/validator.v9"
 )
@@ -43,7 +44,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 		}
 
 		user, err := s.Store.GetUserByUsername(ru.Username)
-		if _, ok := err.(*store.ErrNoResults); ok {
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
@@ -124,10 +125,10 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 		u.HashedPassword = string(hashedPassword)
 
 		err = s.Store.CreateUser(u)
-		if _, ok := err.(*store.ErrExists); ok {
+		if _, ok := errors.Cause(err).(store.ErrExists); ok {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
-		} else if _, ok := err.(*store.ErrFKeyViolation); ok {
+		} else if _, ok := errors.Cause(err).(store.ErrFKeyViolation); ok {
 			ihttp.Respond(w, err, http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {
@@ -192,7 +193,7 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 		}
 
 		user, err := s.Store.GetUserByID(id)
-		if _, ok := err.(*store.ErrNoResults); ok {
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -291,10 +292,10 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		}
 
 		err = s.Store.PatchUser(u)
-		if _, ok := err.(*store.ErrNoResults); ok {
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
-		} else if _, ok := err.(*store.ErrFKeyViolation); ok {
+		} else if _, ok := errors.Cause(err).(store.ErrFKeyViolation); ok {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {

@@ -40,7 +40,7 @@ test('users CRUD', async () => {
   let otherRealmId
 
   let otherRealm = {
-    name: 'TMM',
+    name: 'TMM' + Number(new Date()),
     shareReports: false,
   }
 

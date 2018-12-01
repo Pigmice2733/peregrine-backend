@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
-	"fmt"
 
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -28,7 +27,7 @@ func (r Roles) Value() (driver.Value, error) {
 func (r *Roles) Scan(src interface{}) error {
 	bytes, ok := src.([]byte)
 	if !ok {
-		return fmt.Errorf("got incorrect type for jsonb")
+		return errors.New("got incorrect type for jsonb")
 	}
 
 	return json.Unmarshal(bytes, r)
@@ -65,7 +64,7 @@ func (s *Service) GetUserByUsername(username string) (User, error) {
 
 	err := s.db.Get(&u, "SELECT * FROM users WHERE username = $1", username)
 	if err == sql.ErrNoRows {
-		return u, &ErrNoResults{msg: fmt.Sprintf("user %d does not exist", u.ID)}
+		return u, ErrNoResults{errors.Wrapf(err, "user %d does not exist", u.ID)}
 	}
 
 	return u, errors.Wrap(err, "unable to select user")
@@ -95,10 +94,10 @@ func (s *Service) CreateUser(u User) error {
 		_ = tx.Rollback()
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code == pgExists {
-				return &ErrExists{msg: fmt.Sprintf("username %s already exists", u.Username)}
+				return ErrExists{errors.Wrapf(err, "username %s already exists", u.Username)}
 			}
 			if err.Code == pgFKeyViolation {
-				return &ErrFKeyViolation{msg: fmt.Sprintf("user fk violation on realm ID %d: %v", u.RealmID, err)}
+				return ErrFKeyViolation{errors.Wrapf(err, "user fk violation on realm ID %d: %v", u.RealmID, err)}
 			}
 		}
 		return errors.Wrap(err, "unable to insert user")
@@ -114,7 +113,7 @@ func (s *Service) CreateUser(u User) error {
 		if _, err := starsStmt.Exec(u.ID, star); err != nil {
 			_ = tx.Rollback()
 			if err, ok := err.(*pq.Error); ok && err.Code == pgFKeyViolation {
-				return &ErrFKeyViolation{msg: fmt.Sprintf("user stars event key fk violation: %v", err)}
+				return ErrFKeyViolation{errors.Wrapf(err, "user stars event key fk violation: %v", err)}
 			}
 			return errors.Wrap(err, "unable to insert star for user")
 		}
@@ -197,7 +196,7 @@ func (s *Service) GetUserByID(id int64) (User, error) {
 	GROUP BY users.id
 	`, id)
 	if err == sql.ErrNoRows {
-		return u, &ErrNoResults{msg: fmt.Sprintf("user %d does not exist", u.ID)}
+		return u, ErrNoResults{errors.Wrapf(err, "user %d does not exist", u.ID)}
 	}
 
 	return u, errors.Wrap(err, "unable to select user")
@@ -228,7 +227,7 @@ func (s *Service) PatchUser(pu PatchUser) error {
 
 	if count, err := result.RowsAffected(); err != nil || count == 0 {
 		_ = tx.Rollback()
-		return &ErrNoResults{msg: fmt.Sprintf("user ID %d not found", pu.ID)}
+		return ErrNoResults{errors.Wrapf(err, "user ID %d not found", pu.ID)}
 	}
 
 	if pu.Stars != nil {
@@ -247,7 +246,7 @@ func (s *Service) PatchUser(pu PatchUser) error {
 			if _, err := starsStmt.Exec(pu.ID, star); err != nil {
 				_ = tx.Rollback()
 				if err, ok := err.(*pq.Error); ok && err.Code == pgFKeyViolation {
-					return &ErrFKeyViolation{msg: fmt.Sprintf("user stars event key fk violation: %v", err)}
+					return ErrFKeyViolation{errors.Wrapf(err, "user stars event key fk violation: %v", err)}
 				}
 				return errors.Wrap(err, "unable to insert star for user")
 			}

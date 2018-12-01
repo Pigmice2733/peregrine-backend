@@ -9,6 +9,7 @@ import (
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	validator "gopkg.in/go-playground/validator.v9"
 )
 
@@ -39,7 +40,7 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 		realm := store.Realm{Name: rr.Name, ShareReports: rr.ShareReports}
 
 		id, err := s.Store.InsertRealm(realm)
-		if _, ok := err.(*store.ErrExists); ok {
+		if _, ok := errors.Cause(err).(store.ErrExists); ok {
 			ihttp.Error(w, http.StatusConflict)
 			return
 		} else if err != nil {
@@ -106,7 +107,7 @@ func (s *Server) realmHandler() http.HandlerFunc {
 		}
 
 		realm, err := s.Store.GetRealm(id)
-		if _, ok := err.(*store.ErrNoResults); ok {
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -178,7 +179,7 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 		sr := store.PatchRealm{ID: id, Name: pr.Name, ShareReports: pr.ShareReports}
 
 		err = s.Store.PatchRealm(sr)
-		if _, ok := err.(*store.ErrNoResults); ok {
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {

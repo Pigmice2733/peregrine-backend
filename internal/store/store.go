@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -12,29 +13,17 @@ import (
 
 // ErrNoResults indicates that no data matching the query was found.
 type ErrNoResults struct {
-	msg string
-}
-
-func (enr *ErrNoResults) Error() string {
-	return enr.msg
+	error
 }
 
 // ErrExists is returned if a unique record already exists.
 type ErrExists struct {
-	msg string
-}
-
-func (eex *ErrExists) Error() string {
-	return eex.msg
+	error
 }
 
 // ErrFKeyViolation is returned if inserting a record causes a foreign key violation.
 type ErrFKeyViolation struct {
-	msg string
-}
-
-func (efk *ErrFKeyViolation) Error() string {
-	return efk.msg
+	error
 }
 
 const pgExists = "23505"
@@ -62,7 +51,7 @@ func (s *Service) Ping() error {
 		return s.db.QueryRow("SELECT 1").Scan(new(bool))
 	}
 
-	return fmt.Errorf("not connected to postgresql")
+	return errors.New("not connected to postgresql")
 }
 
 // Close closes the underlying postgresql database.
@@ -99,7 +88,7 @@ func NewUnixFromInt(time int64) UnixTime {
 // a unix timestamp.
 func (ut *UnixTime) Scan(src interface{}) error {
 	if ut == nil {
-		return fmt.Errorf("cannot scan into nil unix time")
+		return errors.New("cannot scan into nil unix time")
 	}
 
 	switch v := src.(type) {

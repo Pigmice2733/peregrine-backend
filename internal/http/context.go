@@ -1,7 +1,7 @@
 package http
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -28,17 +28,17 @@ type Claims struct {
 func GetSubject(r *http.Request) (int64, error) {
 	contextSubject := r.Context().Value(keySubjectContext)
 	if contextSubject == nil {
-		return 0, fmt.Errorf("no subject set on context")
+		return 0, errors.New("no subject set on context")
 	}
 
 	sub, ok := contextSubject.(string)
 	if !ok {
-		return 0, fmt.Errorf("got invalid type for subject")
+		return 0, errors.New("got invalid type for subject")
 	}
 
 	id, err := strconv.ParseInt(sub, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("unable to parse subject as int")
+		return 0, errors.New("unable to parse subject as int")
 	}
 
 	return id, nil
@@ -63,12 +63,12 @@ func GetRoles(r *http.Request) store.Roles {
 func GetRealmID(r *http.Request) (int64, error) {
 	contextRealm := r.Context().Value(keyRealmContext)
 	if contextRealm == nil {
-		return 0, fmt.Errorf("no realm set on context")
+		return 0, errors.New("no realm set on context")
 	}
 
 	realmID, ok := contextRealm.(int64)
 	if !ok {
-		return 0, fmt.Errorf("got invalid type for realm")
+		return 0, errors.New("got invalid type for realm")
 	}
 	return realmID, nil
 }
