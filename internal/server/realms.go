@@ -9,6 +9,7 @@ import (
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	validator "gopkg.in/go-playground/validator.v9"
 )
 
@@ -38,8 +39,8 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 
 		realm := store.Realm{Name: rr.Name, ShareReports: rr.ShareReports}
 
-		id, err := s.Store.InsertRealm(realm)
-		if _, ok := err.(*store.ErrExists); ok {
+		id, err := s.Store.InsertRealm(r.Context(), realm)
+		if _, ok := errors.Cause(err).(store.ErrExists); ok {
 			ihttp.Error(w, http.StatusConflict)
 			return
 		} else if err != nil {
@@ -61,14 +62,14 @@ func (s *Server) realmsHandler() http.HandlerFunc {
 		var err error
 
 		if roles.IsSuperAdmin {
-			realms, err = s.Store.GetRealms()
+			realms, err = s.Store.GetRealms(r.Context())
 			if err != nil {
 				ihttp.Error(w, http.StatusInternalServerError)
 				go s.Logger.WithError(err).Error("retrieving realms")
 				return
 			}
 		} else {
-			realms, err = s.Store.GetPublicRealms()
+			realms, err = s.Store.GetPublicRealms(r.Context())
 			if err != nil {
 				ihttp.Error(w, http.StatusInternalServerError)
 				go s.Logger.WithError(err).Error("retrieving realms")
@@ -81,7 +82,7 @@ func (s *Server) realmsHandler() http.HandlerFunc {
 				return
 			}
 			var realm store.Realm
-			realm, err = s.Store.GetRealm(userRealm)
+			realm, err = s.Store.GetRealm(r.Context(), userRealm)
 			if err != nil {
 				ihttp.Error(w, http.StatusInternalServerError)
 				go s.Logger.WithError(err).Error(fmt.Sprintf("retrieving realm %d", userRealm))
@@ -105,8 +106,8 @@ func (s *Server) realmHandler() http.HandlerFunc {
 			return
 		}
 
-		realm, err := s.Store.GetRealm(id)
-		if _, ok := err.(*store.ErrNoResults); ok {
+		realm, err := s.Store.GetRealm(r.Context(), id)
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -177,8 +178,8 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 
 		sr := store.PatchRealm{ID: id, Name: pr.Name, ShareReports: pr.ShareReports}
 
-		err = s.Store.PatchRealm(sr)
-		if _, ok := err.(*store.ErrNoResults); ok {
+		err = s.Store.PatchRealm(r.Context(), sr)
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -218,7 +219,7 @@ func (s *Server) deleteRealmHandler() http.HandlerFunc {
 			}
 		}
 
-		err = s.Store.DeleteRealm(id)
+		err = s.Store.DeleteRealm(r.Context(), id)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("deleting realms")

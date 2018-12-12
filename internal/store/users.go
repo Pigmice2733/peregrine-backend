@@ -1,10 +1,10 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
-	"fmt"
 
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -28,7 +28,7 @@ func (r Roles) Value() (driver.Value, error) {
 func (r *Roles) Scan(src interface{}) error {
 	bytes, ok := src.([]byte)
 	if !ok {
-		return fmt.Errorf("got incorrect type for jsonb")
+		return errors.New("got incorrect type for jsonb")
 	}
 
 	return json.Unmarshal(bytes, r)
@@ -60,25 +60,25 @@ type PatchUser struct {
 
 // GetUserByUsername retrieves a user from the database by username. It does not
 // retrieve the users stars.
-func (s *Service) GetUserByUsername(username string) (User, error) {
+func (s *Service) GetUserByUsername(ctx context.Context, username string) (User, error) {
 	var u User
 
-	err := s.db.Get(&u, "SELECT * FROM users WHERE username = $1", username)
+	err := s.db.GetContext(ctx, &u, "SELECT * FROM users WHERE username = $1", username)
 	if err == sql.ErrNoRows {
-		return u, &ErrNoResults{msg: fmt.Sprintf("user %d does not exist", u.ID)}
+		return u, ErrNoResults{errors.Wrapf(err, "user %d does not exist", u.ID)}
 	}
 
 	return u, errors.Wrap(err, "unable to select user")
 }
 
 // CreateUser creates a given user.
-func (s *Service) CreateUser(u User) error {
-	tx, err := s.db.Beginx()
+func (s *Service) CreateUser(ctx context.Context, u User) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "unable to begin transaction")
 	}
 
-	userStmt, err := tx.PrepareNamed(`
+	userStmt, err := tx.PrepareNamedContext(ctx, `
 	INSERT
 		INTO
 			users (username, hashed_password, realm_id, first_name, last_name, roles)
@@ -86,35 +86,35 @@ func (s *Service) CreateUser(u User) error {
 		RETURNING id
 	`)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to prepare user insert statement")
 	}
 
-	err = userStmt.Get(&u.ID, u)
+	err = userStmt.GetContext(ctx, &u.ID, u)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code == pgExists {
-				return &ErrExists{msg: fmt.Sprintf("username %s already exists", u.Username)}
+				return ErrExists{errors.Wrapf(err, "username %s already exists", u.Username)}
 			}
 			if err.Code == pgFKeyViolation {
-				return &ErrFKeyViolation{msg: fmt.Sprintf("user fk violation on realm ID %d: %v", u.RealmID, err)}
+				return ErrFKeyViolation{errors.Wrapf(err, "user fk violation on realm ID %d: %v", u.RealmID, err)}
 			}
 		}
 		return errors.Wrap(err, "unable to insert user")
 	}
 
-	starsStmt, err := tx.Prepare("INSERT INTO stars (user_id, event_key) VALUES ($1, $2)")
+	starsStmt, err := tx.PrepareContext(ctx, "INSERT INTO stars (user_id, event_key) VALUES ($1, $2)")
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to prepare stars insert statement")
 	}
 
 	for _, star := range u.Stars {
-		if _, err := starsStmt.Exec(u.ID, star); err != nil {
-			_ = tx.Rollback()
+		if _, err := starsStmt.ExecContext(ctx, u.ID, star); err != nil {
+			s.logErr(tx.Rollback())
 			if err, ok := err.(*pq.Error); ok && err.Code == pgFKeyViolation {
-				return &ErrFKeyViolation{msg: fmt.Sprintf("user stars event key fk violation: %v", err)}
+				return ErrFKeyViolation{errors.Wrapf(err, "user stars event key fk violation: %v", err)}
 			}
 			return errors.Wrap(err, "unable to insert star for user")
 		}
@@ -124,10 +124,10 @@ func (s *Service) CreateUser(u User) error {
 }
 
 // GetUsers retrieves all users.
-func (s *Service) GetUsers() ([]User, error) {
+func (s *Service) GetUsers(ctx context.Context) ([]User, error) {
 	users := []User{}
 
-	err := s.db.Select(&users, `
+	err := s.db.SelectContext(ctx, &users, `
 	SELECT
 		id,
 		username,
@@ -149,10 +149,10 @@ func (s *Service) GetUsers() ([]User, error) {
 }
 
 // GetUsersByRealm retrieves all users in a specific realm.
-func (s *Service) GetUsersByRealm(realmID int64) ([]User, error) {
+func (s *Service) GetUsersByRealm(ctx context.Context, realmID int64) ([]User, error) {
 	users := []User{}
 
-	err := s.db.Select(&users, `
+	err := s.db.SelectContext(ctx, &users, `
 	SELECT
 		id,
 		username,
@@ -175,10 +175,10 @@ func (s *Service) GetUsersByRealm(realmID int64) ([]User, error) {
 }
 
 // GetUserByID retrieves a user from the database by id.
-func (s *Service) GetUserByID(id int64) (User, error) {
+func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 	var u User
 
-	err := s.db.Get(&u, `
+	err := s.db.GetContext(ctx, &u, `
 	SELECT
 		id,
 		username,
@@ -197,20 +197,20 @@ func (s *Service) GetUserByID(id int64) (User, error) {
 	GROUP BY users.id
 	`, id)
 	if err == sql.ErrNoRows {
-		return u, &ErrNoResults{msg: fmt.Sprintf("user %d does not exist", u.ID)}
+		return u, ErrNoResults{errors.Wrapf(err, "user %d does not exist", u.ID)}
 	}
 
 	return u, errors.Wrap(err, "unable to select user")
 }
 
 // PatchUser updates a user by their ID.
-func (s *Service) PatchUser(pu PatchUser) error {
-	tx, err := s.db.Beginx()
+func (s *Service) PatchUser(ctx context.Context, pu PatchUser) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "unable to begin transaction")
 	}
 
-	result, err := tx.NamedExec(`
+	result, err := tx.NamedExecContext(ctx, `
 	UPDATE users
 	    SET
 		    username = COALESCE(:username, username),
@@ -222,32 +222,32 @@ func (s *Service) PatchUser(pu PatchUser) error {
 		    id = :id
 	`, pu)
 	if err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to patch user")
 	}
 
 	if count, err := result.RowsAffected(); err != nil || count == 0 {
-		_ = tx.Rollback()
-		return &ErrNoResults{msg: fmt.Sprintf("user ID %d not found", pu.ID)}
+		s.logErr(tx.Rollback())
+		return ErrNoResults{errors.Wrapf(err, "user ID %d not found", pu.ID)}
 	}
 
 	if pu.Stars != nil {
-		if _, err := tx.Exec("DELETE FROM stars WHERE user_id = $1", pu.ID); err != nil {
-			_ = tx.Rollback()
+		if _, err := tx.ExecContext(ctx, "DELETE FROM stars WHERE user_id = $1", pu.ID); err != nil {
+			s.logErr(tx.Rollback())
 			return errors.Wrap(err, "unable to remove user stars")
 		}
 
-		starsStmt, err := tx.Prepare("INSERT INTO stars (user_id, event_key) VALUES ($1, $2)")
+		starsStmt, err := tx.PrepareContext(ctx, "INSERT INTO stars (user_id, event_key) VALUES ($1, $2)")
 		if err != nil {
-			_ = tx.Rollback()
+			s.logErr(tx.Rollback())
 			return errors.Wrap(err, "unable to prepare stars insert statement")
 		}
 
 		for _, star := range pu.Stars {
-			if _, err := starsStmt.Exec(pu.ID, star); err != nil {
-				_ = tx.Rollback()
+			if _, err := starsStmt.ExecContext(ctx, pu.ID, star); err != nil {
+				s.logErr(tx.Rollback())
 				if err, ok := err.(*pq.Error); ok && err.Code == pgFKeyViolation {
-					return &ErrFKeyViolation{msg: fmt.Sprintf("user stars event key fk violation: %v", err)}
+					return ErrFKeyViolation{errors.Wrapf(err, "user stars event key fk violation: %v", err)}
 				}
 				return errors.Wrap(err, "unable to insert star for user")
 			}
@@ -258,25 +258,25 @@ func (s *Service) PatchUser(pu PatchUser) error {
 }
 
 // DeleteUser deletes a specific user from the database.
-func (s *Service) DeleteUser(id int64) error {
-	tx, err := s.db.Beginx()
+func (s *Service) DeleteUser(ctx context.Context, id int64) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "unable to begin transaction")
 	}
 
-	if _, err := tx.Exec(`
+	if _, err := tx.ExecContext(ctx, `
 	    DELETE FROM stars
 	        WHERE user_id = $1
 	`, id); err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to delete user's stars")
 	}
 
-	if _, err := tx.Exec(`
+	if _, err := tx.ExecContext(ctx, `
 	    DELETE FROM users
 		    WHERE id = $1
 	`, id); err != nil {
-		_ = tx.Rollback()
+		s.logErr(tx.Rollback())
 		return errors.Wrap(err, "unable to delete user")
 	}
 	return errors.Wrap(tx.Commit(), "unable to delete user")

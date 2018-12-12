@@ -31,7 +31,7 @@ func (s *Server) Run(ctx context.Context) error {
 	handler := ihttp.Auth(ihttp.Log(gziphandler.GzipHandler(ihttp.CORS(ihttp.LimitBody(router), s.Origin)), s.Logger), s.JWTSecret)
 
 	s.Logger.Info("fetching seed events")
-	if err := s.updateEvents(); err != nil {
+	if err := s.updateEvents(ctx); err != nil {
 		s.Logger.WithError(err).Error("updating event data on server run")
 	}
 
@@ -101,8 +101,8 @@ type status struct {
 
 func (s *Server) healthHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tbaHealthy := s.TBA.Ping() == nil
-		pgHealthy := s.Store.Ping() == nil
+		tbaHealthy := s.TBA.Ping(r.Context()) == nil
+		pgHealthy := s.Store.Ping(r.Context()) == nil
 
 		ihttp.Respond(w, status{
 			StartTime: s.start.Unix(),

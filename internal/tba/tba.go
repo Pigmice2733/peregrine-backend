@@ -1,6 +1,7 @@
 package tba
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
+	"github.com/pkg/errors"
 )
 
 // Service provides an interface to retrieve data from
@@ -85,13 +87,16 @@ var tbaClient = &http.Client{
 
 // ErrNotModified is returned when a resource has not been modified since it was
 // last retrieved from TBA.
-type ErrNotModified error
+type ErrNotModified struct {
+	error
+}
 
-func (s *Service) makeRequest(path string) (*http.Response, error) {
+func (s *Service) makeRequest(ctx context.Context, path string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", s.URL+path, nil)
 	if err != nil {
 		return nil, err
 	}
+	req = req.WithContext(ctx)
 
 	if s.etagStore == nil {
 		s.etagStore = new(sync.Map)
@@ -109,7 +114,7 @@ func (s *Service) makeRequest(path string) (*http.Response, error) {
 	}
 
 	if resp.StatusCode == http.StatusNotModified {
-		return resp, ErrNotModified(fmt.Errorf("tba: got not modified for path: %s", path))
+		return resp, ErrNotModified{fmt.Errorf("got not modified for path: %s", path)}
 	}
 
 	if etag := resp.Header.Get("etag"); etag != "" {
@@ -127,26 +132,32 @@ func webcastURL(webcastType store.WebcastType, channel string) (string, error) {
 		return fmt.Sprintf("https://www.youtube.com/watch?v=%s", channel), nil
 	}
 
-	return "", fmt.Errorf("got invalid webcast url")
+	return "", errors.New("got invalid webcast url")
 }
 
 // Ping pings the TBA /status endpoint
-func (s *Service) Ping() error {
-	_, err := tbaClient.Get(s.URL + "/status")
-	return err
+func (s *Service) Ping(ctx context.Context) error {
+	req, err := http.NewRequest(http.MethodGet, s.URL+"/status", nil)
+	if err != nil {
+		return errors.Wrap(err, "making new request")
+	}
+	req = req.WithContext(ctx)
+
+	_, err = tbaClient.Do(req)
+	return errors.Wrap(err, "doing request")
 }
 
 // GetEvents retrieves all events from the given year (e.g. 2018).
-func (s *Service) GetEvents(year int, schemaID *int64) ([]store.Event, error) {
+func (s *Service) GetEvents(ctx context.Context, year int, schemaID *int64) ([]store.Event, error) {
 	path := fmt.Sprintf("/events/%d", year)
 
-	response, err := s.makeRequest(path)
+	response, err := s.makeRequest(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("TBA request to %s failed: %v", path, err)
+		return nil, errors.Wrap(err, "failed to make request")
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("TBA request to %s failed with status code: %v", path, response.StatusCode)
+		return nil, fmt.Errorf("got unexpected status: %d", response.StatusCode)
 	}
 
 	var tbaEvents []event
@@ -212,16 +223,16 @@ func (s *Service) GetEvents(year int, schemaID *int64) ([]store.Event, error) {
 }
 
 // GetMatches retrieves all matches from a specific event.
-func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
+func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Match, error) {
 	path := fmt.Sprintf("/event/%s/matches/simple", eventKey)
 
-	response, err := s.makeRequest(path)
+	response, err := s.makeRequest(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("TBA request to %s failed: %v", path, err)
+		return nil, errors.Wrap(err, "failed to make request")
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("TBA request to %s failed with status code: %v", path, response.StatusCode)
+		return nil, fmt.Errorf("got unexpected status: %d", response.StatusCode)
 	}
 
 	var tbaMatches []match
@@ -276,16 +287,16 @@ func (s *Service) GetMatches(eventKey string) ([]store.Match, error) {
 }
 
 // GetTeamKeys retrieves all team keys from a specific event
-func (s *Service) GetTeamKeys(eventKey string) ([]string, error) {
+func (s *Service) GetTeamKeys(ctx context.Context, eventKey string) ([]string, error) {
 	path := fmt.Sprintf("/event/%s/teams/keys", eventKey)
 
-	response, err := s.makeRequest(path)
+	response, err := s.makeRequest(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("TBA request to %s failed: %v", path, err)
+		return nil, errors.Wrap(err, "failed to make request")
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("TBA request to %s failed with status code: %v", path, response.StatusCode)
+		return nil, fmt.Errorf("got unexpected status: %d", response.StatusCode)
 	}
 
 	var teamKeys []string
@@ -294,16 +305,16 @@ func (s *Service) GetTeamKeys(eventKey string) ([]string, error) {
 }
 
 // GetTeamRankings retrieves all team rankings from a specific event.
-func (s *Service) GetTeamRankings(eventKey string) ([]store.Team, error) {
+func (s *Service) GetTeamRankings(ctx context.Context, eventKey string) ([]store.Team, error) {
 	path := fmt.Sprintf("/event/%s/rankings", eventKey)
 
-	response, err := s.makeRequest(path)
+	response, err := s.makeRequest(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("TBA request to %s failed: %v", path, err)
+		return nil, errors.Wrap(err, "failed to make request")
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("TBA request to %s failed with status code: %v", path, response.StatusCode)
+		return nil, fmt.Errorf("got unexpected status: %d", response.StatusCode)
 	}
 
 	teamRankings := rankings{

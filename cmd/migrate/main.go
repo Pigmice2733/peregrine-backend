@@ -34,7 +34,7 @@ func main() {
 func run(steps int, up, down bool, migrationsTable, basePath, migrationsPath string) error {
 	// Neither are set or both are set
 	if up == down {
-		return fmt.Errorf("must specify either -up or -down")
+		return errors.New("must specify either -up or -down")
 	}
 
 	c, err := config.Open(basePath)

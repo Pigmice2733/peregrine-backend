@@ -1,8 +1,8 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -10,6 +10,7 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 )
 
 type location struct {
@@ -45,7 +46,7 @@ type webcastEvent struct {
 func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get new event data from TBA if event data is over 24 hours old
-		if err := s.updateEvents(); err != nil {
+		if err := s.updateEvents(r.Context()); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("unable to update event data")
 			return
@@ -58,12 +59,12 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		userRealm, err := ihttp.GetRealmID(r)
 
 		if roles.IsSuperAdmin {
-			fullEvents, err = s.Store.GetEvents()
+			fullEvents, err = s.Store.GetEvents(r.Context())
 		} else {
 			if err != nil {
-				fullEvents, err = s.Store.GetEventsFromRealm(nil)
+				fullEvents, err = s.Store.GetEventsFromRealm(r.Context(), nil)
 			} else {
-				fullEvents, err = s.Store.GetEventsFromRealm(&userRealm)
+				fullEvents, err = s.Store.GetEventsFromRealm(r.Context(), &userRealm)
 			}
 		}
 
@@ -100,7 +101,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 func (s *Server) eventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get new event data from TBA if event data is over 24 hours old
-		if err := s.updateEvents(); err != nil {
+		if err := s.updateEvents(r.Context()); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("unable to update event data")
 			return
@@ -108,9 +109,9 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 		eventKey := mux.Vars(r)["eventKey"]
 
-		fullEvent, err := s.Store.GetEvent(eventKey)
+		fullEvent, err := s.Store.GetEvent(r.Context(), eventKey)
 		if err != nil {
-			if _, ok := err.(*store.ErrNoResults); ok {
+			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
@@ -173,11 +174,11 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 
 		e.RealmID = &creatorRealm
 
-		err = s.Store.EventsUpsert([]store.Event{e})
-		if _, ok := err.(*store.ErrExists); ok {
+		err = s.Store.EventsUpsert(r.Context(), []store.Event{e})
+		if _, ok := errors.Cause(err).(store.ErrExists); ok {
 			ihttp.Error(w, http.StatusConflict)
 			return
-		} else if _, ok := err.(*store.ErrFKeyViolation); ok {
+		} else if _, ok := errors.Cause(err).(store.ErrFKeyViolation); ok {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {
@@ -194,7 +195,7 @@ const expiry = 3.0
 
 // Get new event data from TBA only if event data is over 3 hours old.
 // Upsert event data into database.
-func (s *Server) updateEvents() error {
+func (s *Server) updateEvents(ctx context.Context) error {
 	now := time.Now()
 
 	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > expiry {
@@ -209,15 +210,15 @@ func (s *Server) updateEvents() error {
 			schemaID = &schema.ID
 		}
 
-		fullEvents, err := s.TBA.GetEvents(s.Year, schemaID)
-		if _, ok := err.(tba.ErrNotModified); ok {
+		fullEvents, err := s.TBA.GetEvents(ctx, s.Year, schemaID)
+		if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
 			return nil
 		} else if err != nil {
 			return err
 		}
 
-		if err := s.Store.EventsUpsert(fullEvents); err != nil {
-			return fmt.Errorf("upserting events: %v", err)
+		if err := s.Store.EventsUpsert(ctx, fullEvents); err != nil {
+			return errors.Wrap(err, "upserting events")
 		}
 
 		s.eventsLastUpdate = &now

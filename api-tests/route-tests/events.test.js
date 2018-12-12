@@ -63,7 +63,7 @@ test('events', async () => {
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
 
@@ -72,7 +72,7 @@ test('events', async () => {
   let respInfo = await fetch(api.address + `/events/${event.key}`, {
     method: 'GET',
     headers: {
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(respInfo.status).toBe(200)

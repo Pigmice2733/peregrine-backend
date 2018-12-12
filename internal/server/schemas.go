@@ -153,7 +153,3 @@ func (s *Server) getSchemaByYearHandler() http.HandlerFunc {
 		ihttp.Respond(w, schema, http.StatusOK)
 	}
 }
-
-func (s *Server) patchSchema() {
-	
-}

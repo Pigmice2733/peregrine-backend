@@ -38,7 +38,12 @@ func run(basePath string) error {
 		APIKey: c.TBA.APIKey,
 	}
 
-	sto, err := store.New(c.DSN)
+	logger := logrus.New()
+	if c.Server.LogJSON {
+		logger.Formatter = &logrus.JSONFormatter{}
+	}
+
+	sto, err := store.New(context.Background(), c.DSN, logger)
 	if err != nil {
 		return errors.Wrap(err, "opening postgres server")
 	}
@@ -51,11 +56,6 @@ func run(basePath string) error {
 	jwtSecret := make([]byte, 64)
 	if _, err := rand.Read(jwtSecret); err != nil {
 		return errors.Wrap(err, "generating jwt secret")
-	}
-
-	logger := logrus.New()
-	if c.Server.LogJSON {
-		logger.Formatter = &logrus.JSONFormatter{}
 	}
 
 	s := &server.Server{
