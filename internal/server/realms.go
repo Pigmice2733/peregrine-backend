@@ -187,15 +187,6 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		if pr.ShareReports != nil && *pr.ShareReports {
-			err = s.Store.DeleteRealmSchemaOverrides(id)
-			if err != nil {
-				go s.Logger.WithError(err).Error("deleting realm's schema overrides")
-				ihttp.Error(w, http.StatusInternalServerError)
-				return
-			}
-		}
-
 		ihttp.Respond(w, nil, http.StatusNoContent)
 	}
 }

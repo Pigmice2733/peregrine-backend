@@ -92,14 +92,13 @@ func (s *Server) putReport() http.HandlerFunc {
 		}
 		report.ReporterID = &reporterID
 
-		user, err := s.Store.GetUserByID(reporterID)
+		var realmID int64
+		realmID, err = ihttp.GetRealmID(r)
+		report.RealmID = &realmID
 		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving user")
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
-		report.Reporter = user.Username
-		report.RealmID = &user.RealmID
 
 		err = s.Store.UpsertReport(report)
 		if err != nil {

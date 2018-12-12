@@ -67,11 +67,13 @@ test('schemas', async () => {
   expect(d.data.teleop).not.toBeUndefined()
 
   d.data.auto.forEach(stat => {
-    expect(stat.id).not.toBeUndefined()
+    expect(stat.statName).not.toBeUndefined()
+    expect(stat.type).not.toBeUndefined()
   })
 
   d.data.teleop.forEach(stat => {
-    expect(stat.id).not.toBeUndefined()
+    expect(stat.statName).not.toBeUndefined()
+    expect(stat.type).not.toBeUndefined()
   })
 
   expect(Object.keys(d.data)).toBeASubsetOf([
@@ -99,11 +101,13 @@ test('schemas', async () => {
   expect(d.data.teleop).not.toBeUndefined()
 
   d.data.auto.forEach(stat => {
-    expect(stat.id).not.toBeUndefined()
+    expect(stat.statName).not.toBeUndefined()
+    expect(stat.type).not.toBeUndefined()
   })
 
   d.data.teleop.forEach(stat => {
-    expect(stat.id).not.toBeUndefined()
+    expect(stat.statName).not.toBeUndefined()
+    expect(stat.type).not.toBeUndefined()
   })
 
   expect(Object.keys(d.data)).toBeASubsetOf([

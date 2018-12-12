@@ -60,25 +60,27 @@ test('reports endpoint', async () => {
 
   let report = {
     autoName: 'FarScale',
-    auto: [
-      {
-        statName: 'cross line',
-        attempted: true,
-        succeeded: true,
-      },
-      {
-        statName: 'scale',
-        attempts: 2,
-        successes: 0,
-      },
-    ],
-    teleop: [
-      {
-        statName: 'exchange',
-        attempts: 12,
-        successes: 10,
-      },
-    ],
+    data: {
+      auto: [
+        {
+          statName: 'cross line',
+          attempted: true,
+          succeeded: true,
+        },
+        {
+          statName: 'scale',
+          attempts: 2,
+          successes: 0,
+        },
+      ],
+      teleop: [
+        {
+          statName: 'exchange',
+          attempts: 12,
+          successes: 10,
+        },
+      ],
+    },
   }
 
   resp = await fetch(
@@ -110,18 +112,16 @@ test('reports endpoint', async () => {
   d = await resp.json()
 
   expect(d.data).toHaveLength(1)
-  expect(d.data[0].reporter).toEqual(api.seedUser.username)
   let reporterId = d.data[0].reporterId
   expect(reporterId).not.toBeUndefined()
   expect(d.data[0].autoName).toEqual(report.autoName)
-  expect(d.data[0].auto).toEqual(report.auto)
-  expect(d.data[0].teleop).toEqual(report.teleop)
+  expect(d.data[0].data).not.toBeUndefined()
+  expect(d.data[0].data.auto).toEqual(report.data.auto)
+  expect(d.data[0].data.teleop).toEqual(report.data.teleop)
   expect(Object.keys(d.data[0])).toBeASubsetOf([
-    'reporter',
     'reporterId',
     'autoName',
-    'auto',
-    'teleop',
+    'data',
   ])
 
   report.auto = []
@@ -147,16 +147,14 @@ test('reports endpoint', async () => {
   d = await resp.json()
 
   expect(d.data).toHaveLength(1)
-  expect(d.data[0].reporter).toEqual(api.seedUser.username)
   expect(d.data[0].reporterId).toEqual(reporterId)
   expect(d.data[0].autoName).toEqual(report.autoName)
-  expect(d.data[0].auto).toEqual(report.auto)
-  expect(d.data[0].teleop).toEqual(report.teleop)
+  expect(d.data[0].data).not.toBeUndefined()
+  expect(d.data[0].data.auto).toEqual(report.data.auto)
+  expect(d.data[0].data.teleop).toEqual(report.data.teleop)
   expect(Object.keys(d.data[0])).toBeASubsetOf([
-    'reporter',
     'reporterId',
     'autoName',
-    'auto',
-    'teleop',
+    'data',
   ])
 })

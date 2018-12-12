@@ -47,7 +47,7 @@ type Location struct {
 	Lon  float64 `json:"lon" db:"lon"`
 }
 
-// GetEvents returns all events from the database. event.Webcasts will be nil for every event.
+// GetEvents returns all events from the database. event.Webcasts and schemaID will be nil for every event.
 func (s *Service) GetEvents() ([]Event, error) {
 	events := []Event{}
 
@@ -56,7 +56,7 @@ func (s *Service) GetEvents() ([]Event, error) {
 
 // GetEventsFromRealm returns all events from a specific realm. Additionally all
 // TBA events will be retrieved. If no realm is specified (nil) then just the TBA
-// events will be retrieved. event.Webcasts will be nil for every event.
+// events will be retrieved. event.Webcasts and schemaID will be nil for every event.
 func (s *Service) GetEventsFromRealm(realm *int64) ([]Event, error) {
 	events := []Event{}
 
@@ -84,7 +84,28 @@ func (s *Service) CheckTBAEventKeyExists(eventKey string) (bool, error) {
 // GetEvent retrieves a specific event.
 func (s *Service) GetEvent(eventKey string) (Event, error) {
 	var event Event
-	if err := s.db.Get(&event, "SELECT * FROM events WHERE key = $1", eventKey); err != nil {
+	if err := s.db.Get(&event, `
+	SELECT
+	    key,
+		name,
+		district,
+		full_district,
+		week,
+		start_date,
+		end_date,
+		location_name,
+		lat,
+		lon,
+		events.realm_id AS realm_id,
+		COALESCE(schema_id, s.id) AS schema_id
+	FROM
+		events
+	LEFT JOIN
+		schemas s
+	ON
+	    s.year = EXTRACT(YEAR FROM start_date)
+	WHERE key = $1
+	`, eventKey); err != nil {
 		if err == sql.ErrNoRows {
 			return event, &ErrNoResults{msg: fmt.Sprintf("event %s does not exist", event.Key)}
 		}

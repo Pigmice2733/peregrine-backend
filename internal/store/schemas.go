@@ -18,6 +18,14 @@ type Schema struct {
 	Teleop  json.RawMessage `json:"teleop" db:"teleop"`
 }
 
+// PatchSchema is a nullable schema for patching.
+type PatchSchema struct {
+	ID     int64            `json:"id" db:"id"`
+	Year   *int64           `json:"year,omitempty" db:"year"`
+	Auto   *json.RawMessage `json:"auto" db:"auto"`
+	Teleop *json.RawMessage `json:"teleop" db:"teleop"`
+}
+
 // CreateSchema creates a new schema
 func (s *Service) CreateSchema(schema Schema) error {
 	tx, err := s.db.Beginx()
