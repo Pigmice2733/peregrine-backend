@@ -18,7 +18,7 @@ func (s *Server) getReports() http.HandlerFunc {
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
-		if _, err := s.Store.CheckTBAEventKeyExists(eventKey); err != nil {
+		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		}
@@ -56,7 +56,7 @@ func (s *Server) putReport() http.HandlerFunc {
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
-		if _, err := s.Store.CheckTBAEventKeyExists(eventKey); err != nil {
+		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		}
