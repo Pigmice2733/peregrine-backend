@@ -42,7 +42,7 @@ func (s *Service) CreateSchema(schema Schema) error {
 
 	if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
 		_ = tx.Rollback()
-		return &ErrExists{msg: fmt.Sprintf("schema already exists: %v", err.Error())}
+		return &ErrExists{fmt.Errorf("schema already exists: %v", err.Error())}
 	} else if err != nil {
 		_ = tx.Rollback()
 		return errors.Wrap(err, "unable to insert schema")
@@ -57,7 +57,7 @@ func (s *Service) GetSchemaByID(id int64) (Schema, error) {
 
 	err := s.db.Get(&schema, "SELECT * FROM schemas WHERE id = $1", id)
 	if err == sql.ErrNoRows {
-		return schema, &ErrNoResults{msg: fmt.Sprintf("schema %d does not exist", schema.ID)}
+		return schema, &ErrNoResults{fmt.Errorf("schema %d does not exist", schema.ID)}
 	}
 
 	return schema, errors.Wrap(err, "unable to retrieve schema")
@@ -69,7 +69,7 @@ func (s *Service) GetSchemaByYear(year int) (Schema, error) {
 
 	err := s.db.Get(&schema, "SELECT * FROM schemas WHERE year = $1", year)
 	if err == sql.ErrNoRows {
-		return schema, &ErrNoResults{msg: fmt.Sprintf("no schema for year %d exists", year)}
+		return schema, &ErrNoResults{fmt.Errorf("no schema for year %d exists", year)}
 	}
 
 	return schema, errors.Wrap(err, "unable to retrieve schema")
