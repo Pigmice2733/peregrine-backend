@@ -148,7 +148,7 @@ func (s *Service) Ping(ctx context.Context) error {
 }
 
 // GetEvents retrieves all events from the given year (e.g. 2018).
-func (s *Service) GetEvents(ctx context.Context, year int) ([]store.Event, error) {
+func (s *Service) GetEvents(ctx context.Context, year int, schemaID *int64) ([]store.Event, error) {
 	path := fmt.Sprintf("/events/%d", year)
 
 	response, err := s.makeRequest(ctx, path)
@@ -215,6 +215,7 @@ func (s *Service) GetEvents(ctx context.Context, year int) ([]store.Event, error
 				Lon:  tbaEvent.Lng,
 				Name: tbaEvent.LocationName,
 			},
+			SchemaID: schemaID,
 		})
 	}
 

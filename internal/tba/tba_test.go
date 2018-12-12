@@ -242,7 +242,7 @@ func TestGetEvents(t *testing.T) {
 	for index, tt := range testCases {
 		server.getEventsHandler = tt.getEventsHandler
 
-		events, err := s.GetEvents(context.TODO(), testingYear)
+		events, err := s.GetEvents(context.TODO(), testingYear, nil)
 		if tt.expectErr != (err != nil) {
 			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
 		}

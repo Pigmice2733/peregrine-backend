@@ -17,6 +17,11 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/users/{id}", ihttp.ACL(s.patchUserHandler(), false, false, true)).Methods("PATCH")
 	r.Handle("/users/{id}", ihttp.ACL(s.deleteUserHandler(), false, false, true)).Methods("DELETE")
 
+	r.Handle("/schemas", ihttp.ACL(s.getSchemasHandler(), false, false, false)).Methods("GET")
+	r.Handle("/schemas", ihttp.ACL(s.createSchemaHandler(), true, true, true)).Methods("POST")
+	r.Handle("/schemas/year/{year}", ihttp.ACL(s.getSchemaByYearHandler(), false, false, false)).Methods("GET")
+	r.Handle("/schemas/{id}", ihttp.ACL(s.getSchemaByIDHandler(), false, false, false)).Methods("GET")
+
 	r.Handle("/events", s.eventsHandler()).Methods("GET")
 	r.Handle("/events", ihttp.ACL(s.createEventHandler(), true, true, true)).Methods("POST")
 	r.Handle("/events/{eventKey}", s.eventHandler()).Methods("GET")
@@ -27,6 +32,9 @@ func (s *Server) registerRoutes() *mux.Router {
 
 	r.Handle("/events/{eventKey}/teams", s.teamsHandler()).Methods("GET")
 	r.Handle("/events/{eventKey}/teams/{teamKey}", s.teamInfoHandler()).Methods("GET")
+
+	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.getReports(), false, false, false)).Methods("GET")
+	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.putReport(), false, true, true)).Methods("PUT")
 
 	r.Handle("/realms", s.realmsHandler()).Methods("GET")
 	r.Handle("/realms", ihttp.ACL(s.createRealmHandler(), true, true, true)).Methods("POST")

@@ -30,6 +30,12 @@ func (m *Match) GetTime() *UnixTime {
 	return m.ScheduledTime
 }
 
+// CheckMatchKeyExists returns whether the match key exists in the database.
+func (s *Service) CheckMatchKeyExists(matchKey string) (bool, error) {
+	var exists bool
+	return exists, s.db.Get(&exists, "SELECT EXISTS(SELECT true FROM matches WHERE key = $1)", matchKey)
+}
+
 // GetMatches returns all matches from a specific event that include the given
 // teams. If teams is nil or empty a list of all the matches for that event are
 // returned.
