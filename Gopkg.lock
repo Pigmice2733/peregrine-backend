@@ -45,14 +45,6 @@
   version = "v0.16.0"
 
 [[projects]]
-  digest = "1:c594a691090b434d55c67f6cc8e326ef5ba49452abc059821bd5d4fd4cdef08c"
-  name = "github.com/gofrs/uuid"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "7077aa61129615a0d7f45c49101cd011ab221c27"
-  version = "v3.1.2"
-
-[[projects]]
   digest = "1:692b29784ba0a25c33a77cb4c2594e2ffc1e72fc66e17e87503e03a29cb227c5"
   name = "github.com/golang-migrate/migrate"
   packages = [
@@ -274,7 +266,6 @@
   input-imports = [
     "github.com/NYTimes/gziphandler",
     "github.com/dgrijalva/jwt-go",
-    "github.com/gofrs/uuid",
     "github.com/golang-migrate/migrate",
     "github.com/golang-migrate/migrate/database/postgres",
     "github.com/golang-migrate/migrate/source/file",
