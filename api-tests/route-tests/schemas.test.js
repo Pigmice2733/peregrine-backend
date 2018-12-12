@@ -32,7 +32,7 @@ test('schemas', async () => {
     body: JSON.stringify(schema),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(201)
@@ -41,7 +41,7 @@ test('schemas', async () => {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(200)
@@ -54,7 +54,7 @@ test('schemas', async () => {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(200)
@@ -88,7 +88,7 @@ test('schemas', async () => {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(resp.status).toBe(200)

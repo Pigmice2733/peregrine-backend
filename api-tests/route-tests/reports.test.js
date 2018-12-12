@@ -26,7 +26,7 @@ test('reports endpoint', async () => {
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(eventResp.status).toBe(201)
@@ -45,7 +45,7 @@ test('reports endpoint', async () => {
     body: JSON.stringify(match),
     headers: {
       'Content-Type': 'application/json',
-      Authentication: 'Bearer ' + (await api.getJWT()),
+      Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
   expect(matchResp.status).toBe(201)
@@ -99,7 +99,7 @@ test('reports endpoint', async () => {
       body: JSON.stringify(report),
       headers: {
         'Content-Type': 'application/json',
-        Authentication: 'Bearer ' + (await api.getJWT()),
+        Authorization: 'Bearer ' + (await api.getJWT()),
       },
     },
   )
@@ -134,7 +134,7 @@ test('reports endpoint', async () => {
       body: JSON.stringify(report),
       headers: {
         'Content-Type': 'application/json',
-        Authentication: 'Bearer ' + (await api.getJWT()),
+        Authorization: 'Bearer ' + (await api.getJWT()),
       },
     },
   )
