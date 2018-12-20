@@ -26,6 +26,12 @@ type PatchSchema struct {
 	Teleop *json.RawMessage `json:"teleop" db:"teleop"`
 }
 
+// StatDescription describes a single statistic in a schema
+type StatDescription struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
 // CreateSchema creates a new schema
 func (s *Service) CreateSchema(schema Schema) error {
 	tx, err := s.db.Beginx()
@@ -36,8 +42,8 @@ func (s *Service) CreateSchema(schema Schema) error {
 	_, err = tx.NamedExec(`
 	INSERT
 		INTO
-			schemas (id, year, realm_id, auto, teleop)
-		VALUES (:id, :year, :realm_id, :auto, :teleop)
+			schemas (year, realm_id, auto, teleop)
+		VALUES (:year, :realm_id, :auto, :teleop)
 	`, schema)
 
 	if err, ok := err.(*pq.Error); ok && err.Code == pgExists {

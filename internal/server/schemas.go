@@ -11,12 +11,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// StatDescription escribes a single statistic in a schema
-type StatDescription struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-
 func (s *Server) createSchemaHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var schema store.Schema

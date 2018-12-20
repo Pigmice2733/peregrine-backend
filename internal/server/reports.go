@@ -38,7 +38,7 @@ func (s *Server) getReports() http.HandlerFunc {
 			return
 		}
 
-		reports, err := s.Store.GetReports(matchKey, teamKey)
+		reports, err := s.Store.GetTeamMatchReports(matchKey, teamKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("getting reports")

@@ -4,6 +4,25 @@ import (
 	"encoding/json"
 )
 
+// A Stat holds a single statistic from a single match, and could be either a
+// boolean or numeric statistic
+type Stat struct {
+	// Numeric
+	Attempts  *int `json:"attempts"`
+	Successes *int `json:"successes"`
+	// Boolean
+	Attempted *bool `json:"attempted"`
+	Succeeded *bool `json:"succeeded"`
+
+	Name string `json:"statName"`
+}
+
+// ReportData holds all the data in a report
+type ReportData struct {
+	Auto   []Stat `json:"auto"`
+	Teleop []Stat `json:"teleop"`
+}
+
 // Report is data about how an FRC team performed in a specific match.
 type Report struct {
 	ID       int64  `json:"-" db:"id"`
@@ -34,11 +53,29 @@ func (s *Service) UpsertReport(r Report) error {
 	return err
 }
 
-// GetReports retrieves all reports for a specific team and match from the db.
-func (s *Service) GetReports(matchKey string, teamKey string) ([]Report, error) {
+// GetTeamMatchReports retrieves all reports for a specific team and match from the db.
+func (s *Service) GetTeamMatchReports(matchKey string, teamKey string) ([]Report, error) {
 	reports := []Report{}
 
 	return reports, s.db.Select(&reports, "SELECT * FROM reports WHERE match_key = $1 AND team_key = $2", matchKey, teamKey)
+}
+
+// GetTeamEventReports retrieves all reports for a specific team and event from the db.
+func (s *Service) GetTeamEventReports(eventKey string, teamKey string) ([]Report, error) {
+	reports := []Report{}
+
+	return reports, s.db.Select(&reports, `
+	SELECT reports.* 
+		FROM
+			reports
+		INNER JOIN
+			matches m
+		ON
+			m.key = match_key
+		WHERE
+			team_key = $1 AND
+			m.event_key = $2
+	`, teamKey, eventKey)
 }
 
 // GetReportsBySchemaID retrieves all reports with a specific schema.
