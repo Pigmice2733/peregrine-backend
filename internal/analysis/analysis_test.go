@@ -45,7 +45,7 @@ func TestAnalsyzeReports(t *testing.T) {
 
 	schema := store.Schema{
 		Auto:   []byte(`[{"name": "Line", "type": "boolean"}]`),
-		Teleop: []byte(`[{"name: "Cubes", "type": "number"}]`),
+		Teleop: []byte(`[{"name": "Cubes", "type": "number"}]`),
 	}
 
 	analyzedStats, err := analysis.AnalyzeReports(schema, reports)
@@ -67,19 +67,24 @@ func TestAnalsyzeReports(t *testing.T) {
 		t.Errorf("analysis for team frc2471 has wrong team key")
 	}
 
-	for name, stat := range analyzedStats["frc2471"].Auto {
+	for name, stat := range analyzedStats["frc2471"].AutoBoolean {
 		if stat.Name != name {
 			t.Errorf("stat %s has wrong stat name: %s", name, stat.Name)
 		}
 
-		if stat.Name == "Line" {
-			if stat.BooleanAttempts == nil || stat.BooleanSuccesses == nil || *stat.BooleanAttempts != 2 || *stat.BooleanSuccesses != 1 {
+		if stat.Name != "Line" {
+			if stat.Attempts != 2 || stat.Successes != 1 {
 				t.Errorf("analysis for frc2471 'Line' is wrong")
 			}
-			if stat.NumericAttempts != nil || stat.NumericSuccesses != nil {
-				t.Errorf("analysis for frc2471 boolean stat has non-nil numeric stats")
-			}
-		} else if stat.Name == "Cubes" {
+		}
+	}
+
+	for name, stat := range analyzedStats["frc2471"].TeleopNumeric {
+		if stat.Name != name {
+			t.Errorf("stat %s has wrong stat name: %s", name, stat.Name)
+		}
+
+		if stat.Name == "Cubes" {
 			attempts := analysis.MaxAvg{
 				Max:     5,
 				Avg:     3.5,
@@ -93,46 +98,8 @@ func TestAnalsyzeReports(t *testing.T) {
 				Total:   5,
 				Matches: 2,
 			}
-			if stat.NumericAttempts == nil || stat.NumericSuccesses == nil || *stat.NumericAttempts != attempts || *stat.NumericSuccesses != successes {
+			if stat.Attempts != attempts || stat.Successes != successes {
 				t.Errorf("analysis for frc2471 'Cubes' is wrong")
-			}
-			if stat.BooleanAttempts != nil || stat.BooleanSuccesses != nil {
-				t.Errorf("analysis for frc2471 numeric stat has non-nil boolean stats")
-			}
-		}
-	}
-
-	for name, stat := range analyzedStats["frc2733"].Auto {
-		if stat.Name != name {
-			t.Errorf("stat %s has wrong stat name: %s", name, stat.Name)
-		}
-
-		if stat.Name == "Line" {
-			if stat.BooleanAttempts == nil || stat.BooleanSuccesses == nil || *stat.BooleanAttempts != 1 || *stat.BooleanSuccesses != 1 {
-				t.Errorf("analysis for frc2733 'Line' is wrong")
-			}
-			if stat.NumericAttempts != nil || stat.NumericSuccesses != nil {
-				t.Errorf("analysis for frc2733 boolean stat has non-nil numeric stats")
-			}
-		} else if stat.Name == "Cubes" {
-			attempts := analysis.MaxAvg{
-				Max:     8,
-				Avg:     8,
-				Total:   8,
-				Matches: 1,
-			}
-
-			successes := analysis.MaxAvg{
-				Max:     6,
-				Avg:     6,
-				Total:   6,
-				Matches: 1,
-			}
-			if stat.NumericAttempts == nil || stat.NumericSuccesses == nil || *stat.NumericAttempts != attempts || *stat.NumericSuccesses != successes {
-				t.Errorf("analysis for frc2733 'Cubes' is wrong")
-			}
-			if stat.BooleanAttempts != nil || stat.BooleanSuccesses != nil {
-				t.Errorf("analysis for frc2733 numeric stat has non-nil boolean stats")
 			}
 		}
 	}

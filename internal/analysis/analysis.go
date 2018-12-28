@@ -6,10 +6,6 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 )
 
-func newInt(a int) *int {
-	return &a
-}
-
 func max(a, b int) int {
 	if a > b {
 		return a
