@@ -27,29 +27,34 @@ type SchemaFields struct {
 type MaxAvg struct {
 	Max     int     `json:"max"`
 	Avg     float32 `json:"avg"`
-	Total   int
-	Matches int
+	Total   int     `json:"-"`
+	Matches int     `json:"-"`
 }
 
-// AnalyzedStat represents a single analyzed statistic
-type AnalyzedStat struct {
-	Name             string  `json:"statName"`
-	NumericAttempts  *MaxAvg `json:"attempts,omitempty"`
-	NumericSuccesses *MaxAvg `json:"successes,omitempty"`
-	BooleanAttempts  *int    `json:"attempts,omitempty"`
-	BooleanSuccesses *int    `json:"successes,omitempty"`
+type numericStat struct {
+	Name      string `json:"statName"`
+	Attempts  MaxAvg `json:"attempts"`
+	Successes MaxAvg `json:"successes"`
+}
+
+type booleanStat struct {
+	Name      string `json:"statName"`
+	Attempts  int    `json:"attempts"`
+	Successes int    `json:"successes"`
 }
 
 // TeamStats holds the performance stats of one team
 type TeamStats struct {
-	Team   string `json:"team"`
-	Auto   map[string]AnalyzedStat
-	Teleop map[string]AnalyzedStat
+	Team          string
+	AutoNumeric   map[string]*numericStat
+	AutoBoolean   map[string]*booleanStat
+	TeleopNumeric map[string]*numericStat
+	TeleopBoolean map[string]*booleanStat
 }
 
 // AnalyzeReports analyzes reports based on a schema
-func AnalyzeReports(schema store.Schema, eventReports []store.Report) (map[string]TeamStats, error) {
-	stats := make(map[string]TeamStats)
+func AnalyzeReports(schema store.Schema, eventReports []store.Report) (map[string]*TeamStats, error) {
+	stats := make(map[string]*TeamStats)
 
 	schemaFields, err := getSchemaFields(schema)
 	if err != nil {
@@ -64,67 +69,85 @@ func AnalyzeReports(schema store.Schema, eventReports []store.Report) (map[strin
 		}
 
 		if _, ok := stats[report.TeamKey]; !ok {
-			stats[report.TeamKey] = TeamStats{
-				Team:   report.TeamKey,
-				Auto:   make(map[string]AnalyzedStat),
-				Teleop: make(map[string]AnalyzedStat),
+			rts := TeamStats{
+				Team:          report.TeamKey,
+				AutoNumeric:   make(map[string]*numericStat),
+				AutoBoolean:   make(map[string]*booleanStat),
+				TeleopNumeric: make(map[string]*numericStat),
+				TeleopBoolean: make(map[string]*booleanStat),
 			}
+			stats[report.TeamKey] = &rts
 		}
 
-		for _, stat := range data.Auto {
-			if statType, ok := schemaFields.Auto[stat.Name]; ok {
-				if _, ok := stats[report.TeamKey].Auto[stat.Name]; !ok {
-					if statType == "boolean" {
-						stats[report.TeamKey].Auto[stat.Name] = AnalyzedStat{
-							Name:             stat.Name,
-							BooleanAttempts:  newInt(0),
-							BooleanSuccesses: newInt(0),
-						}
-					} else if statType == "numeric" {
-						succ := MaxAvg{}
-						atmpt := MaxAvg{}
-						stats[report.TeamKey].Auto[stat.Name] = AnalyzedStat{
-							Name:             stat.Name,
-							NumericSuccesses: &succ,
-							NumericAttempts:  &atmpt,
-						}
-					}
-				}
-
-				if statType == "boolean" {
-					if stat.Attempted != nil && *stat.Attempted {
-						*stats[report.TeamKey].Auto[stat.Name].BooleanAttempts++
-					}
-					if stat.Succeeded != nil && *stat.Succeeded {
-						*stats[report.TeamKey].Auto[stat.Name].BooleanSuccesses++
-					}
-				} else if statType == "numeric" {
-					stats[report.TeamKey].Auto[stat.Name].NumericAttempts.Matches++
-					stats[report.TeamKey].Auto[stat.Name].NumericSuccesses.Matches++
-
-					if stat.Attempts != nil {
-						stats[report.TeamKey].Auto[stat.Name].NumericAttempts.Total += *stat.Attempts
-						currMax := stats[report.TeamKey].Auto[stat.Name].NumericAttempts.Max
-						stats[report.TeamKey].Auto[stat.Name].NumericAttempts.Max = max(*stat.Attempts, currMax)
-					}
-					if stat.Successes != nil {
-						stats[report.TeamKey].Auto[stat.Name].NumericSuccesses.Total += *stat.Successes
-						currMax := stats[report.TeamKey].Auto[stat.Name].NumericSuccesses.Max
-						stats[report.TeamKey].Auto[stat.Name].NumericSuccesses.Max = max(*stat.Successes, currMax)
-					}
-
-					totalAttempts := stats[report.TeamKey].Auto[stat.Name].NumericAttempts.Total
-					nAttempts := stats[report.TeamKey].Auto[stat.Name].NumericAttempts.Matches
-					stats[report.TeamKey].Auto[stat.Name].NumericAttempts.Avg = float32(totalAttempts) / float32(nAttempts)
-					totalSuccesses := stats[report.TeamKey].Auto[stat.Name].NumericSuccesses.Total
-					nSuccesses := stats[report.TeamKey].Auto[stat.Name].NumericSuccesses.Matches
-					stats[report.TeamKey].Auto[stat.Name].NumericSuccesses.Avg = float32(totalSuccesses) / float32(nSuccesses)
-				}
-			}
-		}
+		processStatFields(data.Auto, schemaFields.Auto, stats[report.TeamKey].AutoNumeric, stats[report.TeamKey].AutoBoolean)
+		processStatFields(data.Teleop, schemaFields.Teleop, stats[report.TeamKey].TeleopNumeric, stats[report.TeamKey].TeleopBoolean)
 	}
 
 	return stats, nil
+}
+
+// processStatFields processes report statistics based on field types and stores them into numericStat and booleanStat types.
+func processStatFields(stats []store.Stat, fields map[string]string, numeric map[string]*numericStat, boolean map[string]*booleanStat) {
+	for _, stat := range stats {
+		if statType, ok := fields[stat.Name]; ok {
+			if statType == "boolean" {
+				if _, ok := boolean[stat.Name]; !ok {
+					boolStat := booleanStat{
+						Name:      stat.Name,
+						Attempts:  0,
+						Successes: 0,
+					}
+					boolean[stat.Name] = &boolStat
+				}
+			} else if statType == "number" {
+				if _, ok := numeric[stat.Name]; !ok {
+					succ := MaxAvg{}
+					atmpt := MaxAvg{}
+					numStat := numericStat{
+						Name:      stat.Name,
+						Successes: succ,
+						Attempts:  atmpt,
+					}
+					numeric[stat.Name] = &numStat
+				}
+			}
+
+			if statType == "boolean" {
+				if stat.Attempted != nil && stat.Succeeded != nil {
+					if *stat.Attempted {
+						boolean[stat.Name].Attempts++
+						if *stat.Succeeded {
+							boolean[stat.Name].Successes++
+						}
+					}
+				}
+			} else if statType == "number" {
+				numeric[stat.Name].Attempts.Matches++
+				numeric[stat.Name].Successes.Matches++
+
+				if stat.Attempts != nil && stat.Successes != nil {
+					if *stat.Successes > *stat.Attempts {
+						*stat.Successes = *stat.Attempts
+					}
+
+					numeric[stat.Name].Attempts.Total += *stat.Attempts
+					currMax := numeric[stat.Name].Attempts.Max
+					numeric[stat.Name].Attempts.Max = max(*stat.Attempts, currMax)
+
+					numeric[stat.Name].Successes.Total += *stat.Successes
+					currMax = numeric[stat.Name].Successes.Max
+					numeric[stat.Name].Successes.Max = max(*stat.Successes, currMax)
+				}
+
+				totalAttempts := numeric[stat.Name].Attempts.Total
+				nAttempts := numeric[stat.Name].Attempts.Matches
+				numeric[stat.Name].Attempts.Avg = float32(totalAttempts) / float32(nAttempts)
+				totalSuccesses := numeric[stat.Name].Successes.Total
+				nSuccesses := numeric[stat.Name].Successes.Matches
+				numeric[stat.Name].Successes.Avg = float32(totalSuccesses) / float32(nSuccesses)
+			}
+		}
+	}
 }
 
 // getSchemaFields creates a SchemaFields struct from a store.Schema
@@ -140,7 +163,7 @@ func getSchemaFields(s store.Schema) (SchemaFields, error) {
 	}
 
 	teleopFields := []store.StatDescription{}
-	if err := json.Unmarshal(s.Auto, &teleopFields); err != nil {
+	if err := json.Unmarshal(s.Teleop, &teleopFields); err != nil {
 		return sf, err
 	}
 

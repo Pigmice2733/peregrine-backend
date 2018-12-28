@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/analysis"
@@ -11,17 +12,16 @@ import (
 )
 
 type teamStats struct {
-	Team   string                  `json:"team"`
-	Auto   []analysis.AnalyzedStat `json:"auto"`
-	Teleop []analysis.AnalyzedStat `json:"teleop"`
+	Team   string            `json:"team"`
+	Auto   []json.RawMessage `json:"auto"`
+	Teleop []json.RawMessage `json:"teleop"`
 }
 
-// eventTeamStats analyzes the event-wide statistics of every team at an event with submitted reports
-func (s *Server) eventTeamStats() http.HandlerFunc {
+// eventStats analyzes the event-wide statistics of every team at an event with submitted reports
+func (s *Server) eventStats() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		eventKey := vars["eventKey"]
-		teamKey := vars["teamKey"]
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
 		if err != nil {
@@ -47,7 +47,16 @@ func (s *Server) eventTeamStats() http.HandlerFunc {
 			return
 		}
 
-		reports, err := s.Store.GetTeamEventReports(eventKey, teamKey)
+		var reports []store.Report
+
+		realmID, err := ihttp.GetRealmID(r)
+
+		if err != nil {
+			reports, err = s.Store.GetEventReports(eventKey, nil)
+		} else {
+			reports, err = s.Store.GetEventReports(eventKey, &realmID)
+		}
+
 		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
@@ -72,19 +81,13 @@ func (s *Server) eventTeamStats() http.HandlerFunc {
 
 		fullStats := []teamStats{}
 
-		for team, ts := range analyzedStats {
-			stats := teamStats{
-				Team:   team,
-				Auto:   []analysis.AnalyzedStat{},
-				Teleop: []analysis.AnalyzedStat{},
-			}
+		for _, ts := range analyzedStats {
+			stats, err := marshalTeamStats(ts)
 
-			for _, stat := range ts.Auto {
-				stats.Auto = append(stats.Auto, stat)
-			}
-
-			for _, stat := range ts.Teleop {
-				stats.Teleop = append(stats.Auto, stat)
+			if err != nil {
+				ihttp.Error(w, http.StatusInternalServerError)
+				go s.Logger.WithError(err).Error("marshalling statistic")
+				return
 			}
 
 			fullStats = append(fullStats, stats)
@@ -101,8 +104,8 @@ func (s *Server) eventTeamStats() http.HandlerFunc {
 			if _, ok := analyzedStats[team]; !ok {
 				stats := teamStats{
 					Team:   team,
-					Auto:   []analysis.AnalyzedStat{},
-					Teleop: []analysis.AnalyzedStat{},
+					Auto:   []json.RawMessage{},
+					Teleop: []json.RawMessage{},
 				}
 				fullStats = append(fullStats, stats)
 			}
@@ -110,4 +113,46 @@ func (s *Server) eventTeamStats() http.HandlerFunc {
 
 		ihttp.Respond(w, fullStats, http.StatusOK)
 	}
+}
+
+func marshalTeamStats(ts *analysis.TeamStats) (teamStats, error) {
+	stats := teamStats{
+		Team:   ts.Team,
+		Auto:   []json.RawMessage{},
+		Teleop: []json.RawMessage{},
+	}
+
+	for _, numeric := range ts.AutoNumeric {
+		stat, err := json.Marshal(numeric)
+		if err != nil {
+			return stats, err
+		}
+		stats.Auto = append(stats.Auto, stat)
+	}
+
+	for _, boolean := range ts.AutoBoolean {
+		stat, err := json.Marshal(boolean)
+		if err != nil {
+			return stats, err
+		}
+		stats.Auto = append(stats.Auto, stat)
+	}
+
+	for _, numeric := range ts.TeleopNumeric {
+		stat, err := json.Marshal(numeric)
+		if err != nil {
+			return stats, err
+		}
+		stats.Teleop = append(stats.Teleop, stat)
+	}
+
+	for _, boolean := range ts.TeleopBoolean {
+		stat, err := json.Marshal(boolean)
+		if err != nil {
+			return stats, err
+		}
+		stats.Teleop = append(stats.Teleop, stat)
+	}
+
+	return stats, nil
 }

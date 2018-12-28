@@ -94,11 +94,11 @@ func (s *Server) putReport() http.HandlerFunc {
 
 		var realmID int64
 		realmID, err = ihttp.GetRealmID(r)
-		report.RealmID = &realmID
 		if err != nil {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
+		report.RealmID = &realmID
 
 		err = s.Store.UpsertReport(report)
 		if err != nil {

@@ -60,9 +60,25 @@ func (s *Service) GetTeamMatchReports(matchKey string, teamKey string) ([]Report
 	return reports, s.db.Select(&reports, "SELECT * FROM reports WHERE match_key = $1 AND team_key = $2", matchKey, teamKey)
 }
 
-// GetTeamEventReports retrieves all reports for a specific team and event from the db.
-func (s *Service) GetTeamEventReports(eventKey string, teamKey string) ([]Report, error) {
+// GetEventReports retrieves all reports for an event from the db. If a realmID
+// is specified, only reports from that realm will be included.
+func (s *Service) GetEventReports(eventKey string, realmID *int64) ([]Report, error) {
 	reports := []Report{}
+
+	if realmID != nil {
+		return reports, s.db.Select(&reports, `
+	SELECT reports.* 
+		FROM
+			reports
+		INNER JOIN
+			matches m
+		ON
+			m.key = match_key
+		WHERE
+		    realm_id = $1 AND
+			m.event_key = $2
+	`, realmID, eventKey)
+	}
 
 	return reports, s.db.Select(&reports, `
 	SELECT reports.* 
@@ -73,7 +89,41 @@ func (s *Service) GetTeamEventReports(eventKey string, teamKey string) ([]Report
 		ON
 			m.key = match_key
 		WHERE
-			team_key = $1 AND
+		    m.event_key = $1
+	`, eventKey)
+}
+
+// GetTeamEventReports retrieves all reports for a specific team and event from
+// the db. If a realmID is specified, only reports from that realm will be included.
+func (s *Service) GetTeamEventReports(eventKey string, teamKey string, realmID *int64) ([]Report, error) {
+	reports := []Report{}
+
+	if realmID != nil {
+		return reports, s.db.Select(&reports, `
+	SELECT reports.* 
+		FROM
+			reports
+		INNER JOIN
+			matches m
+		ON
+			m.key = match_key
+		WHERE
+		    realm_id = $1 AND
+			team_key = $2 AND
+			m.event_key = $3
+	`, realmID, teamKey, eventKey)
+	}
+
+	return reports, s.db.Select(&reports, `
+	SELECT reports.* 
+		FROM
+			reports
+		INNER JOIN
+			matches m
+		ON
+			m.key = match_key
+		WHERE
+		    team_key = $1 AND
 			m.event_key = $2
 	`, teamKey, eventKey)
 }
