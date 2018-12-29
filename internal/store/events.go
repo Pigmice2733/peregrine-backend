@@ -13,6 +13,7 @@ import (
 type Event struct {
 	Key          string    `json:"key" db:"key"`
 	RealmID      *int64    `db:"realm_id"`
+	SchemaID     *int64    `json:"schemaId" db:"schema_id"`
 	Name         string    `json:"name" db:"name"`
 	District     *string   `json:"district" db:"district"`
 	FullDistrict *string   `json:"fullDistrict" db:"full_district"`
@@ -47,7 +48,7 @@ type Location struct {
 	Lon  float64 `json:"lon" db:"lon"`
 }
 
-// GetEvents returns all events from the database. event.Webcasts will be nil for every event.
+// GetEvents returns all events from the database. event.Webcasts and schemaID will be nil for every event.
 func (s *Service) GetEvents(ctx context.Context) ([]Event, error) {
 	events := []Event{}
 
@@ -56,7 +57,7 @@ func (s *Service) GetEvents(ctx context.Context) ([]Event, error) {
 
 // GetEventsFromRealm returns all events from a specific realm. Additionally all
 // TBA events will be retrieved. If no realm is specified (nil) then just the TBA
-// events will be retrieved. event.Webcasts will be nil for every event.
+// events will be retrieved. event.Webcasts and schemaID will be nil for every event.
 func (s *Service) GetEventsFromRealm(ctx context.Context, realm *int64) ([]Event, error) {
 	events := []Event{}
 
@@ -67,7 +68,7 @@ func (s *Service) GetEventsFromRealm(ctx context.Context, realm *int64) ([]Event
 }
 
 // CheckTBAEventKeyExists checks whether a specific event key exists and is from
-// TBA rather than manually added.
+// TBA rather than manually added. Returns ErrNoResults if event does not exist.
 func (s *Service) CheckTBAEventKeyExists(ctx context.Context, eventKey string) (bool, error) {
 	var realmID *int64
 
@@ -84,7 +85,29 @@ func (s *Service) CheckTBAEventKeyExists(ctx context.Context, eventKey string) (
 // GetEvent retrieves a specific event.
 func (s *Service) GetEvent(ctx context.Context, eventKey string) (Event, error) {
 	var event Event
-	if err := s.db.GetContext(ctx, &event, "SELECT * FROM events WHERE key = $1", eventKey); err != nil {
+
+	if err := s.db.GetContext(ctx, &event, `
+	SELECT
+	    key,
+		name,
+		district,
+		full_district,
+		week,
+		start_date,
+		end_date,
+		location_name,
+		lat,
+		lon,
+		events.realm_id AS realm_id,
+		COALESCE(schema_id, s.id) AS schema_id
+	FROM
+		events
+	LEFT JOIN
+		schemas s
+	ON
+	    s.year = EXTRACT(YEAR FROM start_date)
+	WHERE key = $1
+	`, eventKey); err != nil {
 		if err == sql.ErrNoRows {
 			return event, ErrNoResults{errors.Wrapf(err, "event %s does not exist", event.Key)}
 		}
@@ -103,8 +126,8 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 	}
 
 	eventStmt, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, realm_id)
-		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :realm_id)
+		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, realm_id, schema_id)
+		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :realm_id, :schema_id)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -118,7 +141,8 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 					location_name = :location_name,
 					lat = :lat,
 					lon = :lon,
-                    realm_id = :realm_id
+					realm_id = :realm_id,
+					schema_id = :schema_id
 	`)
 	if err != nil {
 		s.logErr(tx.Rollback())
