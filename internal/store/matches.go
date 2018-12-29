@@ -136,6 +136,11 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 		return err
 	}
 
+	if err = s.TeamKeysUpsert(ctx, match.EventKey, append(match.BlueAlliance, match.RedAlliance...)); err != nil {
+		s.logErr(tx.Rollback())
+		return err
+	}
+
 	return tx.Commit()
 }
 

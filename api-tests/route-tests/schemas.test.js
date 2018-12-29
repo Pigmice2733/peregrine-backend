@@ -5,9 +5,6 @@ test('schemas', async () => {
   let resp = await fetch(api.address + '/schemas')
   expect(resp.status).toBe(200)
 
-  let d = await resp.json()
-  expect(d.data).toHaveLength(1)
-
   let schema = {
     year: 2018,
     auto: [
@@ -46,8 +43,7 @@ test('schemas', async () => {
   })
   expect(resp.status).toBe(200)
 
-  d = await resp.json()
-  expect(d.data).toHaveLength(2)
+  let d = await resp.json()
   let foundSchema = d.data.find(curSchema => schema.year === curSchema.year)
 
   resp = await fetch(api.address + `/schemas/${foundSchema.id}`, {
