@@ -281,3 +281,21 @@ func (s *Service) DeleteUser(ctx context.Context, id int64) error {
 	}
 	return errors.Wrap(tx.Commit(), "unable to delete user")
 }
+
+// CheckSimilarUsernameExists checks whether a user with (case insensitive) the
+// same username exists. It returns an ErrExists if a similar user exists.
+func (s *Service) CheckSimilarUsernameExists(ctx context.Context, username string) error {
+	var ok bool
+	err := s.db.QueryRow(
+		`SELECT EXISTS(SELECT true FROM users WHERE lower(username) = lower($1))`,
+		username).Scan(&ok)
+	if err != nil {
+		return errors.Wrap(err, "unable to select whether user exists")
+	}
+
+	if ok {
+		return ErrExists{errors.New("user with similar username exists")}
+	}
+
+	return nil
+}

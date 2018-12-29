@@ -16,7 +16,7 @@ import (
 )
 
 type baseUser struct {
-	Username string `json:"username" validate:"gte=4,lte=32"`
+	Username string `json:"username" validate:"gte=4,lte=32,alphanum"`
 	Password string `json:"password" validate:"gte=8,lte=128"`
 }
 
@@ -29,10 +29,8 @@ type requestUser struct {
 }
 
 func (s *Server) authenticateHandler() http.HandlerFunc {
-	type requestUser baseUser
-
 	return func(w http.ResponseWriter, r *http.Request) {
-		var ru requestUser
+		var ru baseUser
 		if err := json.NewDecoder(r.Body).Decode(&ru); err != nil {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
 			return
@@ -113,6 +111,16 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			return
 		}
 
+		err := s.Store.CheckSimilarUsernameExists(r.Context(), ru.Username)
+		if _, ok := errors.Cause(err).(store.ErrExists); ok {
+			ihttp.Respond(w, err, http.StatusConflict)
+			return
+		} else if err != nil {
+			go s.Logger.WithError(err).Error("checking whether similar user exists")
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
 		u := store.User{Username: ru.Username, RealmID: ru.RealmID, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcrypt.DefaultCost)
@@ -125,15 +133,18 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 		u.HashedPassword = string(hashedPassword)
 
 		err = s.Store.CreateUser(r.Context(), u)
-		if _, ok := errors.Cause(err).(store.ErrExists); ok {
-			ihttp.Respond(w, err, http.StatusConflict)
-			return
-		} else if _, ok := errors.Cause(err).(store.ErrFKeyViolation); ok {
-			ihttp.Respond(w, err, http.StatusUnprocessableEntity)
-			return
-		} else if err != nil {
-			go s.Logger.WithError(err).Error("creating new user")
-			ihttp.Error(w, http.StatusInternalServerError)
+
+		if err != nil {
+			switch errors.Cause(err).(type) {
+			case store.ErrExists:
+				ihttp.Error(w, http.StatusConflict)
+			case store.ErrFKeyViolation:
+				ihttp.Error(w, http.StatusUnprocessableEntity)
+			default:
+				go s.Logger.WithError(err).Error("creating new user")
+				ihttp.Error(w, http.StatusInternalServerError)
+			}
+
 			return
 		}
 
@@ -215,7 +226,7 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 
 func (s *Server) patchUserHandler() http.HandlerFunc {
 	type patchUser struct {
-		Username  *string      `json:"username" validate:"omitempty,gte=4,lte=32"`
+		Username  *string      `json:"username" validate:"omitempty,gte=4,lte=32,alphanum"`
 		Password  *string      `json:"password" validate:"omitempty,gte=8,lte=128"`
 		FirstName *string      `json:"firstName" validate:"omitempty,gte=0"`
 		LastName  *string      `json:"lastName" validate:"omitempty,gte=0"`
@@ -277,6 +288,18 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 			return
 		}
 
+		if ru.Username != nil {
+			err := s.Store.CheckSimilarUsernameExists(r.Context(), *ru.Username)
+			if _, ok := errors.Cause(err).(store.ErrExists); ok {
+				ihttp.Respond(w, err, http.StatusConflict)
+				return
+			} else if err != nil {
+				go s.Logger.WithError(err).Error("checking whether similar user exists")
+				ihttp.Error(w, http.StatusInternalServerError)
+				return
+			}
+		}
+
 		u := store.PatchUser{ID: targetID, Username: ru.Username, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName, Stars: ru.Stars}
 
 		if ru.Password != nil {
@@ -292,15 +315,18 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		}
 
 		err = s.Store.PatchUser(r.Context(), u)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if _, ok := errors.Cause(err).(store.ErrFKeyViolation); ok {
-			ihttp.Error(w, http.StatusUnprocessableEntity)
-			return
-		} else if err != nil {
-			go s.Logger.WithError(err).Error("patching user")
-			ihttp.Error(w, http.StatusInternalServerError)
+
+		if err != nil {
+			switch errors.Cause(err).(type) {
+			case store.ErrNoResults:
+				ihttp.Error(w, http.StatusNotFound)
+			case store.ErrFKeyViolation:
+				ihttp.Error(w, http.StatusUnprocessableEntity)
+			default:
+				go s.Logger.WithError(err).Error("patching user")
+				ihttp.Error(w, http.StatusInternalServerError)
+			}
+
 			return
 		}
 
