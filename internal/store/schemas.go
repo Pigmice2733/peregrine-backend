@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -33,13 +34,13 @@ type StatDescription struct {
 }
 
 // CreateSchema creates a new schema
-func (s *Service) CreateSchema(schema Schema) error {
-	tx, err := s.db.Beginx()
+func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "unable to begin transaction")
 	}
 
-	_, err = tx.NamedExec(`
+	_, err = tx.NamedExecContext(ctx, `
 	INSERT
 		INTO
 			schemas (year, realm_id, auto, teleop)
@@ -58,10 +59,10 @@ func (s *Service) CreateSchema(schema Schema) error {
 }
 
 // GetSchemaByID retrieves a schema given its ID
-func (s *Service) GetSchemaByID(id int64) (Schema, error) {
+func (s *Service) GetSchemaByID(ctx context.Context, id int64) (Schema, error) {
 	var schema Schema
 
-	err := s.db.Get(&schema, "SELECT * FROM schemas WHERE id = $1", id)
+	err := s.db.GetContext(ctx, &schema, "SELECT * FROM schemas WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		return schema, &ErrNoResults{fmt.Errorf("schema %d does not exist", schema.ID)}
 	}
@@ -70,10 +71,10 @@ func (s *Service) GetSchemaByID(id int64) (Schema, error) {
 }
 
 // GetSchemaByYear retrieves the schema for a given year
-func (s *Service) GetSchemaByYear(year int) (Schema, error) {
+func (s *Service) GetSchemaByYear(ctx context.Context, year int) (Schema, error) {
 	var schema Schema
 
-	err := s.db.Get(&schema, "SELECT * FROM schemas WHERE year = $1", year)
+	err := s.db.GetContext(ctx, &schema, "SELECT * FROM schemas WHERE year = $1", year)
 	if err == sql.ErrNoRows {
 		return schema, &ErrNoResults{fmt.Errorf("no schema for year %d exists", year)}
 	}
@@ -84,12 +85,12 @@ func (s *Service) GetSchemaByYear(year int) (Schema, error) {
 // GetVisibleSchemas retrieves schemas from the database frm a specific realm,
 // from realms with public events, and standard FRC schemas. If the realm ID is
 // nil, no private realms' schemas will be retrieved.
-func (s *Service) GetVisibleSchemas(realmID *int64) ([]Schema, error) {
+func (s *Service) GetVisibleSchemas(ctx context.Context, realmID *int64) ([]Schema, error) {
 	schemas := []Schema{}
 	var err error
 
 	if realmID == nil {
-		err = s.db.Select(&schemas, `
+		err = s.db.SelectContext(ctx, &schemas, `
 		WITH public_realms AS (
 			SELECT id FROM realms WHERE share_reports = true
 		)
@@ -98,7 +99,7 @@ func (s *Service) GetVisibleSchemas(realmID *int64) ([]Schema, error) {
 				WHERE year IS NULL OR realm_id IN (SELECT id FROM public_realms)
 		`)
 	} else {
-		err = s.db.Select(&schemas, `
+		err = s.db.SelectContext(ctx, &schemas, `
 		WITH public_realms AS (
 			SELECT id FROM realms WHERE share_reports = true
 		)
@@ -112,8 +113,8 @@ func (s *Service) GetVisibleSchemas(realmID *int64) ([]Schema, error) {
 }
 
 // GetSchemas retrieves all schemas from the database.
-func (s *Service) GetSchemas() ([]Schema, error) {
+func (s *Service) GetSchemas(ctx context.Context) ([]Schema, error) {
 	schemas := []Schema{}
-	err := s.db.Select(&schemas, "SELECT * FROM schemas")
+	err := s.db.SelectContext(ctx, &schemas, "SELECT * FROM schemas")
 	return schemas, errors.Wrap(err, "unable to retrieve schemas")
 }
