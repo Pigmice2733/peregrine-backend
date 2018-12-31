@@ -44,7 +44,7 @@ module.exports = {
     })
     expect(resp.status).toBe(200)
     const d = await resp.json()
-    return d.data.jwt
+    return d.data.accessToken
   },
 }
 
