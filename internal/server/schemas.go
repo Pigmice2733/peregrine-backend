@@ -37,7 +37,7 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 			schema.RealmID = nil
 		}
 
-		err := s.Store.CreateSchema(schema)
+		err := s.Store.CreateSchema(r.Context(), schema)
 		if _, ok := err.(*store.ErrExists); ok {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
@@ -64,7 +64,7 @@ func (s *Server) getSchemasHandler() http.HandlerFunc {
 		var err error
 		roles := ihttp.GetRoles(r)
 		if roles.IsSuperAdmin {
-			schemas, err = s.Store.GetSchemas()
+			schemas, err = s.Store.GetSchemas(r.Context())
 			if err != nil {
 				go s.Logger.WithError(err).Error("getting schemas")
 				ihttp.Error(w, http.StatusInternalServerError)
@@ -78,7 +78,7 @@ func (s *Server) getSchemasHandler() http.HandlerFunc {
 			} else {
 				realmID = &realm
 			}
-			schemas, err = s.Store.GetVisibleSchemas(realmID)
+			schemas, err = s.Store.GetVisibleSchemas(r.Context(), realmID)
 			if err != nil {
 				go s.Logger.WithError(err).Error("getting schemas")
 				ihttp.Error(w, http.StatusInternalServerError)
@@ -98,7 +98,7 @@ func (s *Server) getSchemaByIDHandler() http.HandlerFunc {
 			return
 		}
 
-		schema, err := s.Store.GetSchemaByID(id)
+		schema, err := s.Store.GetSchemaByID(r.Context(), id)
 		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
@@ -134,7 +134,7 @@ func (s *Server) getSchemaByYearHandler() http.HandlerFunc {
 			return
 		}
 
-		schema, err := s.Store.GetSchemaByYear(int(year))
+		schema, err := s.Store.GetSchemaByYear(r.Context(), int(year))
 		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"encoding/json"
 )
 
@@ -38,8 +39,8 @@ type Report struct {
 
 // UpsertReport creates a new report in the db, or replaces the existing one if
 // the same reporter already has a report in the db for that team and match.
-func (s *Service) UpsertReport(r Report) error {
-	_, err := s.db.NamedExec(`
+func (s *Service) UpsertReport(ctx context.Context, r Report) error {
+	_, err := s.db.NamedExecContext(ctx, `
 	INSERT
 		INTO
 			reports (match_key, team_key, reporter_id, realm_id, auto_name, data)
@@ -54,19 +55,19 @@ func (s *Service) UpsertReport(r Report) error {
 }
 
 // GetTeamMatchReports retrieves all reports for a specific team and match from the db.
-func (s *Service) GetTeamMatchReports(matchKey string, teamKey string) ([]Report, error) {
+func (s *Service) GetTeamMatchReports(ctx context.Context, matchKey string, teamKey string) ([]Report, error) {
 	reports := []Report{}
 
-	return reports, s.db.Select(&reports, "SELECT * FROM reports WHERE match_key = $1 AND team_key = $2", matchKey, teamKey)
+	return reports, s.db.SelectContext(ctx, &reports, "SELECT * FROM reports WHERE match_key = $1 AND team_key = $2", matchKey, teamKey)
 }
 
 // GetEventReports retrieves all reports for an event from the db. If a realmID
 // is specified, only reports from that realm will be included.
-func (s *Service) GetEventReports(eventKey string, realmID *int64) ([]Report, error) {
+func (s *Service) GetEventReports(ctx context.Context, eventKey string, realmID *int64) ([]Report, error) {
 	reports := []Report{}
 
 	if realmID != nil {
-		return reports, s.db.Select(&reports, `
+		return reports, s.db.SelectContext(ctx, &reports, `
 	SELECT reports.* 
 		FROM
 			reports
@@ -80,7 +81,7 @@ func (s *Service) GetEventReports(eventKey string, realmID *int64) ([]Report, er
 	`, realmID, eventKey)
 	}
 
-	return reports, s.db.Select(&reports, `
+	return reports, s.db.SelectContext(ctx, &reports, `
 	SELECT reports.* 
 		FROM
 			reports
@@ -95,11 +96,11 @@ func (s *Service) GetEventReports(eventKey string, realmID *int64) ([]Report, er
 
 // GetTeamEventReports retrieves all reports for a specific team and event from
 // the db. If a realmID is specified, only reports from that realm will be included.
-func (s *Service) GetTeamEventReports(eventKey string, teamKey string, realmID *int64) ([]Report, error) {
+func (s *Service) GetTeamEventReports(ctx context.Context, eventKey string, teamKey string, realmID *int64) ([]Report, error) {
 	reports := []Report{}
 
 	if realmID != nil {
-		return reports, s.db.Select(&reports, `
+		return reports, s.db.SelectContext(ctx, &reports, `
 	SELECT reports.* 
 		FROM
 			reports
@@ -114,7 +115,7 @@ func (s *Service) GetTeamEventReports(eventKey string, teamKey string, realmID *
 	`, realmID, teamKey, eventKey)
 	}
 
-	return reports, s.db.Select(&reports, `
+	return reports, s.db.SelectContext(ctx, &reports, `
 	SELECT reports.* 
 		FROM
 			reports
@@ -129,10 +130,10 @@ func (s *Service) GetTeamEventReports(eventKey string, teamKey string, realmID *
 }
 
 // GetReportsBySchemaID retrieves all reports with a specific schema.
-func (s *Service) GetReportsBySchemaID(schemaID int64) ([]Report, error) {
+func (s *Service) GetReportsBySchemaID(ctx context.Context, schemaID int64) ([]Report, error) {
 	reports := []Report{}
 
-	return reports, s.db.Select(&reports, `
+	return reports, s.db.SelectContext(ctx, &reports, `
 	SELECT reports.*
 	FROM reports, matches, events
 	WHERE
