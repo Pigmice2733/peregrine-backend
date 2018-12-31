@@ -18,6 +18,32 @@ describe('auth endpoints', () => {
     expect(d.data.accessToken).toBeA(String)
   })
 
+  test('/refresh route', async () => {
+    const authResponse = await fetch(api.address + '/authenticate', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: api.seedUser.username,
+        password: api.seedUser.password,
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    const authData = (await authResponse.json()).data
+
+    const resp = await fetch(api.address + '/refresh', {
+      method: 'POST',
+      body: JSON.stringify({
+        refreshToken: authData.refreshToken,
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    expect(resp.status).toBe(200)
+
+    const d = await resp.json()
+    expect(d.data.accessToken).toBeA(String)
+  })
+
   test('/authenticate route with incorrect auth info', async () => {
     const resp = await fetch(api.address + '/authenticate', {
       method: 'POST',
