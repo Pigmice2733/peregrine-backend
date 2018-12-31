@@ -42,6 +42,10 @@ type recorder struct {
 }
 
 func (r *recorder) Write(b []byte) (int, error) {
+	if r.code == 0 {
+		r.code = http.StatusOK
+	}
+
 	n, err := r.ResponseWriter.Write(b)
 	r.len += n
 	return n, err
@@ -89,10 +93,10 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 }
 
 // Auth returns a middleware used for jwt authentication.
-func Auth(next http.HandlerFunc, jwtSecret []byte) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func Auth(next http.Handler, jwtSecret []byte) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") == "" {
-			next(w, r)
+			next.ServeHTTP(w, r)
 			return
 		}
 
@@ -124,8 +128,8 @@ func Auth(next http.HandlerFunc, jwtSecret []byte) http.HandlerFunc {
 		ctx = context.WithValue(ctx, keySubjectContext, claims.Subject)
 		ctx = context.WithValue(ctx, keyRealmContext, claims.RealmID)
 
-		next(w, r.WithContext(ctx))
-	}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 // ACL returns a middleware that must be used inside of an Auth middleware for

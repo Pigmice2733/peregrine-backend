@@ -30,8 +30,8 @@ type requestUser struct {
 }
 
 const (
-	accessTokenDuration  = time.Hour * 8      // 8 hours
-	refreshTokenDuration = time.Hour * 24 * 7 // 7 days
+	accessTokenDuration  = time.Hour * 24         // 1 day
+	refreshTokenDuration = time.Hour * 24 * 7 * 2 // 2 weeks
 )
 
 func (s *Server) authenticateHandler() http.HandlerFunc {
