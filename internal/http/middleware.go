@@ -42,6 +42,10 @@ type recorder struct {
 }
 
 func (r *recorder) Write(b []byte) (int, error) {
+	if r.code == 0 {
+		r.code = http.StatusOK
+	}
+
 	n, err := r.ResponseWriter.Write(b)
 	r.len += n
 	return n, err
