@@ -38,7 +38,7 @@ test('events', async () => {
   expect(api.seedUser.roles.isSuperAdmin).toBe(true)
 
   let event = {
-    key: '1970flir',
+    key: '1970flir' + Number(new Date()),
     name: 'FLIR x Daimler',
     district: 'pnw',
     fullDistrict: 'Pacific Northwest',

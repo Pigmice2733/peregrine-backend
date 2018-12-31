@@ -15,7 +15,7 @@ describe('auth endpoints', () => {
     expect(resp.status).toBe(200)
 
     const d = await resp.json()
-    expect(d.data.jwt).toBeA(String)
+    expect(d.data.accessToken).toBeA(String)
   })
 
   test('/authenticate route with incorrect auth info', async () => {
@@ -80,7 +80,7 @@ test('users CRUD', async () => {
   otherRealmId = d.data
 
   otherRealmAdmin = {
-    username: 'usersotheradmin',
+    username: 'usersotheradmin' + Number(new Date()),
     password: 'password',
     realmId: otherRealmId,
     firstName: 'foo',
@@ -99,7 +99,7 @@ test('users CRUD', async () => {
   expect(resp.status).toBe(201)
 
   otherRealmUser = {
-    username: 'usersotheruser',
+    username: 'usersotheruser' + Number(new Date()),
     password: 'password',
     realmId: otherRealmId,
     firstName: 'test',
@@ -120,7 +120,7 @@ test('users CRUD', async () => {
 
   // /users create unverified super-admin
   unverifiedSuperAdmin = {
-    username: 'userssuper',
+    username: 'userssuper' + Number(new Date()),
     password: 'password',
     realmId: 1,
     firstName: 'test',
