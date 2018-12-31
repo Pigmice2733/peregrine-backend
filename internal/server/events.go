@@ -202,7 +202,7 @@ func (s *Server) updateEvents(ctx context.Context) error {
 	now := time.Now()
 
 	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > expiry {
-		schema, err := s.Store.GetSchemaByYear(s.Year)
+		schema, err := s.Store.GetSchemaByYear(ctx, s.Year)
 		var schemaID *int64
 		if err != nil {
 			_, ok := err.(*store.ErrNoResults)

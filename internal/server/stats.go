@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/analysis"
@@ -35,6 +36,11 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
+		if event.SchemaID == nil {
+			ihttp.Respond(w, fmt.Errorf("no schema found"), http.StatusBadRequest)
+			return
+		}
+
 		// Get new team data from TBA
 		if err := s.updateTeamKeys(r.Context(), eventKey); err != nil {
 			// 404 if eventKey isn't a real event
@@ -52,9 +58,9 @@ func (s *Server) eventStats() http.HandlerFunc {
 		realmID, err := ihttp.GetRealmID(r)
 
 		if err != nil {
-			reports, err = s.Store.GetEventReports(eventKey, nil)
+			reports, err = s.Store.GetEventReports(r.Context(), eventKey, nil)
 		} else {
-			reports, err = s.Store.GetEventReports(eventKey, &realmID)
+			reports, err = s.Store.GetEventReports(r.Context(), eventKey, &realmID)
 		}
 
 		if _, ok := err.(*store.ErrNoResults); ok {
@@ -62,7 +68,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		schema, err := s.Store.GetSchemaByID(*event.SchemaID)
+		schema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
 		if _, ok := err.(*store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusConflict)
 			return
