@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -28,7 +29,17 @@ type requestUser struct {
 	Roles     store.Roles `json:"roles"`
 }
 
+const (
+	accessTokenDuration  = time.Hour * 24         // 1 day
+	refreshTokenDuration = time.Hour * 24 * 7 * 2 // 2 weeks
+)
+
 func (s *Server) authenticateHandler() http.HandlerFunc {
+	type authenticateResponse struct {
+		AccessToken  string `json:"accessToken"`
+		RefreshToken string `json:"refreshToken"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		var ru baseUser
 		if err := json.NewDecoder(r.Body).Decode(&ru); err != nil {
@@ -61,9 +72,92 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		ss, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.Claims{
+		accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.Claims{
 			StandardClaims: jwt.StandardClaims{
-				ExpiresAt: time.Now().Add(time.Hour * 8).Unix(),
+				ExpiresAt: time.Now().Add(accessTokenDuration).Unix(),
+				Subject:   strconv.FormatInt(user.ID, 10),
+			},
+			Roles:   user.Roles,
+			RealmID: user.RealmID,
+		}).SignedString(s.JWTSecret)
+		if err != nil {
+			go s.Logger.WithError(err).Error("generating jwt access token signed string")
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(refreshTokenDuration).Unix(),
+			Subject:   strconv.FormatInt(user.ID, 10),
+		}).SignedString(s.JWTSecret)
+		if err != nil {
+			go s.Logger.WithError(err).Error("generating jwt refresh token signed string")
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		ihttp.Respond(w, authenticateResponse{accessToken, refreshToken}, http.StatusOK)
+	}
+}
+
+func (s *Server) refreshHandler() http.HandlerFunc {
+	type refreshRequest struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+
+	type refreshResponse struct {
+		AccessToken string `json:"accessToken"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		var rr refreshRequest
+		if err := json.NewDecoder(r.Body).Decode(&rr); err != nil {
+			ihttp.Error(w, http.StatusUnprocessableEntity)
+			return
+		}
+
+		token, err := jwt.ParseWithClaims(rr.RefreshToken, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+
+			return s.JWTSecret, nil
+		})
+		if err != nil {
+			ihttp.Error(w, http.StatusUnauthorized)
+			return
+		}
+
+		if !token.Valid {
+			ihttp.Error(w, http.StatusUnauthorized)
+			return
+		}
+
+		claims, ok := token.Claims.(*jwt.StandardClaims)
+		if !ok {
+			ihttp.Error(w, http.StatusUnauthorized)
+			return
+		}
+
+		userID, err := strconv.ParseInt(claims.Subject, 10, 64)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		user, err := s.Store.GetUserByID(r.Context(), userID)
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusUnauthorized)
+			return
+		} else if err != nil {
+			go s.Logger.WithError(err).Error("retrieving user from database")
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.Claims{
+			StandardClaims: jwt.StandardClaims{
+				ExpiresAt: time.Now().Add(accessTokenDuration).Unix(),
 				Subject:   strconv.FormatInt(user.ID, 10),
 			},
 			Roles:   user.Roles,
@@ -75,7 +169,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, map[string]string{"jwt": ss}, http.StatusOK)
+		ihttp.Respond(w, refreshResponse{accessToken}, http.StatusOK)
 	}
 }
 

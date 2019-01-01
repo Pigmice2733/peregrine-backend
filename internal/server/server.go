@@ -28,7 +28,13 @@ type Server struct {
 // Run starts the server, and returns if it runs into an error
 func (s *Server) Run(ctx context.Context) error {
 	router := s.registerRoutes()
-	handler := ihttp.Auth(ihttp.Log(gziphandler.GzipHandler(ihttp.CORS(ihttp.LimitBody(router), s.Origin)), s.Logger), s.JWTSecret)
+
+	var handler http.Handler = router
+	handler = ihttp.LimitBody(handler)
+	handler = gziphandler.GzipHandler(handler)
+	handler = ihttp.Auth(handler, s.JWTSecret)
+	handler = ihttp.Log(handler, s.Logger)
+	handler = ihttp.CORS(handler, s.Origin)
 
 	s.Logger.Info("fetching seed events")
 	if err := s.updateEvents(ctx); err != nil {
