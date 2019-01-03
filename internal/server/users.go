@@ -34,6 +34,17 @@ const (
 	refreshTokenDuration = time.Hour * 24 * 7 * 2 // 2 weeks
 )
 
+func generateAccessToken(user store.User, secret []byte) (string, error) {
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.Claims{
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(accessTokenDuration).Unix(),
+			Subject:   strconv.FormatInt(user.ID, 10),
+		},
+		Roles:   user.Roles,
+		RealmID: user.RealmID,
+	}).SignedString(secret)
+}
+
 func (s *Server) authenticateHandler() http.HandlerFunc {
 	type authenticateResponse struct {
 		AccessToken  string `json:"accessToken"`
@@ -72,14 +83,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.Claims{
-			StandardClaims: jwt.StandardClaims{
-				ExpiresAt: time.Now().Add(accessTokenDuration).Unix(),
-				Subject:   strconv.FormatInt(user.ID, 10),
-			},
-			Roles:   user.Roles,
-			RealmID: user.RealmID,
-		}).SignedString(s.JWTSecret)
+		accessToken, err := generateAccessToken(user, s.JWTSecret)
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt access token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -155,16 +159,9 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 			return
 		}
 
-		accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.Claims{
-			StandardClaims: jwt.StandardClaims{
-				ExpiresAt: time.Now().Add(accessTokenDuration).Unix(),
-				Subject:   strconv.FormatInt(user.ID, 10),
-			},
-			Roles:   user.Roles,
-			RealmID: user.RealmID,
-		}).SignedString(s.JWTSecret)
+		accessToken, err := generateAccessToken(user, s.JWTSecret)
 		if err != nil {
-			go s.Logger.WithError(err).Error("generating jwt signed string")
+			go s.Logger.WithError(err).Error("generating jwt access token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
