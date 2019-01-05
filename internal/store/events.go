@@ -11,48 +11,47 @@ import (
 // Event holds information about an FRC event such as webcast associated with
 // it, the location, its start date, and more.
 type Event struct {
-	Key          string    `json:"key" db:"key"`
-	RealmID      *int64    `db:"realm_id"`
-	SchemaID     *int64    `json:"schemaId" db:"schema_id"`
-	Name         string    `json:"name" db:"name"`
-	District     *string   `json:"district" db:"district"`
-	FullDistrict *string   `json:"fullDistrict" db:"full_district"`
-	Week         *int      `json:"week" db:"week"`
-	StartDate    UnixTime  `json:"startDate" db:"start_date"`
-	EndDate      UnixTime  `json:"endDate" db:"end_date"`
-	Webcasts     []Webcast `json:"webcasts"`
-	Location     `json:"location"`
+	Key          string         `json:"key" db:"key"`
+	RealmID      *int64         `json:"realmId,omitempty" db:"realm_id"`
+	SchemaID     *int64         `json:"schemaId,omitempty" db:"schema_id"`
+	Name         string         `json:"name" db:"name"`
+	District     *string        `json:"district,omitempty" db:"district"`
+	FullDistrict *string        `json:"fullDistrict,omitempty" db:"full_district"`
+	Week         *int           `json:"week,omitempty" db:"week"`
+	StartDate    UnixTime       `json:"startDate" db:"start_date"`
+	EndDate      UnixTime       `json:"endDate" db:"end_date"`
+	Webcasts     pq.StringArray `json:"webcasts" db:"webcasts"`
+	LocationName string         `json:"locationName" db:"location_name"`
+	Lat          float64        `json:"lat" db:"lat"`
+	Lon          float64        `json:"lon" db:"lon"`
 }
 
-// WebcastType represents a data source for a webcast such as twitch or youtube.
-type WebcastType string
-
-const (
-	// Twitch provides livestreams of events.
-	Twitch WebcastType = "twitch"
-	// Youtube provides livestreams of events.
-	Youtube WebcastType = "youtube"
-)
-
-// Webcast represents a webcast of an events.
-type Webcast struct {
-	EventKey string      `json:"-" db:"event_key"`
-	Type     WebcastType `json:"type" db:"type"`
-	URL      string      `json:"url" db:"url"`
-}
-
-// Location holds a location for events: a name, and a latlong.
-type Location struct {
-	Name string  `json:"name" db:"location_name"`
-	Lat  float64 `json:"lat" db:"lat"`
-	Lon  float64 `json:"lon" db:"lon"`
-}
+const eventsQuery = `
+SELECT
+	    key,
+		name,
+		district,
+		full_district,
+		week,
+		start_date,
+		end_date,
+		webcasts,
+		location_name,
+		lat,
+		lon,
+		events.realm_id,
+		COALESCE(schema_id, s.id) AS schema_id
+	FROM
+		events
+	LEFT JOIN
+		schemas s
+	ON
+	    s.year = EXTRACT(YEAR FROM start_date)`
 
 // GetEvents returns all events from the database. event.Webcasts and schemaID will be nil for every event.
 func (s *Service) GetEvents(ctx context.Context) ([]Event, error) {
 	events := []Event{}
-
-	return events, s.db.SelectContext(ctx, &events, "SELECT * FROM events")
+	return events, s.db.SelectContext(ctx, &events, eventsQuery)
 }
 
 // GetEventsFromRealm returns all events from a specific realm. Additionally all
@@ -60,11 +59,10 @@ func (s *Service) GetEvents(ctx context.Context) ([]Event, error) {
 // events will be retrieved. event.Webcasts and schemaID will be nil for every event.
 func (s *Service) GetEventsFromRealm(ctx context.Context, realm *int64) ([]Event, error) {
 	events := []Event{}
-
 	if realm == nil {
-		return events, s.db.SelectContext(ctx, &events, "SELECT * FROM events WHERE realm_id IS NULL")
+		return events, s.db.SelectContext(ctx, &events, eventsQuery+" WHERE events.realm_id IS NULL")
 	}
-	return events, s.db.SelectContext(ctx, &events, "SELECT * FROM events WHERE realm_id IS NULL OR realm_id = $1", *realm)
+	return events, s.db.SelectContext(ctx, &events, eventsQuery+" WHERE events.realm_id IS NULL OR events.realm_id = $1", *realm)
 }
 
 // CheckTBAEventKeyExists checks whether a specific event key exists and is from
@@ -86,35 +84,11 @@ func (s *Service) CheckTBAEventKeyExists(ctx context.Context, eventKey string) (
 func (s *Service) GetEvent(ctx context.Context, eventKey string) (Event, error) {
 	var event Event
 
-	if err := s.db.GetContext(ctx, &event, `
-	SELECT
-	    key,
-		name,
-		district,
-		full_district,
-		week,
-		start_date,
-		end_date,
-		location_name,
-		lat,
-		lon,
-		events.realm_id AS realm_id,
-		COALESCE(schema_id, s.id) AS schema_id
-	FROM
-		events
-	LEFT JOIN
-		schemas s
-	ON
-	    s.year = EXTRACT(YEAR FROM start_date)
-	WHERE key = $1
-	`, eventKey); err != nil {
-		if err == sql.ErrNoRows {
-			return event, ErrNoResults{errors.Wrapf(err, "event %s does not exist", event.Key)}
-		}
-		return event, err
-	}
+	err := s.db.GetContext(ctx, &event, eventsQuery+" WHERE key = $1", eventKey)
 
-	err := s.db.SelectContext(ctx, &event.Webcasts, "SELECT type, url FROM webcasts WHERE event_key = $1", eventKey)
+	if err == sql.ErrNoRows {
+		return event, ErrNoResults{errors.Wrapf(err, "event %s does not exist", event.Key)}
+	}
 	return event, err
 }
 
@@ -126,8 +100,8 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 	}
 
 	eventStmt, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, location_name, lat, lon, realm_id, schema_id)
-		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :location_name, :lat, :lon, :realm_id, :schema_id)
+		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, lat, lon, realm_id, schema_id)
+		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :lat, :lon, :realm_id, :schema_id)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -138,6 +112,7 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 					week = :week,
 					start_date = :start_date,
 					end_date = :end_date,
+					webcasts = :webcasts,
 					location_name = :location_name,
 					lat = :lat,
 					lon = :lon,
@@ -145,33 +120,14 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 					schema_id = :schema_id
 	`)
 	if err != nil {
-		s.logErr(tx.Rollback())
+		s.logErr(errors.Wrap(tx.Rollback(), "rolling back events upsert tx"))
 		return err
 	}
 	defer eventStmt.Close()
 
-	deleteWebcastsStmt, err := tx.PrepareContext(ctx, `
-	    DELETE FROM webcasts WHERE event_key = $1
-	`)
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
-	defer deleteWebcastsStmt.Close()
-
-	webcastStmt, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO webcasts (event_key, type, url)
-		VALUES (:event_key, :type, :url)
-	`)
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
-	defer webcastStmt.Close()
-
 	for _, event := range events {
 		if _, err = eventStmt.ExecContext(ctx, event); err != nil {
-			s.logErr(tx.Rollback())
+			s.logErr(errors.Wrap(tx.Rollback(), "rolling back events upsert tx"))
 			if err, ok := err.(*pq.Error); ok {
 				if err.Code == pgExists {
 					return ErrExists{errors.Wrapf(err, "event with key %s already exists", event.Key)}
@@ -180,19 +136,6 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 				}
 			}
 			return err
-		}
-
-		if _, err = deleteWebcastsStmt.ExecContext(ctx, event.Key); err != nil {
-			s.logErr(tx.Rollback())
-			return err
-		}
-
-		for _, webcast := range event.Webcasts {
-			webcast.EventKey = event.Key
-			if _, err = webcastStmt.ExecContext(ctx, webcast); err != nil {
-				s.logErr(tx.Rollback())
-				return err
-			}
 		}
 	}
 
