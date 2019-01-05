@@ -124,7 +124,7 @@ func (s *Service) makeRequest(ctx context.Context, path string) (*http.Response,
 	return resp, nil
 }
 
-func webcastURL(webcastType string, channel string) (string, error) {
+func webcastURL(webcastType, channel string) (string, error) {
 	switch webcastType {
 	case "twitch":
 		return fmt.Sprintf("https://www.twitch.tv/%s", channel), nil
