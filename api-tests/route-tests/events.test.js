@@ -10,29 +10,7 @@ test('events', async () => {
 
   expect(d).toEqual({ data: expect.any(Array) })
   expect(d.data.length).toBeGreaterThan(1)
-  d.data.forEach(event => {
-    expect(event.name).toBeA(String)
-    expect(event.startDate).toBeADateString()
-    expect(event.endDate).toBeADateString()
-    expect(event.location).toBeA(Object)
-    expect(event.location.lat).toBeA(Number)
-    expect(event.location.lon).toBeA(Number)
-    expect(event.key).toBeA(String)
-    expect(event.district).toBeUndefinedOr(String)
-    expect(event.fullDistrict).toBeUndefinedOr(String)
-    expect(event.week).toBeUndefinedOr(Number)
-    expect(Object.keys(event)).toBeASubsetOf([
-      'key',
-      'realmId',
-      'name',
-      'week',
-      'startDate',
-      'endDate',
-      'location',
-      'district',
-      'fullDistrict',
-    ])
-  })
+  d.data.forEach(event => expect(event).toBeAnEvent())
 
   // /events create endpoint
   expect(api.seedUser.roles.isSuperAdmin).toBe(true)
@@ -45,16 +23,11 @@ test('events', async () => {
     week: 4,
     startDate: '1970-01-01T19:46:40-08:00',
     endDate: '1970-01-02T09:40:00-08:00',
-    location: {
-      name: 'Cleveland High School',
-      lat: 45.498555,
-      lon: -122.6385231,
-    },
+    locationName: 'Cleveland High School',
+    lat: 45.498555,
+    lon: -122.6385231,
     webcasts: [
-      {
-        type: 'twitch',
-        url: 'https://www.twitch.tv/firstwa_red',
-      },
+      'https://www.twitch.tv/firstwa_red',
     ],
   }
 
@@ -88,7 +61,9 @@ test('events', async () => {
     week: event.week,
     startDate: expect.toEqualDate(event.startDate),
     endDate: expect.toEqualDate(event.endDate),
-    location: event.location,
+    locationName: event.locationName,
+    lat: event.lat,
+    lon: event.lon,
     webcasts: event.webcasts,
   })
 
@@ -98,37 +73,6 @@ test('events', async () => {
 
   d = await resp.json()
 
-  let info = d.data
-  expect(info.key).toEqual('2018flor')
-  expect(info.name).toBeA(String)
-  expect(info.startDate).toBeADateString()
-  expect(info.endDate).toBeADateString()
-  expect(info.location).toBeA(Object)
-  expect(info.location.name).toBeA(String)
-  expect(info.location.lat).toBeA(Number)
-  expect(info.location.lon).toBeA(Number)
-  expect(info.key).toBeA(String)
-  expect(info.district).toBeUndefinedOr(String)
-  expect(info.fullDistrict).toBeUndefinedOr(String)
-  expect(info.week).toBeUndefinedOr(Number)
-  expect(info.webcasts).toEqual(expect.any(Array))
-  info.webcasts.forEach(webcast => {
-    expect(webcast).toEqual({
-      url: expect.any(String),
-      type: expect.stringMatching(api.youtubeOrTwitch),
-    })
-  })
-  expect(Object.keys(info)).toBeASubsetOf([
-    'key',
-    'realmId',
-    'schemaId',
-    'name',
-    'week',
-    'startDate',
-    'endDate',
-    'location',
-    'district',
-    'fullDistrict',
-    'webcasts',
-  ])
+  expect(d.data).toBeAnEvent()
+  expect(d.data.key).toBe("2018flor")
 })
