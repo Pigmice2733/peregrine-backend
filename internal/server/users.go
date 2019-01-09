@@ -90,9 +90,12 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(refreshTokenDuration).Unix(),
-			Subject:   strconv.FormatInt(user.ID, 10),
+		refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.RefreshClaims{
+			StandardClaims: jwt.StandardClaims{
+				ExpiresAt: time.Now().Add(refreshTokenDuration).Unix(),
+				Subject:   strconv.FormatInt(user.ID, 10),
+			},
+			HashedPassword: user.HashedPassword,
 		}).SignedString(s.JWTSecret)
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt refresh token signed string")
@@ -120,7 +123,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 			return
 		}
 
-		token, err := jwt.ParseWithClaims(rr.RefreshToken, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(rr.RefreshToken, &ihttp.RefreshClaims{}, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
@@ -137,7 +140,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 			return
 		}
 
-		claims, ok := token.Claims.(*jwt.StandardClaims)
+		claims, ok := token.Claims.(*ihttp.RefreshClaims)
 		if !ok {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
@@ -156,6 +159,12 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 		} else if err != nil {
 			go s.Logger.WithError(err).Error("retrieving user from database")
 			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		// user password has been updated since refresh token was issued
+		if user.HashedPassword != claims.HashedPassword {
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
 

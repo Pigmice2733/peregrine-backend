@@ -12,15 +12,21 @@ import (
 type contextKey string
 
 const (
-	keyRolesContext   contextKey = "pigmice_roles"
-	keySubjectContext contextKey = "pigmice_subject"
-	keyRealmContext   contextKey = "pigmice_realm"
+	keyRolesContext   contextKey = "peregrine_roles"
+	keySubjectContext contextKey = "peregrine_subject"
+	keyRealmContext   contextKey = "peregrine_realm"
 )
 
-// Claims holds the standard jwt claims plus the pigmice roles claim.
+// Claims holds the standard jwt claims, peregrine roles, and realm id.
 type Claims struct {
-	Roles   store.Roles `json:"pigmiceRoles"`
-	RealmID int64       `json:"pigmiceRealm"`
+	Roles   store.Roles `json:"peregrineRoles"`
+	RealmID int64       `json:"peregrineRealm"`
+	jwt.StandardClaims
+}
+
+// RefreshClaims holds the standard jwt claims plus
+type RefreshClaims struct {
+	HashedPassword string `json:"peregrineHashedPassword"`
 	jwt.StandardClaims
 }
 
