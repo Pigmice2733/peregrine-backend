@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"time"
 
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -37,25 +38,27 @@ func (r *Roles) Scan(src interface{}) error {
 // User holds information about a user such as their id, username, and hashed
 // password.
 type User struct {
-	ID             int64          `json:"id" db:"id"`
-	Username       string         `json:"username" db:"username"`
-	HashedPassword string         `json:"-" db:"hashed_password"`
-	RealmID        int64          `json:"realmId" db:"realm_id"`
-	FirstName      string         `json:"firstName" db:"first_name"`
-	LastName       string         `json:"lastName" db:"last_name"`
-	Roles          Roles          `json:"roles" db:"roles"`
-	Stars          pq.StringArray `json:"stars" db:"stars"`
+	ID              int64          `json:"id" db:"id"`
+	Username        string         `json:"username" db:"username"`
+	HashedPassword  string         `json:"-" db:"hashed_password"`
+	PasswordChanged UnixTime       `json:"-" db:"password_changed"`
+	RealmID         int64          `json:"realmId" db:"realm_id"`
+	FirstName       string         `json:"firstName" db:"first_name"`
+	LastName        string         `json:"lastName" db:"last_name"`
+	Roles           Roles          `json:"roles" db:"roles"`
+	Stars           pq.StringArray `json:"stars" db:"stars"`
 }
 
 // PatchUser is like User but with all nullable fields (besides id and realmID) for patching.
 type PatchUser struct {
-	ID             int64          `json:"id" db:"id"`
-	Username       *string        `json:"username" db:"username"`
-	HashedPassword *string        `json:"-" db:"hashed_password"`
-	FirstName      *string        `json:"firstName" db:"first_name"`
-	LastName       *string        `json:"lastName" db:"last_name"`
-	Roles          *Roles         `json:"roles" db:"roles"`
-	Stars          pq.StringArray `json:"stars"`
+	ID              int64          `json:"id" db:"id"`
+	Username        *string        `json:"username" db:"username"`
+	HashedPassword  *string        `json:"-" db:"hashed_password"`
+	PasswordChanged *UnixTime      `json:"-" db:"password_changed"`
+	FirstName       *string        `json:"firstName" db:"first_name"`
+	LastName        *string        `json:"lastName" db:"last_name"`
+	Roles           *Roles         `json:"roles" db:"roles"`
+	Stars           pq.StringArray `json:"stars"`
 }
 
 // GetUserByUsername retrieves a user from the database by username. It does not
@@ -78,11 +81,13 @@ func (s *Service) CreateUser(ctx context.Context, u User) error {
 		return errors.Wrap(err, "unable to begin transaction")
 	}
 
+	u.PasswordChanged = NewUnixFromTime(time.Now())
+
 	userStmt, err := tx.PrepareNamedContext(ctx, `
 	INSERT
 		INTO
-			users (username, hashed_password, realm_id, first_name, last_name, roles)
-		VALUES (:username, :hashed_password, :realm_id, :first_name, :last_name, :roles)
+			users (username, hashed_password, password_changed, realm_id, first_name, last_name, roles)
+		VALUES (:username, :hashed_password, :password_changed, :realm_id, :first_name, :last_name, :roles)
 		RETURNING id
 	`)
 	if err != nil {
@@ -132,6 +137,7 @@ func (s *Service) GetUsers(ctx context.Context) ([]User, error) {
 		id,
 		username,
 		hashed_password,
+		password_changed,
 		realm_id,
 		first_name,
 		last_name,
@@ -157,6 +163,7 @@ func (s *Service) GetUsersByRealm(ctx context.Context, realmID int64) ([]User, e
 		id,
 		username,
 		hashed_password,
+		password_changed,
 		realm_id,
 		first_name,
 		last_name,
@@ -183,6 +190,7 @@ func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 		id,
 		username,
 		hashed_password,
+		password_changed,
 		realm_id,
 		first_name,
 		last_name,
@@ -210,11 +218,17 @@ func (s *Service) PatchUser(ctx context.Context, pu PatchUser) error {
 		return errors.Wrap(err, "unable to begin transaction")
 	}
 
+	if pu.HashedPassword != nil {
+		now := NewUnixFromTime(time.Now())
+		pu.PasswordChanged = &now
+	}
+
 	result, err := tx.NamedExecContext(ctx, `
 	UPDATE users
 	    SET
 		    username = COALESCE(:username, username),
-		    hashed_password = COALESCE(:hashed_password, hashed_password),
+			hashed_password = COALESCE(:hashed_password, hashed_password),
+			password_changed = COALESCE(:password_changed, password_changed),
 		    first_name = COALESCE(:first_name, first_name),
 		    last_name = COALESCE(:last_name, last_name),
 		    roles = COALESCE(:roles, roles)
@@ -284,11 +298,21 @@ func (s *Service) DeleteUser(ctx context.Context, id int64) error {
 
 // CheckSimilarUsernameExists checks whether a user with (case insensitive) the
 // same username exists. It returns an ErrExists if a similar user exists.
-func (s *Service) CheckSimilarUsernameExists(ctx context.Context, username string) error {
+// If an id is given, it will ignore the user with that id.
+func (s *Service) CheckSimilarUsernameExists(ctx context.Context, username string, id *int64) error {
 	var ok bool
-	err := s.db.QueryRow(
-		`SELECT EXISTS(SELECT true FROM users WHERE lower(username) = lower($1))`,
-		username).Scan(&ok)
+	var err error
+
+	if id != nil {
+		err = s.db.QueryRowContext(ctx,
+			`SELECT EXISTS(SELECT true FROM users WHERE lower(username) = lower($1) AND id != $2)`,
+			username, id).Scan(&ok)
+	} else {
+		err = s.db.QueryRowContext(ctx,
+			`SELECT EXISTS(SELECT true FROM users WHERE lower(username) = lower($1))`,
+			username).Scan(&ok)
+	}
+
 	if err != nil {
 		return errors.Wrap(err, "unable to select whether user exists")
 	}

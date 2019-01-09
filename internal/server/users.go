@@ -31,7 +31,8 @@ type requestUser struct {
 
 const (
 	accessTokenDuration  = time.Hour * 24         // 1 day
-	refreshTokenDuration = time.Hour * 24 * 7 * 2 // 2 weeks
+	refreshTokenDuration = time.Hour * 24 * 7 * 4 // 4 weeks
+	bcryptCost           = 12                     // ~236ms per hash on my i7-8550U
 )
 
 func generateAccessToken(user store.User, secret []byte) (string, error) {
@@ -90,9 +91,12 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(refreshTokenDuration).Unix(),
-			Subject:   strconv.FormatInt(user.ID, 10),
+		refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.RefreshClaims{
+			StandardClaims: jwt.StandardClaims{
+				ExpiresAt: time.Now().Add(refreshTokenDuration).Unix(),
+				Subject:   strconv.FormatInt(user.ID, 10),
+			},
+			PasswordChanged: user.PasswordChanged,
 		}).SignedString(s.JWTSecret)
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt refresh token signed string")
@@ -120,7 +124,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 			return
 		}
 
-		token, err := jwt.ParseWithClaims(rr.RefreshToken, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(rr.RefreshToken, &ihttp.RefreshClaims{}, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
@@ -137,7 +141,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 			return
 		}
 
-		claims, ok := token.Claims.(*jwt.StandardClaims)
+		claims, ok := token.Claims.(*ihttp.RefreshClaims)
 		if !ok {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
@@ -156,6 +160,12 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 		} else if err != nil {
 			go s.Logger.WithError(err).Error("retrieving user from database")
 			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		// user password has been updated since refresh token was issued
+		if user.PasswordChanged != claims.PasswordChanged {
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
 
@@ -202,7 +212,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			return
 		}
 
-		err := s.Store.CheckSimilarUsernameExists(r.Context(), ru.Username)
+		err := s.Store.CheckSimilarUsernameExists(r.Context(), ru.Username, nil)
 		if _, ok := errors.Cause(err).(store.ErrExists); ok {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
@@ -214,7 +224,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 		u := store.User{Username: ru.Username, RealmID: ru.RealmID, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName}
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcryptCost)
 		if err != nil {
 			go s.Logger.WithError(err).Error("hashing user password")
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -380,7 +390,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		}
 
 		if ru.Username != nil {
-			err := s.Store.CheckSimilarUsernameExists(r.Context(), *ru.Username)
+			err := s.Store.CheckSimilarUsernameExists(r.Context(), *ru.Username, &targetID)
 			if _, ok := errors.Cause(err).(store.ErrExists); ok {
 				ihttp.Respond(w, err, http.StatusConflict)
 				return
@@ -394,7 +404,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		u := store.PatchUser{ID: targetID, Username: ru.Username, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName, Stars: ru.Stars}
 
 		if ru.Password != nil {
-			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*ru.Password), bcrypt.DefaultCost)
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*ru.Password), bcryptCost)
 			if err != nil {
 				go s.Logger.WithError(err).Error("hashing user password")
 				ihttp.Error(w, http.StatusInternalServerError)
