@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/Pigmice2733/peregrine-backend)](https://goreportcard.com/report/github.com/Pigmice2733/peregrine-backend)
 [![GitHub](https://img.shields.io/github/license/Pigmice2733/peregrine-backend.svg)](https://github.com/Pigmice2733/peregrine-backend/blob/master/LICENSE.md)
 
-Peregrine is a REST API server written in Go for scouting and analysis of FIRST Robotics competitions.
+Peregrine is a HTTP JSON API written in Go for scouting and analysis of FIRST Robotics competitions.
 
 For a description of what scouting is, please view the [SCOUTING.md](SCOUTING.md).
 
