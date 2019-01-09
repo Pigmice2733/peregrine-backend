@@ -31,7 +31,7 @@ type requestUser struct {
 
 const (
 	accessTokenDuration  = time.Hour * 24         // 1 day
-	refreshTokenDuration = time.Hour * 24 * 7 * 2 // 2 weeks
+	refreshTokenDuration = time.Hour * 24 * 7 * 4 // 4 weeks
 )
 
 func generateAccessToken(user store.User, secret []byte) (string, error) {
