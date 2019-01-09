@@ -212,7 +212,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			return
 		}
 
-		err := s.Store.CheckSimilarUsernameExists(r.Context(), ru.Username)
+		err := s.Store.CheckSimilarUsernameExists(r.Context(), ru.Username, nil)
 		if _, ok := errors.Cause(err).(store.ErrExists); ok {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
@@ -390,7 +390,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		}
 
 		if ru.Username != nil {
-			err := s.Store.CheckSimilarUsernameExists(r.Context(), *ru.Username)
+			err := s.Store.CheckSimilarUsernameExists(r.Context(), *ru.Username, &targetID)
 			if _, ok := errors.Cause(err).(store.ErrExists); ok {
 				ihttp.Respond(w, err, http.StatusConflict)
 				return
