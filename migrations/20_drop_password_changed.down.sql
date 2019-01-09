@@ -1,0 +1,1 @@
+DROP COLUMN password_changed;

@@ -96,7 +96,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 				ExpiresAt: time.Now().Add(refreshTokenDuration).Unix(),
 				Subject:   strconv.FormatInt(user.ID, 10),
 			},
-			HashedPassword: user.HashedPassword,
+			PasswordChanged: user.PasswordChanged,
 		}).SignedString(s.JWTSecret)
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt refresh token signed string")
@@ -164,7 +164,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 		}
 
 		// user password has been updated since refresh token was issued
-		if user.HashedPassword != claims.HashedPassword {
+		if user.PasswordChanged != claims.PasswordChanged {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
