@@ -32,6 +32,7 @@ type requestUser struct {
 const (
 	accessTokenDuration  = time.Hour * 24         // 1 day
 	refreshTokenDuration = time.Hour * 24 * 7 * 4 // 4 weeks
+	bcryptCost           = 12                     // ~236ms per hash on my i7-8550U
 )
 
 func generateAccessToken(user store.User, secret []byte) (string, error) {
@@ -223,7 +224,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 		u := store.User{Username: ru.Username, RealmID: ru.RealmID, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName}
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcryptCost)
 		if err != nil {
 			go s.Logger.WithError(err).Error("hashing user password")
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -403,7 +404,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		u := store.PatchUser{ID: targetID, Username: ru.Username, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName, Stars: ru.Stars}
 
 		if ru.Password != nil {
-			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*ru.Password), bcrypt.DefaultCost)
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*ru.Password), bcryptCost)
 			if err != nil {
 				go s.Logger.WithError(err).Error("hashing user password")
 				ihttp.Error(w, http.StatusInternalServerError)
