@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 
@@ -12,25 +13,38 @@ import (
 
 // Schema describes the statistics that reports should include
 type Schema struct {
-	ID      int64           `json:"id" db:"id"`
-	Year    *int64          `json:"year,omitempty" db:"year"`
-	RealmID *int64          `json:"realmId,omitempty" db:"realm_id"`
-	Auto    json.RawMessage `json:"auto" db:"auto"`
-	Teleop  json.RawMessage `json:"teleop" db:"teleop"`
+	ID      int64             `json:"id" db:"id"`
+	Year    *int64            `json:"year,omitempty" db:"year"`
+	RealmID *int64            `json:"realmId,omitempty" db:"realm_id"`
+	Auto    []StatDescription `json:"auto" db:"auto"`
+	Teleop  []StatDescription `json:"teleop" db:"teleop"`
 }
 
 // PatchSchema is a nullable schema for patching.
 type PatchSchema struct {
-	ID     int64            `json:"id" db:"id"`
-	Year   *int64           `json:"year,omitempty" db:"year"`
-	Auto   *json.RawMessage `json:"auto" db:"auto"`
-	Teleop *json.RawMessage `json:"teleop" db:"teleop"`
+	ID     int64             `json:"id" db:"id"`
+	Year   *int64            `json:"year,omitempty" db:"year"`
+	Auto   []StatDescription `json:"auto" db:"auto"`
+	Teleop []StatDescription `json:"teleop" db:"teleop"`
 }
 
 // StatDescription describes a single statistic in a schema
 type StatDescription struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
+}
+
+// Value implements driver.Valuer to return JSON for the DB from StatDescription.
+func (sd StatDescription) Value() (driver.Value, error) { return json.Marshal(sd) }
+
+// Scan implements sql.Scanner to scan JSON from the DB into StatDescription.
+func (sd *StatDescription) Scan(src interface{}) error {
+	j, ok := src.([]byte)
+	if !ok {
+		return errors.New("got invalid type for StatDescription")
+	}
+
+	return json.Unmarshal(j, sd)
 }
 
 // CreateSchema creates a new schema

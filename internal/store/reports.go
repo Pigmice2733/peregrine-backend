@@ -2,20 +2,20 @@ package store
 
 import (
 	"context"
+	"database/sql/driver"
 	"encoding/json"
+
+	"github.com/pkg/errors"
 )
 
 // A Stat holds a single statistic from a single match, and could be either a
 // boolean or numeric statistic
 type Stat struct {
-	// Numeric
-	Attempts  *int `json:"attempts"`
-	Successes *int `json:"successes"`
-	// Boolean
-	Attempted *bool `json:"attempted"`
-	Succeeded *bool `json:"succeeded"`
-
-	Name string `json:"statName"`
+	Attempts  *int   `json:"attempts"`
+	Successes *int   `json:"successes"`
+	Attempted *bool  `json:"attempted"`
+	Succeeded *bool  `json:"succeeded"`
+	Name      string `json:"statName"`
 }
 
 // ReportData holds all the data in a report
@@ -24,17 +24,28 @@ type ReportData struct {
 	Teleop []Stat `json:"teleop"`
 }
 
+// Value implements driver.Valuer to return JSON for the DB from ReportData.
+func (rd ReportData) Value() (driver.Value, error) { return json.Marshal(rd) }
+
+// Scan implements sql.Scanner to scan JSON from the DB into ReportData.
+func (rd *ReportData) Scan(src interface{}) error {
+	j, ok := src.([]byte)
+	if !ok {
+		return errors.New("got invalid type for ReportData")
+	}
+
+	return json.Unmarshal(j, rd)
+}
+
 // Report is data about how an FRC team performed in a specific match.
 type Report struct {
-	ID       int64  `json:"-" db:"id"`
-	MatchKey string `json:"-" db:"match_key"`
-	TeamKey  string `json:"-" db:"team_key"`
-
-	ReporterID *int64 `json:"reporterId" db:"reporter_id"`
-	RealmID    *int64 `json:"-" db:"realm_id"`
-
-	AutoName string          `json:"autoName" db:"auto_name"`
-	Data     json.RawMessage `json:"data" db:"data"`
+	ID         int64      `json:"-" db:"id"`
+	MatchKey   string     `json:"-" db:"match_key"`
+	TeamKey    string     `json:"-" db:"team_key"`
+	ReporterID *int64     `json:"reporterId" db:"reporter_id"`
+	RealmID    *int64     `json:"-" db:"realm_id"`
+	AutoName   string     `json:"autoName" db:"auto_name"`
+	Data       ReportData `json:"data" db:"data"`
 }
 
 // UpsertReport creates a new report in the db, or replaces the existing one if
