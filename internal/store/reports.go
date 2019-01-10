@@ -11,10 +11,10 @@ import (
 // A Stat holds a single statistic from a single match, and could be either a
 // boolean or numeric statistic
 type Stat struct {
-	Attempts  *int   `json:"attempts"`
-	Successes *int   `json:"successes"`
-	Attempted *bool  `json:"attempted"`
-	Succeeded *bool  `json:"succeeded"`
+	Attempts  *int   `json:"attempts,omitempty"`
+	Successes *int   `json:"successes,omitempty"`
+	Attempted *bool  `json:"attempted,omitempty"`
+	Succeeded *bool  `json:"succeeded,omitempty"`
 	Name      string `json:"statName"`
 }
 

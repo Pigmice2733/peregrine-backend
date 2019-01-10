@@ -1,0 +1,451 @@
+[1mdiff --git a/api-tests/package-lock.json b/api-tests/package-lock.json[m
+[1mindex 127a1f8..7e7fa34 100644[m
+[1m--- a/api-tests/package-lock.json[m
+[1m+++ b/api-tests/package-lock.json[m
+[36m@@ -2249,7 +2249,8 @@[m
+         "ansi-regex": {[m
+           "version": "2.1.1",[m
+           "bundled": true,[m
+[31m-          "dev": true[m
+[32m+[m[32m          "dev": true,[m
+[32m+[m[32m          "optional": true[m
+         },[m
+         "aproba": {[m
+           "version": "1.2.0",[m
+[36m@@ -2664,7 +2665,8 @@[m
+         "safe-buffer": {[m
+           "version": "5.1.1",[m
+           "bundled": true,[m
+[31m-          "dev": true[m
+[32m+[m[32m          "dev": true,[m
+[32m+[m[32m          "optional": true[m
+         },[m
+         "safer-buffer": {[m
+           "version": "2.1.2",[m
+[36m@@ -2720,6 +2722,7 @@[m
+           "version": "3.0.1",[m
+           "bundled": true,[m
+           "dev": true,[m
+[32m+[m[32m          "optional": true,[m
+           "requires": {[m
+             "ansi-regex": "^2.0.0"[m
+           }[m
+[36m@@ -2763,12 +2766,14 @@[m
+         "wrappy": {[m
+           "version": "1.0.2",[m
+           "bundled": true,[m
+[31m-          "dev": true[m
+[32m+[m[32m          "dev": true,[m
+[32m+[m[32m          "optional": true[m
+         },[m
+         "yallist": {[m
+           "version": "3.0.2",[m
+           "bundled": true,[m
+[31m-          "dev": true[m
+[32m+[m[32m          "dev": true,[m
+[32m+[m[32m          "optional": true[m
+         }[m
+       }[m
+     },[m
+[1mdiff --git a/internal/analysis/analysis.go b/internal/analysis/analysis.go[m
+[1mindex df34116..dcdb11b 100644[m
+[1m--- a/internal/analysis/analysis.go[m
+[1m+++ b/internal/analysis/analysis.go[m
+[36m@@ -1,8 +1,6 @@[m
+ package analysis[m
+ [m
+ import ([m
+[31m-	"encoding/json"[m
+[31m-[m
+ 	"github.com/Pigmice2733/peregrine-backend/internal/store"[m
+ )[m
+ [m
+[36m@@ -58,12 +56,6 @@[m [mfunc AnalyzeReports(schema store.Schema, eventReports []store.Report) (map[strin[m
+ 	}[m
+ [m
+ 	for _, report := range eventReports {[m
+[31m-		var data store.ReportData[m
+[31m-[m
+[31m-		if err := json.Unmarshal(report.Data, &data); err != nil {[m
+[31m-			return nil, err[m
+[31m-		}[m
+[31m-[m
+ 		if _, ok := stats[report.TeamKey]; !ok {[m
+ 			rts := TeamStats{[m
+ 				Team:          report.TeamKey,[m
+[36m@@ -75,8 +67,8 @@[m [mfunc AnalyzeReports(schema store.Schema, eventReports []store.Report) (map[strin[m
+ 			stats[report.TeamKey] = &rts[m
+ 		}[m
+ [m
+[31m-		processStatFields(data.Auto, schemaFields.Auto, stats[report.TeamKey].AutoNumeric, stats[report.TeamKey].AutoBoolean)[m
+[31m-		processStatFields(data.Teleop, schemaFields.Teleop, stats[report.TeamKey].TeleopNumeric, stats[report.TeamKey].TeleopBoolean)[m
+[32m+[m		[32mprocessStatFields(report.Data.Auto, schemaFields.Auto, stats[report.TeamKey].AutoNumeric, stats[report.TeamKey].AutoBoolean)[m
+[32m+[m		[32mprocessStatFields(report.Data.Teleop, schemaFields.Teleop, stats[report.TeamKey].TeleopNumeric, stats[report.TeamKey].TeleopBoolean)[m
+ 	}[m
+ [m
+ 	return stats, nil[m
+[36m@@ -153,21 +145,11 @@[m [mfunc getSchemaFields(s store.Schema) (SchemaFields, error) {[m
+ 		Teleop: make(map[string]string),[m
+ 	}[m
+ [m
+[31m-	autoFields := []store.StatDescription{}[m
+[31m-	if err := json.Unmarshal(s.Auto, &autoFields); err != nil {[m
+[31m-		return sf, err[m
+[31m-	}[m
+[31m-[m
+[31m-	teleopFields := []store.StatDescription{}[m
+[31m-	if err := json.Unmarshal(s.Teleop, &teleopFields); err != nil {[m
+[31m-		return sf, err[m
+[31m-	}[m
+[31m-[m
+[31m-	for _, field := range autoFields {[m
+[32m+[m	[32mfor _, field := range s.Auto {[m
+ 		sf.Auto[field.Name] = field.Type[m
+ 	}[m
+ [m
+[31m-	for _, field := range teleopFields {[m
+[32m+[m	[32mfor _, field := range s.Teleop {[m
+ 		sf.Teleop[field.Name] = field.Type[m
+ 	}[m
+ [m
+[1mdiff --git a/internal/analysis/analysis_test.go b/internal/analysis/analysis_test.go[m
+[1mindex 3650b4a..c140c06 100644[m
+[1m--- a/internal/analysis/analysis_test.go[m
+[1m+++ b/internal/analysis/analysis_test.go[m
+[36m@@ -7,45 +7,69 @@[m [mimport ([m
+ 	"github.com/Pigmice2733/peregrine-backend/internal/store"[m
+ )[m
+ [m
+[32m+[m[32mfunc newInt(a int) *int {[m
+[32m+[m	[32mreturn &a[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunc newBool(a bool) *bool {[m
+[32m+[m	[32mreturn &a[m
+[32m+[m[32m}[m
+[32m+[m
+ func TestAnalsyzeReports(t *testing.T) {[m
+ 	reports := []store.Report{[m
+ 		store.Report{[m
+ 			ID:      0,[m
+ 			TeamKey: "frc2471",[m
+[31m-			Data: []byte(`{[m
+[31m-				"teleop": [{"statName": "Cubes", "attempts": 5, "successes": 3}],[m
+[31m-				"auto": [{"statName": "Line", "attempted": true, "succeeded": false}][m
+[31m-			}`),[m
+[32m+[m			[32mData: store.ReportData{[m
+[32m+[m				[32mTeleop: []store.Stat{[m
+[32m+[m					[32m{Name: "Cubes", Attempts: newInt(5), Successes: newInt(3)},[m
+[32m+[m				[32m},[m
+[32m+[m				[32mAuto: []store.Stat{[m
+[32m+[m					[32m{Name: "Line", Attempted: newBool(true), Succeeded: newBool(false)},[m
+[32m+[m				[32m},[m
+[32m+[m			[32m},[m
+ 		},[m
+ 		store.Report{[m
+ 			ID:      1,[m
+ 			TeamKey: "frc2733",[m
+[31m-			Data: []byte(`{[m
+[31m-				"teleop": [{"statName": "Cubes", "attempts": 8, "successes": 6}],[m
+[31m-				"auto": [{"statName": "Line", "attempted": true, "succeeded": true}][m
+[31m-			}`),[m
+[32m+[m			[32mData: store.ReportData{[m
+[32m+[m				[32mTeleop: []store.Stat{[m
+[32m+[m					[32m{Name: "Cubes", Attempts: newInt(8), Successes: newInt(6)},[m
+[32m+[m				[32m},[m
+[32m+[m				[32mAuto: []store.Stat{[m
+[32m+[m					[32m{Name: "Line", Attempted: newBool(true), Succeeded: newBool(true)},[m
+[32m+[m				[32m},[m
+[32m+[m			[32m},[m
+ 		},[m
+ 		store.Report{[m
+ 			ID:      2,[m
+ 			TeamKey: "frc2733",[m
+[31m-			Data: []byte(`{[m
+[31m-				"teleop": [{"statName": "Line", "attempted": true, "succeeded": false}],[m
+[31m-				"auto": [{"statName": "Cubes", "attempts": 5, "successes": 3}][m
+[31m-			}`),[m
+[32m+[m			[32mData: store.ReportData{[m
+[32m+[m				[32mTeleop: []store.Stat{[m
+[32m+[m					[32m{Name: "Line", Attempted: newBool(true), Succeeded: newBool(false)},[m
+[32m+[m				[32m},[m
+[32m+[m				[32mAuto: []store.Stat{[m
+[32m+[m					[32m{Name: "Cubes", Attempts: newInt(5), Successes: newInt(3)},[m
+[32m+[m				[32m},[m
+[32m+[m			[32m},[m
+ 		},[m
+ 		store.Report{[m
+ 			ID:      3,[m
+ 			TeamKey: "frc2471",[m
+[31m-			Data: []byte(`{[m
+[31m-				"teleop": [{"statName": "Cubes", "attempts": 2, "successes": 2}],[m
+[31m-				"auto": [{"statName": "Line", "attempted": true, "succeeded": true}][m
+[31m-			}`),[m
+[32m+[m			[32mData: store.ReportData{[m
+[32m+[m				[32mTeleop: []store.Stat{[m
+[32m+[m					[32m{Name: "Cubes", Attempts: newInt(2), Successes: newInt(2)},[m
+[32m+[m				[32m},[m
+[32m+[m				[32mAuto: []store.Stat{[m
+[32m+[m					[32m{Name: "Line", Attempted: newBool(true), Succeeded: newBool(true)},[m
+[32m+[m				[32m},[m
+[32m+[m			[32m},[m
+ 		},[m
+ 	}[m
+ [m
+ 	schema := store.Schema{[m
+[31m-		Auto:   []byte(`[{"name": "Line", "type": "boolean"}]`),[m
+[31m-		Teleop: []byte(`[{"name": "Cubes", "type": "number"}]`),[m
+[32m+[m		[32mAuto:   []store.StatDescription{{Name: "Line", Type: "boolean"}},[m
+[32m+[m		[32mTeleop: []store.StatDescription{{Name: "Cubes", Type: "number"}},[m
+ 	}[m
+ [m
+ 	analyzedStats, err := analysis.AnalyzeReports(schema, reports)[m
+[1mdiff --git a/internal/server/stats.go b/internal/server/stats.go[m
+[1mindex 115567b..f640341 100644[m
+[1m--- a/internal/server/stats.go[m
+[1m+++ b/internal/server/stats.go[m
+[36m@@ -1,7 +1,6 @@[m
+ package server[m
+ [m
+ import ([m
+[31m-	"encoding/json"[m
+ 	"fmt"[m
+ 	"net/http"[m
+ [m
+[36m@@ -13,9 +12,9 @@[m [mimport ([m
+ )[m
+ [m
+ type teamStats struct {[m
+[31m-	Team   string            `json:"team"`[m
+[31m-	Auto   []json.RawMessage `json:"auto"`[m
+[31m-	Teleop []json.RawMessage `json:"teleop"`[m
+[32m+[m	[32mTeam   string        `json:"team"`[m
+[32m+[m	[32mAuto   []interface{} `json:"auto"`[m
+[32m+[m	[32mTeleop []interface{} `json:"teleop"`[m
+ }[m
+ [m
+ // eventStats analyzes the event-wide statistics of every team at an event with submitted reports[m
+[36m@@ -85,15 +84,21 @@[m [mfunc (s *Server) eventStats() http.HandlerFunc {[m
+ 			return[m
+ 		}[m
+ [m
+[31m-		fullStats := []teamStats{}[m
+[31m-[m
+[32m+[m		[32mfullStats := make([]teamStats, 0)[m
+ 		for _, ts := range analyzedStats {[m
+[31m-			stats, err := marshalTeamStats(ts)[m
+[32m+[m			[32mstats := teamStats{Team: ts.Team}[m
+ [m
+[31m-			if err != nil {[m
+[31m-				ihttp.Error(w, http.StatusInternalServerError)[m
+[31m-				go s.Logger.WithError(err).Error("marshalling statistic")[m
+[31m-				return[m
+[32m+[m			[32mfor _, v := range ts.AutoBoolean {[m
+[32m+[m				[32mstats.Auto = append(stats.Auto, v)[m
+[32m+[m			[32m}[m
+[32m+[m			[32mfor _, v := range ts.AutoNumeric {[m
+[32m+[m				[32mstats.Auto = append(stats.Auto, v)[m
+[32m+[m			[32m}[m
+[32m+[m			[32mfor _, v := range ts.TeleopBoolean {[m
+[32m+[m				[32mstats.Teleop = append(stats.Teleop, v)[m
+[32m+[m			[32m}[m
+[32m+[m			[32mfor _, v := range ts.TeleopNumeric {[m
+[32m+[m				[32mstats.Teleop = append(stats.Teleop, v)[m
+ 			}[m
+ [m
+ 			fullStats = append(fullStats, stats)[m
+[36m@@ -106,59 +111,13 @@[m [mfunc (s *Server) eventStats() http.HandlerFunc {[m
+ 			return[m
+ 		}[m
+ [m
+[32m+[m		[32m// fill in unreported teams[m
+ 		for _, team := range teamKeys {[m
+ 			if _, ok := analyzedStats[team]; !ok {[m
+[31m-				stats := teamStats{[m
+[31m-					Team:   team,[m
+[31m-					Auto:   []json.RawMessage{},[m
+[31m-					Teleop: []json.RawMessage{},[m
+[31m-				}[m
+[31m-				fullStats = append(fullStats, stats)[m
+[32m+[m				[32mfullStats = append(fullStats, teamStats{Team: team})[m
+ 			}[m
+ 		}[m
+ [m
+ 		ihttp.Respond(w, fullStats, http.StatusOK)[m
+ 	}[m
+ }[m
+[31m-[m
+[31m-func marshalTeamStats(ts *analysis.TeamStats) (teamStats, error) {[m
+[31m-	stats := teamStats{[m
+[31m-		Team:   ts.Team,[m
+[31m-		Auto:   []json.RawMessage{},[m
+[31m-		Teleop: []json.RawMessage{},[m
+[31m-	}[m
+[31m-[m
+[31m-	for _, numeric := range ts.AutoNumeric {[m
+[31m-		stat, err := json.Marshal(numeric)[m
+[31m-		if err != nil {[m
+[31m-			return stats, err[m
+[31m-		}[m
+[31m-		stats.Auto = append(stats.Auto, stat)[m
+[31m-	}[m
+[31m-[m
+[31m-	for _, boolean := range ts.AutoBoolean {[m
+[31m-		stat, err := json.Marshal(boolean)[m
+[31m-		if err != nil {[m
+[31m-			return stats, err[m
+[31m-		}[m
+[31m-		stats.Auto = append(stats.Auto, stat)[m
+[31m-	}[m
+[31m-[m
+[31m-	for _, numeric := range ts.TeleopNumeric {[m
+[31m-		stat, err := json.Marshal(numeric)[m
+[31m-		if err != nil {[m
+[31m-			return stats, err[m
+[31m-		}[m
+[31m-		stats.Teleop = append(stats.Teleop, stat)[m
+[31m-	}[m
+[31m-[m
+[31m-	for _, boolean := range ts.TeleopBoolean {[m
+[31m-		stat, err := json.Marshal(boolean)[m
+[31m-		if err != nil {[m
+[31m-			return stats, err[m
+[31m-		}[m
+[31m-		stats.Teleop = append(stats.Teleop, stat)[m
+[31m-	}[m
+[31m-[m
+[31m-	return stats, nil[m
+[31m-}[m
+[1mdiff --git a/internal/store/reports.go b/internal/store/reports.go[m
+[1mindex a62e9db..563074c 100644[m
+[1m--- a/internal/store/reports.go[m
+[1m+++ b/internal/store/reports.go[m
+[36m@@ -2,20 +2,20 @@[m [mpackage store[m
+ [m
+ import ([m
+ 	"context"[m
+[32m+[m	[32m"database/sql/driver"[m
+ 	"encoding/json"[m
+[32m+[m
+[32m+[m	[32m"github.com/pkg/errors"[m
+ )[m
+ [m
+ // A Stat holds a single statistic from a single match, and could be either a[m
+ // boolean or numeric statistic[m
+ type Stat struct {[m
+[31m-	// Numeric[m
+[31m-	Attempts  *int `json:"attempts"`[m
+[31m-	Successes *int `json:"successes"`[m
+[31m-	// Boolean[m
+[31m-	Attempted *bool `json:"attempted"`[m
+[31m-	Succeeded *bool `json:"succeeded"`[m
+[31m-[m
+[31m-	Name string `json:"statName"`[m
+[32m+[m	[32mAttempts  *int   `json:"attempts"`[m
+[32m+[m	[32mSuccesses *int   `json:"successes"`[m
+[32m+[m	[32mAttempted *bool  `json:"attempted"`[m
+[32m+[m	[32mSucceeded *bool  `json:"succeeded"`[m
+[32m+[m	[32mName      string `json:"statName"`[m
+ }[m
+ [m
+ // ReportData holds all the data in a report[m
+[36m@@ -24,17 +24,28 @@[m [mtype ReportData struct {[m
+ 	Teleop []Stat `json:"teleop"`[m
+ }[m
+ [m
+[31m-// Report is data about how an FRC team performed in a specific match.[m
+[31m-type Report struct {[m
+[31m-	ID       int64  `json:"-" db:"id"`[m
+[31m-	MatchKey string `json:"-" db:"match_key"`[m
+[31m-	TeamKey  string `json:"-" db:"team_key"`[m
+[32m+[m[32m// Value implements driver.Valuer to return JSON for the DB from ReportData.[m
+[32m+[m[32mfunc (rd ReportData) Value() (driver.Value, error) { return json.Marshal(rd) }[m
+[32m+[m
+[32m+[m[32m// Scan implements sql.Scanner to scan JSON from the DB into ReportData.[m
+[32m+[m[32mfunc (rd *ReportData) Scan(src interface{}) error {[m
+[32m+[m	[32mj, ok := src.([]byte)[m
+[32m+[m	[32mif !ok {[m
+[32m+[m		[32mreturn errors.New("got invalid type for ReportData")[m
+[32m+[m	[32m}[m
+ [m
+[31m-	ReporterID *int64 `json:"reporterId" db:"reporter_id"`[m
+[31m-	RealmID    *int64 `json:"-" db:"realm_id"`[m
+[32m+[m	[32mreturn json.Unmarshal(j, rd)[m
+[32m+[m[32m}[m
+ [m
+[31m-	AutoName string          `json:"autoName" db:"auto_name"`[m
+[31m-	Data     json.RawMessage `json:"data" db:"data"`[m
+[32m+[m[32m// Report is data about how an FRC team performed in a specific match.[m
+[32m+[m[32mtype Report struct {[m
+[32m+[m	[32mID         int64      `json:"-" db:"id"`[m
+[32m+[m	[32mMatchKey   string     `json:"-" db:"match_key"`[m
+[32m+[m	[32mTeamKey    string     `json:"-" db:"team_key"`[m
+[32m+[m	[32mReporterID *int64     `json:"reporterId" db:"reporter_id"`[m
+[32m+[m	[32mRealmID    *int64     `json:"-" db:"realm_id"`[m
+[32m+[m	[32mAutoName   string     `json:"autoName" db:"auto_name"`[m
+[32m+[m	[32mData       ReportData `json:"data" db:"data"`[m
+ }[m
+ [m
+ // UpsertReport creates a new report in the db, or replaces the existing one if[m
+[1mdiff --git a/internal/store/schemas.go b/internal/store/schemas.go[m
+[1mindex 290119f..b1e13dd 100644[m
+[1m--- a/internal/store/schemas.go[m
+[1m+++ b/internal/store/schemas.go[m
+[36m@@ -3,6 +3,7 @@[m [mpackage store[m
+ import ([m
+ 	"context"[m
+ 	"database/sql"[m
+[32m+[m	[32m"database/sql/driver"[m
+ 	"encoding/json"[m
+ 	"fmt"[m
+ [m
+[36m@@ -12,19 +13,19 @@[m [mimport ([m
+ [m
+ // Schema describes the statistics that reports should include[m
+ type Schema struct {[m
+[31m-	ID      int64           `json:"id" db:"id"`[m
+[31m-	Year    *int64          `json:"year,omitempty" db:"year"`[m
+[31m-	RealmID *int64          `json:"realmId,omitempty" db:"realm_id"`[m
+[31m-	Auto    json.RawMessage `json:"auto" db:"auto"`[m
+[31m-	Teleop  json.RawMessage `json:"teleop" db:"teleop"`[m
+[32m+[m	[32mID      int64            `json:"id" db:"id"`[m
+[32m+[m	[32mYear    *int64           `json:"year,omitempty" db:"year"`[m
+[32m+[m	[32mRealmID *int64           `json:"realmId,omitempty" db:"realm_id"`[m
+[32m+[m	[32mAuto    StatDescriptions `json:"auto" db:"auto"`[m
+[32m+[m	[32mTeleop  StatDescriptions `json:"teleop" db:"teleop"`[m
+ }[m
+ [m
+ // PatchSchema is a nullable schema for patching.[m
+ type PatchSchema struct {[m
+ 	ID     int64            `json:"id" db:"id"`[m
+ 	Year   *int64           `json:"year,omitempty" db:"year"`[m
+[31m-	Auto   *json.RawMessage `json:"auto" db:"auto"`[m
+[31m-	Teleop *json.RawMessage `json:"teleop" db:"teleop"`[m
+[32m+[m	[32mAuto   StatDescriptions `json:"auto" db:"auto"`[m
+[32m+[m	[32mTeleop StatDescriptions `json:"teleop" db:"teleop"`[m
+ }[m
+ [m
+ // StatDescription describes a single statistic in a schema[m
+[36m@@ -33,6 +34,22 @@[m [mtype StatDescription struct {[m
+ 	Type string `json:"type"`[m
+ }[m
+ [m
+[32m+[m[32m// StatDescriptions holds multiple StatDescriptions for storing in one DB column[m
+[32m+[m[32mtype StatDescriptions []StatDescription[m
+[32m+[m
+[32m+[m[32m// Value implements driver.Valuer to return JSON for the DB from StatDescription.[m
+[32m+[m[32mfunc (sd StatDescriptions) Value() (driver.Value, error) { return json.Marshal(sd) }[m
+[32m+[m
+[32m+[m[32m// Scan implements sql.Scanner to scan JSON from the DB into StatDescriptions.[m
+[32m+[m[32mfunc (sd *StatDescriptions) Scan(src interface{}) error {[m
+[32m+[m	[32mj, ok := src.([]byte)[m
+[32m+[m	[32mif !ok {[m
+[32m+[m		[32mreturn errors.New("got invalid type for StatDescriptions")[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mreturn json.Unmarshal(j, sd)[m
+[32m+[m[32m}[m
+[32m+[m
+ // CreateSchema creates a new schema[m
+ func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {[m
+ 	tx, err := s.db.BeginTxx(ctx, nil)[m
