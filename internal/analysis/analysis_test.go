@@ -1,9 +1,8 @@
-package analysis_test
+package analysis
 
 import (
 	"testing"
 
-	"github.com/Pigmice2733/peregrine-backend/internal/analysis"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 )
 
@@ -72,7 +71,7 @@ func TestAnalsyzeReports(t *testing.T) {
 		Teleop: []store.StatDescription{{Name: "Cubes", Type: "number"}},
 	}
 
-	analyzedStats, err := analysis.AnalyzeReports(schema, reports)
+	analyzedStats, err := AnalyzeReports(schema, reports)
 	if err != nil {
 		t.Errorf("analysis failed with error: %v", err)
 	}
@@ -109,14 +108,14 @@ func TestAnalsyzeReports(t *testing.T) {
 		}
 
 		if stat.Name == "Cubes" {
-			attempts := analysis.MaxAvg{
+			attempts := MaxAvg{
 				Max:     5,
 				Avg:     3.5,
 				Total:   7,
 				Matches: 2,
 			}
 
-			successes := analysis.MaxAvg{
+			successes := MaxAvg{
 				Max:     3,
 				Avg:     2.5,
 				Total:   5,
