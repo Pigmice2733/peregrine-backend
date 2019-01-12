@@ -16,7 +16,7 @@ func newBool(a bool) *bool {
 
 func TestAnalsyzeReports(t *testing.T) {
 	reports := []store.Report{
-		store.Report{
+		{
 			ID:      0,
 			TeamKey: "frc2471",
 			Data: store.ReportData{
@@ -28,7 +28,7 @@ func TestAnalsyzeReports(t *testing.T) {
 				},
 			},
 		},
-		store.Report{
+		{
 			ID:      1,
 			TeamKey: "frc2733",
 			Data: store.ReportData{
@@ -40,7 +40,7 @@ func TestAnalsyzeReports(t *testing.T) {
 				},
 			},
 		},
-		store.Report{
+		{
 			ID:      2,
 			TeamKey: "frc2733",
 			Data: store.ReportData{
@@ -52,7 +52,7 @@ func TestAnalsyzeReports(t *testing.T) {
 				},
 			},
 		},
-		store.Report{
+		{
 			ID:      3,
 			TeamKey: "frc2471",
 			Data: store.ReportData{
