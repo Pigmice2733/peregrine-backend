@@ -10,6 +10,6 @@ server:
 
 tba:
     url: https://www.thebluealliance.com/api/v3 # default, not required
-    apiKey: your-api-key # no default, required
+    apiKey: your-api-key # no default, required, uses $PEREGRINE_TBA_API_KEY if set
 
 dsn: user=postgres port=5432 dbname=peregrine sslmode=disable

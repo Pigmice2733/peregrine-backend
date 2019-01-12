@@ -57,6 +57,9 @@ func Open(basePath string) (Config, error) {
 		"secret":      secretUUID.String(),
 	})
 	viper.SetDefault("tba.url", "https://www.thebluealliance.com/api/v3")
+	if err := viper.BindEnv("tba.apiKey", "PEREGRINE_TBA_API_KEY"); err != nil {
+		return Config{}, errors.Wrap(err, "unable to bind viper env var for api key")
+	}
 
 	if err := viper.ReadInConfig(); err != nil {
 		return Config{}, errors.Wrap(err, "unable to read in config file")
