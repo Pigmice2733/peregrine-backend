@@ -106,7 +106,7 @@ func Auth(next http.Handler, secret string) http.Handler {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 
-			return secret, nil
+			return []byte(secret), nil
 		})
 		if err != nil {
 			Error(w, http.StatusUnauthorized)
