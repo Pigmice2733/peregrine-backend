@@ -7,45 +7,69 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 )
 
+func newInt(a int) *int {
+	return &a
+}
+
+func newBool(a bool) *bool {
+	return &a
+}
+
 func TestAnalsyzeReports(t *testing.T) {
 	reports := []store.Report{
 		store.Report{
 			ID:      0,
 			TeamKey: "frc2471",
-			Data: []byte(`{
-				"teleop": [{"statName": "Cubes", "attempts": 5, "successes": 3}],
-				"auto": [{"statName": "Line", "attempted": true, "succeeded": false}]
-			}`),
+			Data: store.ReportData{
+				Teleop: []store.Stat{
+					{Name: "Cubes", Attempts: newInt(5), Successes: newInt(3)},
+				},
+				Auto: []store.Stat{
+					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(false)},
+				},
+			},
 		},
 		store.Report{
 			ID:      1,
 			TeamKey: "frc2733",
-			Data: []byte(`{
-				"teleop": [{"statName": "Cubes", "attempts": 8, "successes": 6}],
-				"auto": [{"statName": "Line", "attempted": true, "succeeded": true}]
-			}`),
+			Data: store.ReportData{
+				Teleop: []store.Stat{
+					{Name: "Cubes", Attempts: newInt(8), Successes: newInt(6)},
+				},
+				Auto: []store.Stat{
+					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(true)},
+				},
+			},
 		},
 		store.Report{
 			ID:      2,
 			TeamKey: "frc2733",
-			Data: []byte(`{
-				"teleop": [{"statName": "Line", "attempted": true, "succeeded": false}],
-				"auto": [{"statName": "Cubes", "attempts": 5, "successes": 3}]
-			}`),
+			Data: store.ReportData{
+				Teleop: []store.Stat{
+					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(false)},
+				},
+				Auto: []store.Stat{
+					{Name: "Cubes", Attempts: newInt(5), Successes: newInt(3)},
+				},
+			},
 		},
 		store.Report{
 			ID:      3,
 			TeamKey: "frc2471",
-			Data: []byte(`{
-				"teleop": [{"statName": "Cubes", "attempts": 2, "successes": 2}],
-				"auto": [{"statName": "Line", "attempted": true, "succeeded": true}]
-			}`),
+			Data: store.ReportData{
+				Teleop: []store.Stat{
+					{Name: "Cubes", Attempts: newInt(2), Successes: newInt(2)},
+				},
+				Auto: []store.Stat{
+					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(true)},
+				},
+			},
 		},
 	}
 
 	schema := store.Schema{
-		Auto:   []byte(`[{"name": "Line", "type": "boolean"}]`),
-		Teleop: []byte(`[{"name": "Cubes", "type": "number"}]`),
+		Auto:   []store.StatDescription{{Name: "Line", Type: "boolean"}},
+		Teleop: []store.StatDescription{{Name: "Cubes", Type: "number"}},
 	}
 
 	analyzedStats, err := analysis.AnalyzeReports(schema, reports)

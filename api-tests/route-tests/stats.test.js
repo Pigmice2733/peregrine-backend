@@ -198,24 +198,24 @@ test('stats endpoints', async () => {
     data: {
       auto: [
         {
-          statName: 'Crossed Line',
+          name: 'Crossed Line',
           attempted: true,
           succeeded: true,
         },
         {
-          statName: 'Cubes',
+          name: 'Cubes',
           attempts: 2,
           successes: 1,
         },
       ],
       teleop: [
         {
-          statName: 'Climbed',
+          name: 'Climbed',
           attempted: true,
           succeeded: true,
         },
         {
-          statName: 'Cubes',
+          name: 'Cubes',
           attempts: 6,
           successes: 7,
         },
@@ -241,19 +241,19 @@ test('stats endpoints', async () => {
     data: {
       auto: [
         {
-          statName: 'Crossed Line',
+          name: 'Crossed Line',
           attempted: true,
           succeeded: true,
         },
         {
-          statName: 'Cubes',
+          name: 'Cubes',
           attempts: 2,
           successes: 2,
         },
       ],
       teleop: [
         {
-          statName: 'Cubes',
+          name: 'Cubes',
           attempts: 12,
           successes: 10,
         },
@@ -279,24 +279,24 @@ test('stats endpoints', async () => {
     data: {
       auto: [
         {
-          statName: 'Crossed Line',
+          name: 'Crossed Line',
           attempted: false,
           succeeded: false,
         },
         {
-          statName: 'Cubes',
+          name: 'Cubes',
           attempts: 5,
           successes: 5,
         },
       ],
       teleop: [
         {
-          statName: 'Climbed',
+          name: 'Climbed',
           attempted: false,
           succeeded: true,
         },
         {
-          statName: 'Cubes',
+          name: 'Cubes',
           attempts: 15,
           successes: 15,
         },
@@ -322,24 +322,24 @@ test('stats endpoints', async () => {
     data: {
       auto: [
         {
-          statName: 'Crossed Line',
+          name: 'Crossed Line',
           attempted: true,
           succeeded: true,
         },
         {
-          statName: 'Cubes',
+          name: 'Cubes',
           attempts: 10,
           successes: 10,
         },
       ],
       teleop: [
         {
-          statName: 'Climbed',
+          name: 'Climbed',
           attempted: true,
           succeeded: true,
         },
         {
-          statName: 'Cubes',
+          name: 'Cubes',
           attempts: 15,
           successes: 15,
         },
@@ -379,14 +379,14 @@ test('stats endpoints', async () => {
     expect(teamStats.auto).not.toBeUndefined()
     expect(teamStats.teleop).not.toBeUndefined()
     if (teamStats.team === 'frc1421') {
-      var lineIndex = teamStats.auto[0].statName === 'Crossed Line' ? 0 : 1
+      var lineIndex = teamStats.auto[0].name === 'Crossed Line' ? 0 : 1
       expect(teamStats.auto[lineIndex]).toEqual({
-        statName: 'Crossed Line',
+        name: 'Crossed Line',
         attempts: 2,
         successes: 2,
       })
       expect(teamStats.auto[1 - lineIndex]).toEqual({
-        statName: 'Cubes',
+        name: 'Cubes',
         attempts: {
           max: 2,
           avg: 2,
@@ -397,14 +397,14 @@ test('stats endpoints', async () => {
         },
       })
 
-      var climbedIndex = teamStats.teleop[0].statName === 'Climbed' ? 0 : 1
+      var climbedIndex = teamStats.teleop[0].name === 'Climbed' ? 0 : 1
       expect(teamStats.teleop[climbedIndex]).toEqual({
-        statName: 'Climbed',
+        name: 'Climbed',
         attempts: 1,
         successes: 1,
       })
       expect(teamStats.teleop[1 - climbedIndex]).toEqual({
-        statName: 'Cubes',
+        name: 'Cubes',
         attempts: {
           max: 12,
           avg: 9,

@@ -9,17 +9,17 @@ test('schemas', async () => {
     year: 2018,
     auto: [
       {
-        statName: 'Crossed Line',
+        name: 'Crossed Line',
         type: 'boolean',
       },
     ],
     teleop: [
       {
-        statName: 'Fuel',
+        name: 'Fuel',
         type: 'number',
       },
       {
-        statName: 'Cubes',
+        name: 'Cubes',
         type: 'number',
       },
     ],
@@ -63,12 +63,12 @@ test('schemas', async () => {
   expect(d.data.teleop).not.toBeUndefined()
 
   d.data.auto.forEach(stat => {
-    expect(stat.statName).not.toBeUndefined()
+    expect(stat.name).not.toBeUndefined()
     expect(stat.type).not.toBeUndefined()
   })
 
   d.data.teleop.forEach(stat => {
-    expect(stat.statName).not.toBeUndefined()
+    expect(stat.name).not.toBeUndefined()
     expect(stat.type).not.toBeUndefined()
   })
 
@@ -97,12 +97,12 @@ test('schemas', async () => {
   expect(d.data.teleop).not.toBeUndefined()
 
   d.data.auto.forEach(stat => {
-    expect(stat.statName).not.toBeUndefined()
+    expect(stat.name).not.toBeUndefined()
     expect(stat.type).not.toBeUndefined()
   })
 
   d.data.teleop.forEach(stat => {
-    expect(stat.statName).not.toBeUndefined()
+    expect(stat.name).not.toBeUndefined()
     expect(stat.type).not.toBeUndefined()
   })
 
