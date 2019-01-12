@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"flag"
 	"fmt"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/server"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -53,9 +53,14 @@ func run(basePath string) error {
 		c.Server.Year = time.Now().Year()
 	}
 
-	jwtSecret := make([]byte, 64)
-	if _, err := rand.Read(jwtSecret); err != nil {
-		return errors.Wrap(err, "generating jwt secret")
+	secret := c.Server.Secret
+	if secret == "" {
+		secretUUID, err := uuid.NewRandom()
+		if err != nil {
+			return errors.Wrap(err, "unable to generate uuid for secret")
+		}
+
+		secret = secretUUID.String()
 	}
 
 	s := &server.Server{
@@ -63,7 +68,7 @@ func run(basePath string) error {
 		Store:     sto,
 		Logger:    logger,
 		Server:    c.Server,
-		JWTSecret: jwtSecret,
+		JWTSecret: []byte(secret),
 	}
 
 	return errors.Wrap(s.Run(context.Background()), "running server")

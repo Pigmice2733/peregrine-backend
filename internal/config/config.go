@@ -18,6 +18,7 @@ type Server struct {
 	Origin       string `yaml:"origin"`
 	Year         int    `yaml:"year"`
 	LogJSON      bool   `yaml:"logJSON"`
+	Secret       string `yaml:"secret"`
 }
 
 // Config holds information about how the peregrine backend is configured.
