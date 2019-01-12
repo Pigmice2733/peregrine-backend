@@ -5,6 +5,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
@@ -43,16 +44,19 @@ func Open(basePath string) (Config, error) {
 	viper.AddConfigPath(path.Join(basePath, "etc"))
 	viper.SetConfigName("config." + environment)
 
+	secretUUID, err := uuid.NewRandom()
+	if err != nil {
+		return Config{}, errors.Wrap(err, "unable to generate uuid for secret")
+	}
+
 	viper.SetDefault("server", map[string]interface{}{
 		"httpAddress": ":8080",
 		"origin":      "*",
 		"year":        time.Now().Year(),
 		"logJSON":     false,
+		"secret":      secretUUID.String(),
 	})
 	viper.SetDefault("tba.url", "https://www.thebluealliance.com/api/v3")
-	if err := viper.BindEnv("tba.apiKey", "PEREGRINE_TBA_API_KEY"); err != nil {
-		return Config{}, errors.Wrap(err, "unable to bind viper env var for api key")
-	}
 
 	if err := viper.ReadInConfig(); err != nil {
 		return Config{}, errors.Wrap(err, "unable to read in config file")
