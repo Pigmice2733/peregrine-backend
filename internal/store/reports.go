@@ -15,7 +15,7 @@ type Stat struct {
 	Successes *int   `json:"successes,omitempty"`
 	Attempted *bool  `json:"attempted,omitempty"`
 	Succeeded *bool  `json:"succeeded,omitempty"`
-	Name      string `json:"statName"`
+	Name      string `json:"name"`
 }
 
 // ReportData holds all the data in a report

@@ -26,13 +26,13 @@ type MaxAvg struct {
 }
 
 type numericStat struct {
-	Name      string `json:"statName"`
+	Name      string `json:"name"`
 	Attempts  MaxAvg `json:"attempts"`
 	Successes MaxAvg `json:"successes"`
 }
 
 type booleanStat struct {
-	Name      string `json:"statName"`
+	Name      string `json:"name"`
 	Attempts  int    `json:"attempts"`
 	Successes int    `json:"successes"`
 }

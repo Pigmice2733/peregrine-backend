@@ -63,19 +63,19 @@ test('reports endpoint', async () => {
     data: {
       auto: [
         {
-          statName: 'cross line',
+          name: 'cross line',
           attempted: true,
           succeeded: true,
         },
         {
-          statName: 'scale',
+          name: 'scale',
           attempts: 2,
           successes: 0,
         },
       ],
       teleop: [
         {
-          statName: 'exchange',
+          name: 'exchange',
           attempts: 12,
           successes: 10,
         },
