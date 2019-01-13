@@ -20,7 +20,6 @@ type Server struct {
 	TBA              tba.Service
 	Store            store.Service
 	Logger           *logrus.Logger
-	JWTSecret        []byte
 	eventsLastUpdate *time.Time
 	start            time.Time
 }
@@ -32,8 +31,8 @@ func (s *Server) Run(ctx context.Context) error {
 	var handler http.Handler = router
 	handler = ihttp.LimitBody(handler)
 	handler = gziphandler.GzipHandler(handler)
-	handler = ihttp.Auth(handler, s.JWTSecret)
 	handler = ihttp.Log(handler, s.Logger)
+	handler = ihttp.Auth(handler, s.Secret)
 	handler = ihttp.CORS(handler, s.Origin)
 
 	s.Logger.Info("fetching seed events")

@@ -124,11 +124,11 @@ func (s *Service) makeRequest(ctx context.Context, path string) (*http.Response,
 	return resp, nil
 }
 
-func webcastURL(webcastType store.WebcastType, channel string) (string, error) {
+func webcastURL(webcastType, channel string) (string, error) {
 	switch webcastType {
-	case store.Twitch:
+	case "twitch":
 		return fmt.Sprintf("https://www.twitch.tv/%s", channel), nil
-	case store.Youtube:
+	case "youtube":
 		return fmt.Sprintf("https://www.youtube.com/watch?v=%s", channel), nil
 	}
 
@@ -187,12 +187,11 @@ func (s *Service) GetEvents(ctx context.Context, year int, schemaID *int64) ([]s
 			return nil, err
 		}
 
-		var webcasts []store.Webcast
+		webcasts := make([]string, 0)
 		for _, webcast := range tbaEvent.Webcasts {
-			wt := store.WebcastType(webcast.Type)
-			url, err := webcastURL(wt, webcast.Channel)
+			url, err := webcastURL(webcast.Type, webcast.Channel)
 			if err == nil {
-				webcasts = append(webcasts, store.Webcast{Type: wt, URL: url})
+				webcasts = append(webcasts, url)
 			}
 		}
 
@@ -210,12 +209,10 @@ func (s *Service) GetEvents(ctx context.Context, year int, schemaID *int64) ([]s
 			StartDate:    store.NewUnixFromTime(startDate),
 			EndDate:      store.NewUnixFromTime(endDate),
 			Webcasts:     webcasts,
-			Location: store.Location{
-				Lat:  tbaEvent.Lat,
-				Lon:  tbaEvent.Lng,
-				Name: tbaEvent.LocationName,
-			},
-			SchemaID: schemaID,
+			Lat:          tbaEvent.Lat,
+			Lon:          tbaEvent.Lng,
+			LocationName: tbaEvent.LocationName,
+			SchemaID:     schemaID,
 		})
 	}
 

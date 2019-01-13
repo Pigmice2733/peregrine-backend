@@ -80,11 +80,11 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 			"user_agent":   r.Header.Get("User-Agent"),
 		}
 
-		if sub, err := GetSubject(r); err != nil {
+		if sub, err := GetSubject(r); err == nil {
 			fields["user_id"] = sub
 		}
 
-		if realm, err := GetRealmID(r); err != nil {
+		if realm, err := GetRealmID(r); err == nil {
 			fields["realm_id"] = realm
 		}
 
@@ -93,7 +93,7 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 }
 
 // Auth returns a middleware used for jwt authentication.
-func Auth(next http.Handler, jwtSecret []byte) http.Handler {
+func Auth(next http.Handler, secret string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") == "" {
 			next.ServeHTTP(w, r)
@@ -106,7 +106,7 @@ func Auth(next http.Handler, jwtSecret []byte) http.Handler {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 
-			return jwtSecret, nil
+			return []byte(secret), nil
 		})
 		if err != nil {
 			Error(w, http.StatusUnauthorized)

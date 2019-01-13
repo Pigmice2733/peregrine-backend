@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"flag"
 	"fmt"
 	"os"
@@ -53,17 +52,11 @@ func run(basePath string) error {
 		c.Server.Year = time.Now().Year()
 	}
 
-	jwtSecret := make([]byte, 64)
-	if _, err := rand.Read(jwtSecret); err != nil {
-		return errors.Wrap(err, "generating jwt secret")
-	}
-
 	s := &server.Server{
-		TBA:       tba,
-		Store:     sto,
-		Logger:    logger,
-		Server:    c.Server,
-		JWTSecret: jwtSecret,
+		TBA:    tba,
+		Store:  sto,
+		Logger: logger,
+		Server: c.Server,
 	}
 
 	return errors.Wrap(s.Run(context.Background()), "running server")

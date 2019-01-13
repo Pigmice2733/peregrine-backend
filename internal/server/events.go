@@ -13,35 +13,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type location struct {
-	Name *string `json:"name"`
-	Lat  float64 `json:"lat"`
-	Lon  float64 `json:"lon"`
-}
-
-type event struct {
-	Key          string         `json:"key"`
-	RealmID      *int64         `json:"realmId,omitempty"`
-	SchemaID     *int64         `json:"schemaId,omitempty"`
-	Name         string         `json:"name"`
-	District     *string        `json:"district,omitempty"`
-	FullDistrict *string        `json:"fullDistrict,omitempty"`
-	Week         *int           `json:"week,omitempty"`
-	StartDate    store.UnixTime `json:"startDate"`
-	EndDate      store.UnixTime `json:"endDate"`
-	Location     location       `json:"location"`
-}
-
-type webcast struct {
-	Type string `json:"type"`
-	URL  string `json:"url"`
-}
-
-type webcastEvent struct {
-	event
-	Webcasts []webcast `json:"webcasts"`
-}
-
 // eventsHandler returns a handler to get all events in a given year.
 func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -52,19 +23,20 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 			return
 		}
 
-		var fullEvents []store.Event
+		var events []store.Event
 
 		roles := ihttp.GetRoles(r)
 
-		userRealm, err := ihttp.GetRealmID(r)
+		userRealm, getRealmErr := ihttp.GetRealmID(r)
 
+		var err error
 		if roles.IsSuperAdmin {
-			fullEvents, err = s.Store.GetEvents(r.Context())
+			events, err = s.Store.GetEvents(r.Context())
 		} else {
-			if err != nil {
-				fullEvents, err = s.Store.GetEventsFromRealm(r.Context(), nil)
+			if getRealmErr != nil {
+				events, err = s.Store.GetEventsFromRealm(r.Context(), nil)
 			} else {
-				fullEvents, err = s.Store.GetEventsFromRealm(r.Context(), &userRealm)
+				events, err = s.Store.GetEventsFromRealm(r.Context(), &userRealm)
 			}
 		}
 
@@ -74,26 +46,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 			return
 		}
 
-		events := []event{}
-		for _, fullEvent := range fullEvents {
-			events = append(events, event{
-				Key:          fullEvent.Key,
-				RealmID:      fullEvent.RealmID,
-				SchemaID:     fullEvent.SchemaID,
-				Name:         fullEvent.Name,
-				District:     fullEvent.District,
-				FullDistrict: fullEvent.FullDistrict,
-				Week:         fullEvent.Week,
-				StartDate:    fullEvent.StartDate,
-				EndDate:      fullEvent.EndDate,
-				Location: location{
-					Lat: fullEvent.Location.Lat,
-					Lon: fullEvent.Location.Lon,
-				},
-			})
-		}
-
-		ihttp.Respond(w, events, http.StatusOK)
+		ihttp.Respond(w, &events, http.StatusOK)
 	}
 }
 
@@ -109,7 +62,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 		eventKey := mux.Vars(r)["eventKey"]
 
-		fullEvent, err := s.Store.GetEvent(r.Context(), eventKey)
+		event, err := s.Store.GetEvent(r.Context(), eventKey)
 		if err != nil {
 			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
@@ -120,40 +73,11 @@ func (s *Server) eventHandler() http.HandlerFunc {
 			return
 		}
 
-		if !s.checkEventAccess(fullEvent.RealmID, r) {
+		if !s.checkEventAccess(event.RealmID, r) {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
-		webcasts := []webcast{}
-		for _, fullWebcast := range fullEvent.Webcasts {
-			webcasts = append(webcasts, webcast{
-				Type: string(fullWebcast.Type),
-				URL:  fullWebcast.URL,
-			})
-		}
-
-		event := webcastEvent{
-			event: event{
-				Key:          fullEvent.Key,
-				RealmID:      fullEvent.RealmID,
-				SchemaID:     fullEvent.SchemaID,
-				Name:         fullEvent.Name,
-				District:     fullEvent.District,
-				FullDistrict: fullEvent.FullDistrict,
-				Week:         fullEvent.Week,
-				StartDate:    fullEvent.StartDate,
-				EndDate:      fullEvent.EndDate,
-				Location: location{
-					Name: &fullEvent.Location.Name,
-					Lat:  fullEvent.Location.Lat,
-					Lon:  fullEvent.Location.Lon,
-				},
-			},
-			Webcasts: webcasts,
-		}
-
-		// Using &event so that pointer receivers on embedded types get promoted
 		ihttp.Respond(w, &event, http.StatusOK)
 	}
 }
@@ -213,14 +137,14 @@ func (s *Server) updateEvents(ctx context.Context) error {
 			schemaID = &schema.ID
 		}
 
-		fullEvents, err := s.TBA.GetEvents(ctx, s.Year, schemaID)
+		events, err := s.TBA.GetEvents(ctx, s.Year, schemaID)
 		if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
 			return nil
 		} else if err != nil {
 			return err
 		}
 
-		if err := s.Store.EventsUpsert(ctx, fullEvents); err != nil {
+		if err := s.Store.EventsUpsert(ctx, events); err != nil {
 			return errors.Wrap(err, "upserting events")
 		}
 

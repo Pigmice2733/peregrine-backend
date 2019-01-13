@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -13,9 +12,9 @@ import (
 )
 
 type teamStats struct {
-	Team   string            `json:"team"`
-	Auto   []json.RawMessage `json:"auto"`
-	Teleop []json.RawMessage `json:"teleop"`
+	Team   string        `json:"team"`
+	Auto   []interface{} `json:"auto"`
+	Teleop []interface{} `json:"teleop"`
 }
 
 // eventStats analyzes the event-wide statistics of every team at an event with submitted reports
@@ -85,15 +84,21 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		fullStats := []teamStats{}
-
+		fullStats := make([]teamStats, 0)
 		for _, ts := range analyzedStats {
-			stats, err := marshalTeamStats(ts)
+			stats := teamStats{Team: ts.Team}
 
-			if err != nil {
-				ihttp.Error(w, http.StatusInternalServerError)
-				go s.Logger.WithError(err).Error("marshalling statistic")
-				return
+			for _, v := range ts.AutoBoolean {
+				stats.Auto = append(stats.Auto, v)
+			}
+			for _, v := range ts.AutoNumeric {
+				stats.Auto = append(stats.Auto, v)
+			}
+			for _, v := range ts.TeleopBoolean {
+				stats.Teleop = append(stats.Teleop, v)
+			}
+			for _, v := range ts.TeleopNumeric {
+				stats.Teleop = append(stats.Teleop, v)
 			}
 
 			fullStats = append(fullStats, stats)
@@ -106,59 +111,13 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
+		// fill in unreported teams
 		for _, team := range teamKeys {
 			if _, ok := analyzedStats[team]; !ok {
-				stats := teamStats{
-					Team:   team,
-					Auto:   []json.RawMessage{},
-					Teleop: []json.RawMessage{},
-				}
-				fullStats = append(fullStats, stats)
+				fullStats = append(fullStats, teamStats{Team: team})
 			}
 		}
 
 		ihttp.Respond(w, fullStats, http.StatusOK)
 	}
-}
-
-func marshalTeamStats(ts *analysis.TeamStats) (teamStats, error) {
-	stats := teamStats{
-		Team:   ts.Team,
-		Auto:   []json.RawMessage{},
-		Teleop: []json.RawMessage{},
-	}
-
-	for _, numeric := range ts.AutoNumeric {
-		stat, err := json.Marshal(numeric)
-		if err != nil {
-			return stats, err
-		}
-		stats.Auto = append(stats.Auto, stat)
-	}
-
-	for _, boolean := range ts.AutoBoolean {
-		stat, err := json.Marshal(boolean)
-		if err != nil {
-			return stats, err
-		}
-		stats.Auto = append(stats.Auto, stat)
-	}
-
-	for _, numeric := range ts.TeleopNumeric {
-		stat, err := json.Marshal(numeric)
-		if err != nil {
-			return stats, err
-		}
-		stats.Teleop = append(stats.Teleop, stat)
-	}
-
-	for _, boolean := range ts.TeleopBoolean {
-		stat, err := json.Marshal(boolean)
-		if err != nil {
-			return stats, err
-		}
-		stats.Teleop = append(stats.Teleop, stat)
-	}
-
-	return stats, nil
 }

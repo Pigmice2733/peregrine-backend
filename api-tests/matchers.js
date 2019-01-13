@@ -44,6 +44,42 @@ module.exports = {
     }
     return { pass: true }
   },
+  toBeAnEvent(received) {
+    try {
+      expect(received.name).toBeA(String)
+      expect(received.startDate).toBeADateString()
+      expect(received.endDate).toBeADateString()
+      expect(received.locationName).toBeA(String)
+      expect(received.lat).toBeA(Number)
+      expect(received.lon).toBeA(Number)
+      expect(received.key).toBeA(String)
+      expect(received.district).toBeUndefinedOr(String)
+      expect(received.fullDistrict).toBeUndefinedOr(String)
+      expect(received.week).toBeUndefinedOr(Number)
+      expect(received.webcasts).toBeA(Array)
+      expect(Object.keys(received)).toBeASubsetOf([
+        'key',
+        'realmId',
+        'schemaId',
+        'name',
+        'week',
+        'startDate',
+        'endDate',
+        'locationName',
+        'lat',
+        'lon',
+        'district',
+        'fullDistrict',
+        'webcasts',
+      ])
+    } catch (error) {
+      return {
+        message: () => `expected to get an event. failed:\n ${error}`,
+        pass: false,
+      }
+    }
+    return { pass: true }
+  },
   toBeAMatch(received) {
     try {
       expect(received.key).toBeA(String)
