@@ -35,7 +35,7 @@ const (
 	bcryptCost           = 12                     // ~236ms per hash on my i7-8550U
 )
 
-func generateAccessToken(user store.User, secret []byte) (string, error) {
+func generateAccessToken(user store.User, secret string) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.Claims{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(accessTokenDuration).Unix(),
@@ -43,7 +43,7 @@ func generateAccessToken(user store.User, secret []byte) (string, error) {
 		},
 		Roles:   user.Roles,
 		RealmID: user.RealmID,
-	}).SignedString(secret)
+	}).SignedString([]byte(secret))
 }
 
 func (s *Server) authenticateHandler() http.HandlerFunc {
@@ -84,7 +84,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		accessToken, err := generateAccessToken(user, s.JWTSecret)
+		accessToken, err := generateAccessToken(user, s.Secret)
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt access token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -97,7 +97,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 				Subject:   strconv.FormatInt(user.ID, 10),
 			},
 			PasswordChanged: user.PasswordChanged,
-		}).SignedString(s.JWTSecret)
+		}).SignedString([]byte(s.Secret))
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt refresh token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -129,7 +129,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 
-			return s.JWTSecret, nil
+			return []byte(s.Secret), nil
 		})
 		if err != nil {
 			ihttp.Error(w, http.StatusUnauthorized)
@@ -169,7 +169,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 			return
 		}
 
-		accessToken, err := generateAccessToken(user, s.JWTSecret)
+		accessToken, err := generateAccessToken(user, s.Secret)
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt access token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)

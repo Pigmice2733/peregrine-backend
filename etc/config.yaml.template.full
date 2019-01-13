@@ -1,0 +1,15 @@
+server:
+    httpAddress: 0.0.0.0:8080 # no default, required
+    httpsAddress: 0.0.0.0:8081 # no default, not required
+    keyFile: /etc/letsencrypt/live/edge.api.peregrine.ga/fullchain.pem # no default, required if httpsAddress set
+    certFile: /etc/letsencrypt/live/edge.api.peregrine.ga/fullchain.pem # no default, required if httpsAddress set
+    origin: "*" # default, not required
+    year: 2019 # defaults current year, not required
+    logJSON: false # default, not required
+    secret: CHANGE-ME # defaults to random uuid, not required
+
+tba:
+    url: https://www.thebluealliance.com/api/v3 # default, not required
+    apiKey: your-api-key # no default, required, uses $PEREGRINE_TBA_API_KEY if set
+
+dsn: user=postgres port=5432 dbname=peregrine sslmode=disable

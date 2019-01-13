@@ -5,6 +5,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
@@ -18,6 +19,7 @@ type Server struct {
 	Origin       string `yaml:"origin"`
 	Year         int    `yaml:"year"`
 	LogJSON      bool   `yaml:"logJSON"`
+	Secret       string `yaml:"secret"`
 }
 
 // Config holds information about how the peregrine backend is configured.
@@ -42,11 +44,17 @@ func Open(basePath string) (Config, error) {
 	viper.AddConfigPath(path.Join(basePath, "etc"))
 	viper.SetConfigName("config." + environment)
 
+	secretUUID, err := uuid.NewRandom()
+	if err != nil {
+		return Config{}, errors.Wrap(err, "unable to generate uuid for secret")
+	}
+
 	viper.SetDefault("server", map[string]interface{}{
 		"httpAddress": ":8080",
 		"origin":      "*",
 		"year":        time.Now().Year(),
 		"logJSON":     false,
+		"secret":      secretUUID.String(),
 	})
 	viper.SetDefault("tba.url", "https://www.thebluealliance.com/api/v3")
 	if err := viper.BindEnv("tba.apiKey", "PEREGRINE_TBA_API_KEY"); err != nil {
