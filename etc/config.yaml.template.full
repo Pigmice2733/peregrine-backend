@@ -6,7 +6,7 @@ server:
     origin: "*" # default, not required
     year: 2019 # defaults current year, not required
     logJSON: false # default, not required
-    secret: dbf223b6-1633-11e9-b84a-9cb6d08abbe3 # default random uuid, not required
+    secret: CHANGE-ME # defaults to random uuid, not required
 
 tba:
     url: https://www.thebluealliance.com/api/v3 # default, not required
