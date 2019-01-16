@@ -133,18 +133,18 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 			return []byte(s.Secret), nil
 		})
 		if err != nil {
-			ihttp.Error(w, http.StatusForbidden)
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
 
 		if !token.Valid {
-			ihttp.Error(w, http.StatusForbidden)
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
 
 		claims, ok := token.Claims.(*ihttp.RefreshClaims)
 		if !ok {
-			ihttp.Error(w, http.StatusForbidden)
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
 
@@ -156,7 +156,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 
 		user, err := s.Store.GetUserByID(r.Context(), userID)
 		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusForbidden)
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
 			go s.Logger.WithError(err).Error("retrieving user from database")
