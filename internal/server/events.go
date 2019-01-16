@@ -92,7 +92,7 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 
 		creatorRealm, err := ihttp.GetRealmID(r)
 		if err != nil {
-			ihttp.Error(w, http.StatusUnauthorized)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 

@@ -1,0 +1,461 @@
+openapi: '3.0.0'
+info:
+  version: 0.1.0
+  title: Peregrine API documentation
+servers:
+  - url: http://edge.api.peregrine.ga:8080/
+  - url: http://api.peregrine.ga:8080/
+  - url: http://localhost:8080/
+paths:
+  /:
+    get:
+      summary: Get server uptime and health information
+      operationId: health
+      responses:
+        '200':
+          description: Server uptime and health information
+          content:
+            application/json:
+              schema:
+                required:
+                  - startTime
+                  - uptime
+                  - listen
+                  - services
+                  - ok
+                properties:
+                  startTime:
+                    description: Unix time that specifies when the server started
+                    type: integer
+                    format: int64
+                    example: 1547344071
+                  uptime:
+                    description: Number of seconds that the server has been running
+                    type: integer
+                    format: int64
+                    example: 236252
+                  listen:
+                    description: Information about addresses the server is listening on
+                    required:
+                      - http
+                      - https
+                    properties:
+                      http:
+                        description: HTTP address the server is listening on
+                        type: string
+                        example: ':8080'
+                      https:
+                        description: HTTPS address the server is listening on
+                        type: string
+                        example: ':8081'
+                  services:
+                    description: Health information about services peregrine relies on
+                    required:
+                      - tba
+                      - postgresql
+                    properties:
+                      tba:
+                        description: The Blue Alliance API health
+                        type: boolean
+                        example: true
+                      postgresql:
+                        description: PostgreSQL health
+                        type: boolean
+                        example: false
+                  ok:
+                    description: Health of peregrine and all of it's dependencies
+                    type: boolean
+                    example: false
+  /authenticate:
+    post:
+      summary: Retrieve tokens for authorization
+      operationid: authenticate
+      tags:
+        - authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  description: An alphanumeric string between 4 and 32 characters
+                  example: franklin
+                password:
+                  type: string
+                  description: A string between 8 and 128 characters
+                  example: Q6qA6A22WLTO
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                required:
+                  - refreshToken
+                  - accessToken
+                properties:
+                  refreshToken:
+                    $ref: '#/components/schemas/refreshToken'
+                  accessToken:
+                    $ref: '#/components/schemas/accessToken'
+        '401':
+          description: Failed to authenticate due to an incorrect username or password
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Unauthorized
+        '422':
+          description: Failed to validate username or password, or request body syntax was invalid
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Unprocessable Entity
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /refresh:
+    post:
+      summary: Retrieve a new access token via a refresh token
+      operationId: refresh
+      tags:
+        - authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  $ref: '#/components/schemas/refreshToken'
+      responses:
+        '200':
+          description: Sucessfully generated a new access token
+          content:
+            application/json:
+              schema:
+                required:
+                  - accessToken
+                properties:
+                  accessToken:
+                    $ref: '#/components/schemas/accessToken'
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '422':
+          description: Request body syntax was invalid
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Unprocessable Entity
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /users:
+    post:
+      summary: Create a new user
+      description:
+        Note that if you specify roles higher than your own roles they will be reset.
+        For example, you can't create a verified user in another realm if you're not
+        a global admin, and you can't create an admin if you're not an admin.
+      operationId: createUser
+      security:
+        - BearerAuth: []
+      tags:
+        - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - username
+                - password
+                - realmId
+                - firstName
+                - lastName
+              properties:
+                username:
+                  type: string
+                  example: franklin
+                password:
+                  type: string
+                  example: Q6qA6A22WLTO
+                realmId:
+                  type: integer
+                  format: int64
+                  example: 1
+                firstName:
+                  type: string
+                  example: Franklin
+                lastName:
+                  type: string
+                  example: Harding
+                stars:
+                  $ref: '#/components/schemas/stars'
+                roles:
+                  $ref: '#/components/schemas/roles'
+      responses:
+        '201':
+          description: Successfully created user
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '409':
+          description: A user with the same or a similar username already exists
+          content:
+            text/plain:
+              type: string
+              example: Conflict
+            application/json:
+              required:
+                - error
+              properties:
+                error:
+                  type: string
+                  example: user with similar username exists
+        '422':
+          description: Request body syntax was invalid
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Unprocessable Entity
+        '500':
+          $ref: '#/components/responses/internalServerError'
+    get:
+      summary: Get all users
+      description:
+        Note that only admins can get users. Global admins can get all users, and realm
+        admins can get all users in their realm.
+      operationId: getUsers
+      security:
+        - BearerAuth: []
+      tags:
+        - users
+      responses:
+        '200':
+          description: Successfully fetched users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/user'
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /users/{id}:
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+          format: int64
+        required: true
+        description: Numeric User ID
+    get:
+      summary: Get a user
+      operationId: getUser
+      security:
+        - BearerAuth: []
+      tags:
+        - users
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/user'
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+    patch:
+      summary: Update all or parts of a user
+      description:
+        Any null or undefined fields will not be updated. Global admins can patch any user,
+        realm admins can patch users in their realm, and any user can patch themselves.
+      operationId: patchUser
+      security:
+        - BearerAuth: []
+      tags:
+        - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                username:
+                  type: string
+                  example: franklin
+                password:
+                  type: string
+                  example: Q6qA6A22WLTO
+                realmId:
+                  type: integer
+                  format: int64
+                  example: 1
+                firstName:
+                  type: string
+                  example: Franklin
+                lastName:
+                  type: string
+                  example: Harding
+                stars:
+                  $ref: '#/components/schemas/stars'
+                roles:
+                  $ref: '#/components/schemas/roles'
+      responses:
+        '204':
+          description: Successfully patched user
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+    delete:
+      summary: Delete a user
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      tags:
+        - users
+      responses:
+        '204':
+          description: Successfully deleted user
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+components:
+  responses:
+    internalServerError:
+      description: Failed due to an internal server error
+      content:
+        text/plain:
+          schema:
+            $ref: '#/components/schemas/internalServerError'
+    unauthorizedError:
+      description: Invalid access token, please obtain a new access token
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Unauthorized
+    forbiddenError:
+      description: Your access token is valid, but you lack the roles to perform this operation
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Forbidden
+
+    notFoundError:
+      description: Unable to find that resource
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Not Found
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    user:
+      required:
+        - id
+        - username
+        - realmId
+        - firstName
+        - lastName
+        - roles
+        - stars
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 4
+        username:
+          type: string
+          example: franklin
+        realmId:
+          type: integer
+          format: int64
+          example: 1
+        firstName:
+          type: string
+          example: Franklin
+        lastName:
+          type: string
+          example: Harding
+        stars:
+          $ref: '#/components/schemas/stars'
+        roles:
+          $ref: '#/components/schemas/roles'
+    stars:
+      type: array
+      items:
+        type: string
+        example: 2018pncmp
+    roles:
+      required:
+        - isSuperAdmin
+        - isAdmin
+        - isVerified
+      properties:
+        isSuperAdmin:
+          type: boolean
+          example: true
+        isAdmin:
+          type: boolean
+          example: true
+        isVerified:
+          type: boolean
+          example: false
+    accessToken:
+      type: string
+      description: Short lived (1 day) JWT for API authorization
+      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJlZ3JpbmVSb2xlcyI6eyJpc1N1cGVyQWRtaW4iOnRydWUsImlzQWRtaW4iOnRydWUsImlzVmVyaWZpZWQiOnRydWV9LCJwZXJlZ3JpbmVSZWFsbSI6MSwiZXhwIjoxNTQ3NjcyNDE2LCJzdWIiOiIxIn0.FMsGteZSZ53YmBFAKFHTde_vTymvuT0iFfLGPmcbkDQ
+    refreshToken:
+      type: string
+      description: Long lived (4 week) JWT for generating new access tokens without re-authenticating
+      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJlZ3JpbmVQYXNzd29yZENoYW5nZWQiOiIyMDE5LTAxLTA5VDIyOjUxOjMxWiIsImV4cCI6MTU1MDAwNTIxNiwic3ViIjoiMSJ9.cCnaInxuIdrkZLTkVpx4i9iALoUzQTIYKWc5OtTroiM
+    internalServerError:
+      type: string
+      example: Internal Server Error
+    ValidationError:
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: "Key: 'baseUser.Password' Error:Field validation for 'Password' failed on the 'gte' tag"

@@ -9,6 +9,7 @@ func (s *Server) registerRoutes() *mux.Router {
 	r := mux.NewRouter()
 
 	r.Handle("/", s.healthHandler()).Methods("GET")
+	r.Handle("/openapi.yaml", s.openAPIHandler()).Methods("GET")
 
 	r.Handle("/authenticate", s.authenticateHandler()).Methods("POST")
 	r.Handle("/refresh", s.refreshHandler()).Methods("POST")

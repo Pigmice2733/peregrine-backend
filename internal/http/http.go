@@ -3,13 +3,10 @@ package http
 import (
 	"encoding/json"
 	"net/http"
-
-	"gopkg.in/go-playground/validator.v9"
 )
 
-type response struct {
-	Data interface{} `json:"data,omitempty"`
-	Err  interface{} `json:"error,omitempty"`
+type errorResponse struct {
+	Error string `json:"error"`
 }
 
 // Error sets the specified HTTP status code.
@@ -20,14 +17,11 @@ func Error(w http.ResponseWriter, httpCode int) {
 // Respond encodes the data and ResponseError to JSON and responds with it and
 // the http code. If the encoding fails, sets an InternalServerError.
 func Respond(w http.ResponseWriter, data interface{}, httpCode int) {
-	var resp response
-	switch v := data.(type) {
-	case validator.ValidationErrors:
-		resp.Err = v.Error()
-	case error:
-		resp.Err = v.Error()
-	default:
-		resp.Data = v
+	var resp interface{}
+	if v, ok := data.(error); ok {
+		resp = errorResponse{Error: v.Error()}
+	} else {
+		resp = data
 	}
 
 	jsonData, err := json.Marshal(resp)
@@ -37,5 +31,5 @@ func Respond(w http.ResponseWriter, data interface{}, httpCode int) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpCode)
-	_, _ = w.Write(jsonData) // make linters happy
+	w.Write(jsonData)
 }

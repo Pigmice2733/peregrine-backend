@@ -87,7 +87,7 @@ func (s *Server) putReport() http.HandlerFunc {
 
 		reporterID, err := ihttp.GetSubject(r)
 		if err != nil {
-			ihttp.Error(w, http.StatusUnauthorized)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 		report.ReporterID = &reporterID
@@ -95,7 +95,7 @@ func (s *Server) putReport() http.HandlerFunc {
 		var realmID int64
 		realmID, err = ihttp.GetRealmID(r)
 		if err != nil {
-			ihttp.Error(w, http.StatusUnauthorized)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 		report.RealmID = &realmID

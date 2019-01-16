@@ -120,7 +120,7 @@ func (s *Server) realmHandler() http.HandlerFunc {
 		if !roles.IsSuperAdmin && !realm.ShareReports {
 			userRealm, err := ihttp.GetRealmID(r)
 			if err != nil {
-				ihttp.Error(w, http.StatusUnauthorized)
+				ihttp.Error(w, http.StatusForbidden)
 				return
 			}
 			if userRealm != id {
@@ -152,7 +152,7 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 			if roles.IsAdmin {
 				userRealm, err := ihttp.GetRealmID(r)
 				if err != nil {
-					ihttp.Error(w, http.StatusUnauthorized)
+					ihttp.Error(w, http.StatusForbidden)
 					return
 				}
 				if userRealm != id {
@@ -206,7 +206,7 @@ func (s *Server) deleteRealmHandler() http.HandlerFunc {
 			if roles.IsAdmin {
 				userRealm, err := ihttp.GetRealmID(r)
 				if err != nil {
-					ihttp.Error(w, http.StatusUnauthorized)
+					ihttp.Error(w, http.StatusForbidden)
 					return
 				}
 				if userRealm != id {
