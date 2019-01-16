@@ -215,7 +215,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 		err := s.Store.CheckSimilarUsernameExists(r.Context(), ru.Username, nil)
 		if _, ok := errors.Cause(err).(store.ErrExists); ok {
-			ihttp.Respond(w, err, http.StatusConflict)
+			ihttp.Error(w, http.StatusConflict)
 			return
 		} else if err != nil {
 			go s.Logger.WithError(err).Error("checking whether similar user exists")

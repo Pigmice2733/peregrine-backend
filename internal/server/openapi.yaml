@@ -213,29 +213,13 @@ paths:
         '403':
           $ref: '#/components/responses/forbiddenError'
         '409':
-          description: A user with the same or a similar username already exists
-          content:
-            text/plain:
-              type: string
-              example: Conflict
-            application/json:
-              required:
-                - error
-              properties:
-                error:
-                  type: string
-                  example: user with similar username exists
+          $ref: '#/components/responses/conflictError'
         '422':
-          description: Request body syntax was invalid
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: Unprocessable Entity
+          $ref: '#/components/responses/unprocessableEntityError'
         '500':
           $ref: '#/components/responses/internalServerError'
     get:
-      summary: Get all users
+      summary: Get all visible users
       description:
         Note that only admins can get users. Global admins can get all users, and realm
         admins can get all users in their realm.
@@ -266,6 +250,7 @@ paths:
         schema:
           type: integer
           format: int64
+          example: 1
         required: true
         description: Numeric User ID
     get:
@@ -281,6 +266,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/user'
+        '400':
+          $ref: '#/components/responses/badRequestError'
         '401':
           $ref: '#/components/responses/unauthorizedError'
         '403':
@@ -353,6 +340,112 @@ paths:
           $ref: '#/components/responses/notFoundError'
         '500':
           $ref: '#/components/responses/internalServerError'
+  /schemas:
+    get:
+      summary: Get all visible schemas
+      description:
+        Note that this endpoint will return all schemas if you're a global admin, realm and public schemas
+        if you're authenticated, and just public schemas if you're not authenticated.
+      operationId: getSchemas
+      tags:
+        - schemas
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/schema'
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+    post:
+      summary: Create a new schema
+      description:
+        Note that only global admins can create a schema for a year. Realm admins can only create a schema
+        for their realm. Normal users cannot create schemas. Also note if an ID is included on the schema
+        it will be ignored.
+      operationId: createSchema
+      security:
+        - BearerAuth: []
+      tags:
+        - schemas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema'
+      responses:
+        '201':
+          description: Successfully created schema
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '409':
+          $ref: '#/components/responses/conflictError'
+        '422':
+          $ref: '#/components/responses/unprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /schemas/year/{year}:
+    parameters:
+      - in: path
+        name: year
+        schema:
+          type: integer
+          format: int64
+          example: 2019
+        required: true
+        description: Numeric 4-digit year
+    get:
+      summary: Get a schema by year
+      operationId: getSchemaByYear
+      tags:
+        - schemas
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema'
+        '400':
+          $ref: '#/components/responses/badRequestError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /schemas/{id}:
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+          format: int64
+          example: 1
+        required: true
+        description: Numeric Schema ID
+    get:
+      summary: Get a schema by ID
+      operationId: getSchema
+      tags:
+        - schemas
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema'
+        '400':
+          $ref: '#/components/responses/badRequestError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
 components:
   responses:
     internalServerError:
@@ -382,12 +475,64 @@ components:
           schema:
             type: string
             example: Not Found
+    unprocessableEntityError:
+      description: Request body syntax was invalid
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Unprocessable Entity
+    conflictError:
+      description: A resource with a similar unique key exists (e.g. username or id)
+      content:
+        text/plain:
+          type: string
+          example: Conflict
+    badRequestError:
+      description: Your request was invalid
+      content:
+        text/plain:
+          type: string
+          example: Bad Request
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    schema:
+      required:
+        - id
+        - auto
+        - teleop
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 42
+        year:
+          type: integer
+          format: int64
+          example: 2018
+        realmId:
+          type: integer
+          format: int64
+          example: 1
+        auto:
+          $ref: '#/components/schemas/statDescriptions'
+        teleop:
+          $ref: '#/components/schemas/statDescriptions'
+    statDescriptions:
+      type: array
+      items:
+        required:
+          - name
+          - type
+        properties:
+          name:
+            type: string
+          type:
+            type: string
     user:
       required:
         - id
