@@ -25,11 +25,11 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/schemas/year/{year}", ihttp.ACL(s.getSchemaByYearHandler(), false, false, false)).Methods("GET")
 	r.Handle("/schemas/{id}", ihttp.ACL(s.getSchemaByIDHandler(), false, false, false)).Methods("GET")
 
-	r.Handle("/events/{eventKey}/stats", s.eventStats()).Methods("GET")
-
 	r.Handle("/events", s.eventsHandler()).Methods("GET")
-	r.Handle("/events", ihttp.ACL(s.createEventHandler(), true, true, true)).Methods("POST")
+	r.Handle("/events", ihttp.ACL(s.upsertEventHandler(), true, true, true)).Methods("PUT")
 	r.Handle("/events/{eventKey}", s.eventHandler()).Methods("GET")
+
+	r.Handle("/events/{eventKey}/stats", s.eventStats()).Methods("GET")
 
 	r.Handle("/events/{eventKey}/matches", s.matchesHandler()).Methods("GET")
 	r.Handle("/events/{eventKey}/matches", ihttp.ACL(s.createMatchHandler(), true, true, true)).Methods("POST")

@@ -82,7 +82,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 	}
 }
 
-func (s *Server) createEventHandler() http.HandlerFunc {
+func (s *Server) upsertEventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var e store.Event
 		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
@@ -102,8 +102,6 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 
 		if err != nil {
 			switch errors.Cause(err).(type) {
-			case store.ErrNoResults:
-				ihttp.Error(w, http.StatusNotFound)
 			case store.ErrFKeyViolation:
 				ihttp.Error(w, http.StatusUnprocessableEntity)
 			default:

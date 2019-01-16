@@ -175,6 +175,7 @@ paths:
       tags:
         - users
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -192,9 +193,7 @@ paths:
                   type: string
                   example: Q6qA6A22WLTO
                 realmId:
-                  type: integer
-                  format: int64
-                  example: 1
+                  $ref: '#/components/schemas/id'
                 firstName:
                   type: string
                   example: Franklin
@@ -248,9 +247,7 @@ paths:
       - in: path
         name: id
         schema:
-          type: integer
-          format: int64
-          example: 1
+          $ref: '#/components/schemas/id'
         required: true
         description: Numeric User ID
     get:
@@ -287,6 +284,7 @@ paths:
       tags:
         - users
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -298,9 +296,7 @@ paths:
                   type: string
                   example: Q6qA6A22WLTO
                 realmId:
-                  type: integer
-                  format: int64
-                  example: 1
+                  $ref: '#/components/schemas/id'
                 firstName:
                   type: string
                   example: Franklin
@@ -373,6 +369,7 @@ paths:
       tags:
         - schemas
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -422,9 +419,7 @@ paths:
       - in: path
         name: id
         schema:
-          type: integer
-          format: int64
-          example: 1
+          $ref: '#/components/schemas/id'
         required: true
         description: Numeric Schema ID
     get:
@@ -438,6 +433,82 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/schema'
+        '400':
+          $ref: '#/components/responses/badRequestError'
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /events:
+    get:
+      summary: Get all visible events
+      operationId: getEvents
+      tags:
+        - events
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/event'
+        '400':
+          $ref: '#/components/responses/badRequestError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+    put:
+      summary: Create a new custom event (not on TBA)
+      description:
+        This endpoint allows realm admins and global admins to create custom events. This can
+        be useful if an offseason event isn't on The Blue Alliance and you still want to scout
+        it. Note that if an event with that key already exists it will be replaced.
+      tags:
+        - events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/event'
+      responses:
+        '201':
+          description: Successfully created event
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '422':
+          $ref: '#/components/responses/unprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /events/{eventKey}:
+    parameters:
+      - in: path
+        name: eventKey
+        schema:
+          type: string
+          example: 2019migib
+        required: true
+        description: Event Key
+    get:
+      summary: Get a specific event
+      tags:
+        - events
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/event'
         '400':
           $ref: '#/components/responses/badRequestError'
         '403':
@@ -500,6 +571,65 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    event:
+      required:
+        - key
+        - name
+        - startDate
+        - endDate
+        - webcasts
+        - locationName
+        - lat
+        - lon
+      properties:
+        key:
+          type: string
+          example: 2019migib
+        realmId:
+          $ref: '#/components/schemas/id'
+        schemaId:
+          $ref: '#/components/schemas/id'
+        name:
+          type: string
+          example: Gibraltar
+        district:
+          type: string
+          example: fim
+        fullDistrict:
+          type: string
+          example: FIRST In Michigan
+        week:
+          type: integer
+          example: 4
+        startDate:
+          type: string
+          format: date-time
+          example: '2019-02-28T05:00:00Z'
+        endDate:
+          type: string
+          format: date-time
+          example: '2019-03-02T05:00:00Z'
+        webcasts:
+          type: array
+          items:
+            type: string
+            example: https://www.twitch.tv/firstinspires
+        locationName:
+          type: string
+          example: UW-Milwaukee Panther Arena
+        lat:
+          type: number
+          format: float
+          example: 43.0417381
+        lon:
+          type: number
+          format: float
+          example: -87.9168724
+    id:
+      description: Auto-increment 64-bit integer that identifies a resource
+      type: integer
+      format: int64
+      example: 1
     schema:
       required:
         - id
@@ -507,17 +637,13 @@ components:
         - teleop
       properties:
         id:
-          type: integer
-          format: int64
-          example: 42
+          $ref: '#/components/schemas/id'
         year:
           type: integer
           format: int64
           example: 2018
         realmId:
-          type: integer
-          format: int64
-          example: 1
+          $ref: '#/components/schemas/realmId'
         auto:
           $ref: '#/components/schemas/statDescriptions'
         teleop:
@@ -544,16 +670,12 @@ components:
         - stars
       properties:
         id:
-          type: integer
-          format: int64
-          example: 4
+          $ref: '#/components/schemas/id'
         username:
           type: string
           example: franklin
         realmId:
-          type: integer
-          format: int64
-          example: 1
+          $ref: '#/components/schemas/id'
         firstName:
           type: string
           example: Franklin
