@@ -42,6 +42,7 @@ jobs:
     steps:
       - checkout
       - run: go get -v -t -d ./...
+      - run: go generate ./...
       - run: mkdir -p /tmp/builds
       - run: go build -o /tmp/builds/peregrine cmd/peregrine/main.go
       - run: go build -o /tmp/builds/migrate cmd/migrate/main.go
@@ -59,6 +60,7 @@ jobs:
     steps:
       - checkout
       - run: go get -v -t -d ./...
+      - run: go generate ./...
       - run: mkdir -p /tmp/builds
       - run: go build -o /tmp/builds/peregrine cmd/peregrine/main.go
       - run: go build -o /tmp/builds/migrate cmd/migrate/main.go
