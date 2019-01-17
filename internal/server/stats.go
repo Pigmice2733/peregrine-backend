@@ -69,7 +69,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 
 		schema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
 		if _, ok := err.(*store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusConflict)
+			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)

@@ -465,12 +465,15 @@ paths:
           $ref: '#/components/responses/internalServerError'
     put:
       summary: Create a new custom event (not on TBA)
+      operationId: putEvent
       description:
         This endpoint allows realm admins and global admins to create custom events. This can
         be useful if an offseason event isn't on The Blue Alliance and you still want to scout
         it. Note that if an event with that key already exists it will be replaced.
       tags:
         - events
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -490,15 +493,10 @@ paths:
           $ref: '#/components/responses/internalServerError'
   /events/{eventKey}:
     parameters:
-      - in: path
-        name: eventKey
-        schema:
-          type: string
-          example: 2019migib
-        required: true
-        description: Event Key
+      - $ref: '#/components/parameters/eventKey'
     get:
       summary: Get a specific event
+      operationId: getEvent
       tags:
         - events
       responses:
@@ -511,6 +509,122 @@ paths:
                   $ref: '#/components/schemas/event'
         '400':
           $ref: '#/components/responses/badRequestError'
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /events/{eventKey}/stats:
+    parameters:
+      - $ref: '#/components/parameters/eventKey'
+    get:
+      summary: Get performance stats for all teams at an event
+      operationId: getEventStats
+      tags:
+        - stats
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties:
+                    team:
+                      type: string
+                      example: frc2733
+                    auto:
+                      $ref: '#/components/schemas/stats'
+                    teleop:
+                      $ref: '#/components/schemas/stats'
+        '400':
+          $ref: '#/components/responses/badRequestError'
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /events/{eventKey}/matches:
+    parameters:
+      - $ref: '#/components/parameters/eventKey'
+    get:
+      summary: Get all matches for an event
+      operationId: getMatches
+      tags:
+        - matches
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/match'
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+    post:
+      summary: Create a new match for an event
+      operationId: createMatch
+      description:
+        Note that global admins can create matches on any event, and realm admins
+        can create matches on events in their realm. Normal users cannot create
+        matches.
+      tags:
+        - matches
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/match'
+      responses:
+        '201':
+          description: Successfully created event
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '422':
+          $ref: '#/components/responses/unprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /events/{eventKey}/matches/{matchKey}:
+    parameters:
+      - $ref: '#/components/parameters/eventKey'
+      - $ref: '#/components/parameters/matchKey'
+    get:
+      summary: Get a match
+      description:
+        Note that you can only get matches for events you have access to. A global admin
+        can get matches for any event, otherwise you can only get matches for public events
+        and events in your realm.
+      operationId: getMatch
+      tags:
+        - matches
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/match'
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
         '403':
           $ref: '#/components/responses/forbiddenError'
         '404':
@@ -518,6 +632,21 @@ paths:
         '500':
           $ref: '#/components/responses/internalServerError'
 components:
+  parameters:
+    eventKey:
+      in: path
+      name: eventKey
+      schema:
+        $ref: '#/components/schemas/eventKey'
+      required: true
+      description: Event Key
+    matchKey:
+      in: path
+      name: matchKey
+      schema:
+        $ref: '#/components/schemas/matchKey'
+      required: true
+      description: Match Key
   responses:
     internalServerError:
       description: Failed due to an internal server error
@@ -571,6 +700,73 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    eventKey:
+      type: string
+      example: 2019migib
+    matchKey:
+      type: string
+      example: qm30
+    match:
+      required:
+        - key
+        - time
+        - redAlliance
+        - blueAlliance
+      properties:
+        key:
+          $ref: '#/components/schemas/matchKey'
+        time:
+          type: string
+          format: date-time
+          example: '2018-04-06T23:21:38Z'
+        scheduledTime:
+          type: string
+          format: date-time
+          example: '2018-04-06T23:18:00Z'
+        redScore:
+          type: integer
+          example: 426
+        blueScore:
+          type: integer
+          example: 265
+        redAlliance:
+          type: array
+          items:
+            type: string
+            example: frc5468
+        blueAlliance:
+          type: array
+          items:
+            type: string
+            example: frc4488
+    stats:
+      type: array
+      items:
+        required:
+          - attempts
+          - successes
+          - name
+        properties:
+          attempts:
+            $ref: '#/components/schemas/statPoint'
+          successes:
+            $ref: '#/components/schemas/statPoint'
+          name:
+            type: string
+            example: Cubes on Scale
+    statPoint:
+      required:
+        - max
+        - avg
+      properties:
+        max:
+          type: number
+          format: float
+          example: 10
+        avg:
+          type: number
+          format: float
+          example: 4.25
     event:
       required:
         - key
@@ -583,8 +779,7 @@ components:
         - lon
       properties:
         key:
-          type: string
-          example: 2019migib
+          $ref: '#/components/schemas/eventKey'
         realmId:
           $ref: '#/components/schemas/id'
         schemaId:
