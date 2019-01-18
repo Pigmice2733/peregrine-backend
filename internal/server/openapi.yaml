@@ -553,6 +553,15 @@ paths:
   /events/{eventKey}/matches:
     parameters:
       - $ref: '#/components/parameters/eventKey'
+      - in: query
+        name: team
+        schema:
+          type: array
+          items:
+            $ref: '#/components/schemas/teamKey'
+        description: Filter matches with specified teams. Supports multiple teams.
+        style: form
+        explode: true
     get:
       summary: Get all matches for an event
       operationId: getMatches
@@ -631,8 +640,117 @@ paths:
           $ref: '#/components/responses/notFoundError'
         '500':
           $ref: '#/components/responses/internalServerError'
+  /events/{eventKey}/teams:
+    parameters:
+      - $ref: '#/components/parameters/eventKey'
+    get:
+      summary: Get a list of teams at an event
+      operationId: getEventTeams
+      tags:
+        - teams
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: frc2733
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /events/{eventKey}/teams/{teamKey}:
+    parameters:
+      - $ref: '#/components/parameters/eventKey'
+      - $ref: '#/components/parameters/teamKey'
+    get:
+      summary: Get ranking information about a team at an event
+      operationId: getTeamRankingData
+      tags:
+        - teams
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  rank:
+                    type: integer
+                    example: 37
+                  rankingScore:
+                    type: number
+                    format: float
+                    example: 1.909999966621399
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /events/{eventKey}/matches/{matchKey}/reports/{teamKey}:
+    parameters:
+      - $ref: '#/components/parameters/eventKey'
+      - $ref: '#/components/parameters/matchKey'
+      - $ref: '#/components/parameters/teamKey'
+    get:
+      summary: Get reports for a team in a match at an event
+      operationId: getTeamMatchReports
+      tags:
+        - reports
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/report'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+    put:
+      summary: Submit a report for a team in a match at an event
+      operationId: postTeamMatchReport
+      tags:
+        - reports
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/report'
+      responses:
+        '200':
+          description: Successfully replaced existing report
+        '201':
+          description: Submitted new report
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '422':
+          $ref: '#/components/responses/unprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
 components:
   parameters:
+    teamKey:
+      in: path
+      name: teamKey
+      schema:
+        $ref: '#/components/schemas/teamKey'
+      required: true
+      description: Team Key
     eventKey:
       in: path
       name: eventKey
@@ -700,12 +818,56 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    teamKey:
+      type: string
+      example: frc2733
     eventKey:
       type: string
-      example: 2019migib
+      example: 2018pncmp
     matchKey:
       type: string
       example: qm30
+    reportStat:
+      required:
+        - name
+        - attempts
+        - successes
+      properties:
+        name:
+          type: string
+          example: Sandstorm 2
+        attempts:
+          type: integer
+          example: 9
+        successes:
+          type: integer
+          example: 2
+    report:
+      required:
+        - reporterId
+        - autoName
+        - data
+      properties:
+        reporterId:
+          $ref: '#/components/schemas/id'
+        autoName:
+          type: string
+          example: Center Scale
+        data:
+          $ref: '#/components/schemas/reportData'
+    reportData:
+      required:
+        - auto
+        - teleop
+      properties:
+        auto:
+          type: array
+          items:
+            $ref: '#/components/schemas/reportStat'
+        teleop:
+          type: array
+          items:
+            $ref: '#/components/schemas/reportStat'
     match:
       required:
         - key

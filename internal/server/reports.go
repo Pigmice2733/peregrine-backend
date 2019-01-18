@@ -107,6 +107,8 @@ func (s *Server) putReport() http.HandlerFunc {
 			return
 		}
 
+		// TODO(franklin): should respond with a 201 if created instead of replaced
+		// as well as the rest of the PUTs
 		ihttp.Respond(w, nil, http.StatusOK)
 	}
 }
