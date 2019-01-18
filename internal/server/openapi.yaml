@@ -719,6 +719,8 @@ paths:
           $ref: '#/components/responses/internalServerError'
     put:
       summary: Submit a report for a team in a match at an event
+      description: Note that you don't need to fill in the reporterId,
+        it will be set based on your auth token.
       operationId: postTeamMatchReport
       tags:
         - reports
@@ -844,7 +846,6 @@ components:
           example: 2
     report:
       required:
-        - reporterId
         - autoName
         - data
       properties:
