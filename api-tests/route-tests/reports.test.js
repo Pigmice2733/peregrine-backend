@@ -22,7 +22,7 @@ test('reports endpoint', async () => {
   }
 
   let eventResp = await fetch(api.address + '/events', {
-    method: 'POST',
+    method: 'PUT',
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',

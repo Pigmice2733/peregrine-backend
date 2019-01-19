@@ -27,7 +27,7 @@ test('realms', async () => {
       Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
-  expect(realmResp.status).toBe(200)
+  expect(realmResp.status).toBe(201)
   let d = await realmResp.json()
   realm.id = d
 
@@ -135,93 +135,7 @@ test('realms', async () => {
   resp = await fetch(api.address + '/realms/' + realm.id, {
     method: 'GET',
   })
-  expect(resp.status).toBe(401)
-
-  // /realms/{id} patch unauthorized
-  let patchRealm = {
-    name: 'Fake',
-  }
-
-  resp = await fetch(api.address + '/realms/' + realm.id, {
-    method: 'PATCH',
-    body: JSON.stringify(patchRealm),
-  })
-
-  expect(resp.status).toBe(401)
-
-  // /realms/{id} patch non-existent
-  patchRealm = {
-    id: 'blah',
-    name: 'Real',
-  }
-
-  resp = await fetch(api.address + '/realms/-3', {
-    method: 'PATCH',
-    body: JSON.stringify(patchRealm),
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + (await api.getJWT()),
-    },
-  })
-  expect(resp.status).toBe(404)
-
-  // /realms/{id} complete patch
-  patchRealm = {
-    id: 'Name',
-    shareReports: !realm.shareReports,
-  }
-
-  resp = await fetch(api.address + '/realms/' + realm.id, {
-    method: 'PATCH',
-    body: JSON.stringify(patchRealm),
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + (await api.getJWT()),
-    },
-  })
-
-  realm.name = 'Name'
-  realm.shareReports = !realm.shareReports
-
-  expect(resp.status).toBe(204)
-
-  // /realms/{id} partial patch
-  patchRealm = {
-    id: 'blah',
-    name: 'Real',
-  }
-
-  resp = await fetch(api.address + '/realms/' + realm.id, {
-    method: 'PATCH',
-    body: JSON.stringify(patchRealm),
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + (await api.getJWT(realmAdmin)),
-    },
-  })
-
-  realm.name = 'Real'
-
-  expect(resp.status).toBe(204)
-
-  // check that patches succeeded
-  resp = await fetch(api.address + '/realms/' + realm.id, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + (await api.getJWT(realmAdmin)),
-    },
-  })
-  expect(resp.status).toBe(200)
-
-  d = await resp.json()
-
-  expect(d).toEqual({
-    id: realm.id,
-    name: realm.name,
-    shareReports: realm.shareReports,
-  })
-  expect(Object.keys(d)).toEqual(['id', 'name', 'shareReports'])
+  expect(resp.status).toBe(403)
 
   // /realms/{id} delete unauthorized
   resp = await fetch(api.address + '/realms/' + realm.id, {

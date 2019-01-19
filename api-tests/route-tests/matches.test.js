@@ -8,7 +8,7 @@ test('/events/{eventKey}/matches', async () => {
 
   let d = await resp.json()
 
-  expect(d).toEqual({ data: expect.any(Array) })
+  expect(d).toEqual(expect.any(Array))
   expect(d.length).toBeGreaterThan(1)
   d.forEach(match => {
     expect(match).toBeAMatch()
@@ -21,7 +21,7 @@ test('/events/{eventKey}/matches', async () => {
 
   d = await resp.json()
 
-  expect(d).toEqual({ data: expect.any(Array) })
+  expect(d).toEqual(expect.any(Array))
   expect(d.length).toBeGreaterThan(1)
   d.forEach(match => {
     expect(match).toBeAMatch()
@@ -37,7 +37,7 @@ test('/events/{eventKey}/matches', async () => {
 
   d = await resp.json()
 
-  expect(d).toEqual({ data: expect.any(Array) })
+  expect(d).toEqual(expect.any(Array))
   expect(d.length).toBeGreaterThan(0)
   d.forEach(match => {
     expect(match).toBeAMatch()
@@ -54,7 +54,7 @@ test('/events/{eventKey}/matches', async () => {
 
   d = await resp.json()
 
-  expect(d).toEqual({ data: expect.any(Array) })
+  expect(d).toEqual(expect.any(Array))
   expect(d.length).toBeGreaterThan(2)
   d.forEach(match => {
     expect(match).toBeAMatch()
@@ -83,7 +83,7 @@ test('/events/{eventKey}/matches', async () => {
   }
 
   let eventResp = await fetch(api.address + '/events', {
-    method: 'POST',
+    method: 'PUT',
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',

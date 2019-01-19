@@ -8,7 +8,7 @@ test('events', async () => {
 
   let d = await resp.json()
 
-  expect(d).toEqual({ data: expect.any(Array) })
+  expect(d).toEqual(expect.any(Array))
   expect(d.length).toBeGreaterThan(1)
   d.forEach(event => expect(event).toBeAnEvent())
 
@@ -30,7 +30,7 @@ test('events', async () => {
   }
 
   resp = await fetch(api.address + '/events', {
-    method: 'POST',
+    method: 'PUT',
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',

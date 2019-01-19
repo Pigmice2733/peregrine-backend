@@ -69,7 +69,7 @@ test('stats endpoints', async () => {
   }
 
   let eventResp = await fetch(api.address + '/events', {
-    method: 'POST',
+    method: 'PUT',
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ test('stats endpoints', async () => {
       Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
-  expect(realmResp.status).toBe(200)
+  expect(realmResp.status).toBe(201)
   d = await realmResp.json()
   realm.id = d
 

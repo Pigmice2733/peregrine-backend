@@ -101,7 +101,7 @@ test('users CRUD', async () => {
       Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
-  expect(realmResp.status).toBe(200)
+  expect(realmResp.status).toBe(201)
   let d = await realmResp.json()
   otherRealmId = d
 
