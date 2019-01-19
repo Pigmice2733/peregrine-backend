@@ -44,7 +44,7 @@ module.exports = {
     })
     expect(resp.status).toBe(200)
     const d = await resp.json()
-    return d.data.accessToken
+    return d.accessToken
   },
 }
 
@@ -58,8 +58,8 @@ test('the api is healthy', async () => {
 
   const d = await resp.json()
 
-  expect(d.data.ok).toBe(true)
-  expect(d.data.listen.http).toBe(config.server.httpAddress)
-  expect(d.data.services.tba).toBe(true)
-  expect(d.data.services.postgresql).toBe(true)
+  expect(d.ok).toBe(true)
+  expect(d.listen.http).toBe(config.server.httpAddress)
+  expect(d.services.tba).toBe(true)
+  expect(d.services.postgresql).toBe(true)
 })

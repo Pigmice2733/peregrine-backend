@@ -29,7 +29,7 @@ test('realms', async () => {
   })
   expect(realmResp.status).toBe(200)
   let d = await realmResp.json()
-  realm.id = d.data
+  realm.id = d
 
   realmAdmin = {
     username: 'realmadmin' + Number(new Date()),
@@ -74,8 +74,8 @@ test('realms', async () => {
 
   d = await resp.json()
 
-  expect(d.data.length).toBeGreaterThanOrEqual(1)
-  let foundRealm = d.data.find(curRealm => curRealm.id === realm.id)
+  expect(d.length).toBeGreaterThanOrEqual(1)
+  let foundRealm = d.find(curRealm => curRealm.id === realm.id)
 
   expect(foundRealm).toEqual({
     id: realm.id,
@@ -90,7 +90,7 @@ test('realms', async () => {
   })
   expect(resp.status).toBe(200)
   d = await resp.json()
-  expect(d.data).toHaveLength(0)
+  expect(d).toHaveLength(0)
 
   // /realms/{id} endpoint
   // /realms/{id} get super-admin
@@ -105,12 +105,12 @@ test('realms', async () => {
 
   d = await resp.json()
 
-  expect(d.data).toEqual({
+  expect(d).toEqual({
     id: realm.id,
     name: realm.name,
     shareReports: realm.shareReports,
   })
-  expect(Object.keys(d.data)).toEqual(['id', 'name', 'shareReports'])
+  expect(Object.keys(d)).toEqual(['id', 'name', 'shareReports'])
 
   // /realms/{id} get admin
   resp = await fetch(api.address + '/realms/' + realm.id, {
@@ -124,12 +124,12 @@ test('realms', async () => {
 
   d = await resp.json()
 
-  expect(d.data).toEqual({
+  expect(d).toEqual({
     id: realm.id,
     name: realm.name,
     shareReports: realm.shareReports,
   })
-  expect(Object.keys(d.data)).toEqual(['id', 'name', 'shareReports'])
+  expect(Object.keys(d)).toEqual(['id', 'name', 'shareReports'])
 
   // /realms/{id} get unauthorized
   resp = await fetch(api.address + '/realms/' + realm.id, {
@@ -216,12 +216,12 @@ test('realms', async () => {
 
   d = await resp.json()
 
-  expect(d.data).toEqual({
+  expect(d).toEqual({
     id: realm.id,
     name: realm.name,
     shareReports: realm.shareReports,
   })
-  expect(Object.keys(d.data)).toEqual(['id', 'name', 'shareReports'])
+  expect(Object.keys(d)).toEqual(['id', 'name', 'shareReports'])
 
   // /realms/{id} delete unauthorized
   resp = await fetch(api.address + '/realms/' + realm.id, {
@@ -252,7 +252,7 @@ test('realms', async () => {
   expect(resp.status).toBe(200)
 
   d = await resp.json()
-  foundRealm = d.data.find(curRealm => curRealm.id === realm.id)
+  foundRealm = d.find(curRealm => curRealm.id === realm.id)
 
   expect(foundRealm).toBeUndefined()
 })

@@ -15,7 +15,7 @@ describe('auth endpoints', () => {
     expect(resp.status).toBe(200)
 
     const d = await resp.json()
-    expect(d.data.accessToken).toBeA(String)
+    expect(d.accessToken).toBeA(String)
   })
 
   test('/refresh route', async () => {
@@ -28,7 +28,7 @@ describe('auth endpoints', () => {
       headers: { 'Content-Type': 'application/json' },
     })
 
-    const authData = (await authResponse.json()).data
+    const authData = await authResponse.json()
 
     const resp = await fetch(api.address + '/refresh', {
       method: 'POST',
@@ -41,7 +41,7 @@ describe('auth endpoints', () => {
     expect(resp.status).toBe(200)
 
     const d = await resp.json()
-    expect(d.data.accessToken).toBeA(String)
+    expect(d.accessToken).toBeA(String)
   })
 
   test('/authenticate route with incorrect auth info', async () => {
@@ -103,7 +103,7 @@ test('users CRUD', async () => {
   })
   expect(realmResp.status).toBe(200)
   let d = await realmResp.json()
-  otherRealmId = d.data
+  otherRealmId = d
 
   otherRealmAdmin = {
     username: 'usersotheradmin' + Number(new Date()),
@@ -177,15 +177,13 @@ test('users CRUD', async () => {
 
   d = await resp.json()
 
-  expect(d.data.length).toBeGreaterThanOrEqual(5)
+  expect(d.length).toBeGreaterThanOrEqual(5)
 
-  let foundUser = d.data.find(
-    curUser => curUser.username === sameRealmUser.username,
-  )
+  let foundUser = d.find(curUser => curUser.username === sameRealmUser.username)
   expect(foundUser).not.toBe(undefined)
   sameRealmUser = Object.assign(sameRealmUser, foundUser)
 
-  let foundAdmin = d.data.find(
+  let foundAdmin = d.find(
     curUser => curUser.username === unverifiedSuperAdmin.username,
   )
   expect(foundAdmin).not.toBe(undefined)
@@ -202,17 +200,13 @@ test('users CRUD', async () => {
 
   d = await resp.json()
 
-  expect(d.data).toHaveLength(2)
+  expect(d).toHaveLength(2)
 
-  foundAdmin = d.data.find(
-    curUser => curUser.username === otherRealmAdmin.username,
-  )
+  foundAdmin = d.find(curUser => curUser.username === otherRealmAdmin.username)
   expect(foundAdmin).not.toBe(undefined)
   otherRealmAdmin = Object.assign(otherRealmAdmin, foundAdmin)
 
-  foundUser = d.data.find(
-    curUser => curUser.username === otherRealmUser.username,
-  )
+  foundUser = d.find(curUser => curUser.username === otherRealmUser.username)
   expect(foundUser).not.toBe(undefined)
   otherRealmUser = Object.assign(otherRealmUser, foundUser)
   // Assert that otherRealmUser's permissions were created as expected
@@ -256,7 +250,7 @@ test('users CRUD', async () => {
 
   d = await resp.json()
 
-  expect(d.data).toEqual({
+  expect(d).toEqual({
     id: sameRealmUser.id,
     username: sameRealmUser.username,
     realmId: sameRealmUser.realmId,
@@ -347,7 +341,7 @@ test('users CRUD', async () => {
 
   d = await resp.json()
 
-  expect(d.data).toEqual({
+  expect(d).toEqual({
     id: sameRealmUser.id,
     username: sameRealmUser.username,
     realmId: sameRealmUser.realmId,
@@ -407,7 +401,7 @@ test('users CRUD', async () => {
 
   d = await resp.json()
 
-  expect(d.data).toEqual({
+  expect(d).toEqual({
     id: sameRealmUser.id,
     username: sameRealmUser.username,
     realmId: sameRealmUser.realmId,
@@ -497,7 +491,7 @@ test('users CRUD', async () => {
     otherRealmUser.username,
     otherRealmAdmin.username,
   ]
-  d.data.forEach(user => {
+  d.forEach(user => {
     expect(deletedUsernames).not.toContain(user.username)
   })
 })

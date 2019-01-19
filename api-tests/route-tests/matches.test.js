@@ -9,8 +9,8 @@ test('/events/{eventKey}/matches', async () => {
   let d = await resp.json()
 
   expect(d).toEqual({ data: expect.any(Array) })
-  expect(d.data.length).toBeGreaterThan(1)
-  d.data.forEach(match => {
+  expect(d.length).toBeGreaterThan(1)
+  d.forEach(match => {
     expect(match).toBeAMatch()
     expect(match.scheduledTime).toBeADateString()
   })
@@ -22,8 +22,8 @@ test('/events/{eventKey}/matches', async () => {
   d = await resp.json()
 
   expect(d).toEqual({ data: expect.any(Array) })
-  expect(d.data.length).toBeGreaterThan(1)
-  d.data.forEach(match => {
+  expect(d.length).toBeGreaterThan(1)
+  d.forEach(match => {
     expect(match).toBeAMatch()
     expect(match.scheduledTime).toBeADateString()
     expect(match).toIncludeTeam('frc4481')
@@ -38,8 +38,8 @@ test('/events/{eventKey}/matches', async () => {
   d = await resp.json()
 
   expect(d).toEqual({ data: expect.any(Array) })
-  expect(d.data.length).toBeGreaterThan(0)
-  d.data.forEach(match => {
+  expect(d.length).toBeGreaterThan(0)
+  d.forEach(match => {
     expect(match).toBeAMatch()
     expect(match.scheduledTime).toBeADateString()
     expect(match).toIncludeTeam('frc4481')
@@ -55,8 +55,8 @@ test('/events/{eventKey}/matches', async () => {
   d = await resp.json()
 
   expect(d).toEqual({ data: expect.any(Array) })
-  expect(d.data.length).toBeGreaterThan(2)
-  d.data.forEach(match => {
+  expect(d.length).toBeGreaterThan(2)
+  d.forEach(match => {
     expect(match).toBeAMatch()
     expect(match.scheduledTime).toBeADateString()
     expect(match).toIncludeTeam('frc180')
@@ -128,9 +128,9 @@ test('/events/{eventKey}/matches', async () => {
 
   d = await respGet.json()
 
-  expect(d.data).toBeAMatch()
-  expect(d.data.scheduledTime).toBeUndefined()
-  expect(d.data).toEqual({
+  expect(d).toBeAMatch()
+  expect(d.scheduledTime).toBeUndefined()
+  expect(d).toEqual({
     key: match.key,
     time: expect.toEqualDate(match.time),
     redScore: match.redScore,
@@ -145,7 +145,7 @@ test('/events/{eventKey}/matches', async () => {
 
   d = await resp.json()
 
-  const info = d.data
+  const info = d
   expect(info.scheduledTime).toBeUndefined()
   expect(info).toBeAMatch()
 })

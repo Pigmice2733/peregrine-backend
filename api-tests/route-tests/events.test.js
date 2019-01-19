@@ -9,8 +9,8 @@ test('events', async () => {
   let d = await resp.json()
 
   expect(d).toEqual({ data: expect.any(Array) })
-  expect(d.data.length).toBeGreaterThan(1)
-  d.data.forEach(event => expect(event).toBeAnEvent())
+  expect(d.length).toBeGreaterThan(1)
+  d.forEach(event => expect(event).toBeAnEvent())
 
   // /events create endpoint
   expect(api.seedUser.roles.isSuperAdmin).toBe(true)
@@ -26,9 +26,7 @@ test('events', async () => {
     locationName: 'Cleveland High School',
     lat: 45.498555,
     lon: -122.6385231,
-    webcasts: [
-      'https://www.twitch.tv/firstwa_red',
-    ],
+    webcasts: ['https://www.twitch.tv/firstwa_red'],
   }
 
   resp = await fetch(api.address + '/events', {
@@ -52,7 +50,7 @@ test('events', async () => {
 
   d = await respInfo.json()
 
-  expect(d.data).toEqual({
+  expect(d).toEqual({
     key: event.key,
     realmId: api.seedUser.realmId,
     name: event.name,
@@ -73,6 +71,6 @@ test('events', async () => {
 
   d = await resp.json()
 
-  expect(d.data).toBeAnEvent()
-  expect(d.data.key).toBe("2018flor")
+  expect(d).toBeAnEvent()
+  expect(d.key).toBe('2018flor')
 })

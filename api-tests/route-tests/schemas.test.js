@@ -44,7 +44,7 @@ test('schemas', async () => {
   expect(resp.status).toBe(200)
 
   let d = await resp.json()
-  let foundSchema = d.data.find(curSchema => schema.year === curSchema.year)
+  let foundSchema = d.find(curSchema => schema.year === curSchema.year)
 
   resp = await fetch(api.address + `/schemas/${foundSchema.id}`, {
     method: 'GET',
@@ -56,23 +56,23 @@ test('schemas', async () => {
   expect(resp.status).toBe(200)
   d = await resp.json()
 
-  expect(d.data.year).toEqual(schema.year)
-  expect(d.data.realmId).toBeUndefined()
-  expect(d.data.id).not.toBeUndefined()
-  expect(d.data.auto).not.toBeUndefined()
-  expect(d.data.teleop).not.toBeUndefined()
+  expect(d.year).toEqual(schema.year)
+  expect(d.realmId).toBeUndefined()
+  expect(d.id).not.toBeUndefined()
+  expect(d.auto).not.toBeUndefined()
+  expect(d.teleop).not.toBeUndefined()
 
-  d.data.auto.forEach(stat => {
+  d.auto.forEach(stat => {
     expect(stat.name).not.toBeUndefined()
     expect(stat.type).not.toBeUndefined()
   })
 
-  d.data.teleop.forEach(stat => {
+  d.teleop.forEach(stat => {
     expect(stat.name).not.toBeUndefined()
     expect(stat.type).not.toBeUndefined()
   })
 
-  expect(Object.keys(d.data)).toBeASubsetOf([
+  expect(Object.keys(d)).toBeASubsetOf([
     'id',
     'realmId',
     'year',
@@ -90,23 +90,23 @@ test('schemas', async () => {
   expect(resp.status).toBe(200)
   d = await resp.json()
 
-  expect(d.data.year).toEqual(schema.year)
-  expect(d.data.realmId).toBeUndefined()
-  expect(d.data.id).not.toBeUndefined()
-  expect(d.data.auto).not.toBeUndefined()
-  expect(d.data.teleop).not.toBeUndefined()
+  expect(d.year).toEqual(schema.year)
+  expect(d.realmId).toBeUndefined()
+  expect(d.id).not.toBeUndefined()
+  expect(d.auto).not.toBeUndefined()
+  expect(d.teleop).not.toBeUndefined()
 
-  d.data.auto.forEach(stat => {
+  d.auto.forEach(stat => {
     expect(stat.name).not.toBeUndefined()
     expect(stat.type).not.toBeUndefined()
   })
 
-  d.data.teleop.forEach(stat => {
+  d.teleop.forEach(stat => {
     expect(stat.name).not.toBeUndefined()
     expect(stat.type).not.toBeUndefined()
   })
 
-  expect(Object.keys(d.data)).toBeASubsetOf([
+  expect(Object.keys(d)).toBeASubsetOf([
     'id',
     'realmId',
     'year',

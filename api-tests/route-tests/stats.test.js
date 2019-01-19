@@ -49,7 +49,7 @@ test('stats endpoints', async () => {
   expect(resp.status).toBe(200)
 
   let d = await resp.json()
-  let foundSchema = d.data.find(curSchema => schema.year === curSchema.year)
+  let foundSchema = d.find(curSchema => schema.year === curSchema.year)
 
   let event = {
     key: '1968flir',
@@ -110,7 +110,7 @@ test('stats endpoints', async () => {
 
   let teams = ['frc1592', 'frc5722', 'frc1421', 'frc6322', 'frc4024', 'frc5283']
 
-  d.data.forEach(teamStats => {
+  d.forEach(teamStats => {
     expect(teams).toContain(teamStats.team)
     teams.splice(teams.findIndex(t => t === teamStats.team), 1)
     expect(teamStats.auto).not.toBeUndefined()
@@ -172,7 +172,7 @@ test('stats endpoints', async () => {
   })
   expect(realmResp.status).toBe(200)
   d = await realmResp.json()
-  realm.id = d.data
+  realm.id = d
 
   let otherScout = {
     username: 'otherScout',
@@ -373,7 +373,7 @@ test('stats endpoints', async () => {
 
   teams = ['frc1592', 'frc5722', 'frc1421', 'frc6322', 'frc4024', 'frc5283']
 
-  d.data.forEach(teamStats => {
+  d.forEach(teamStats => {
     expect(teams).toContain(teamStats.team)
     teams.splice(teams.findIndex(t => t === teamStats.team), 1)
     expect(teamStats.auto).not.toBeUndefined()
