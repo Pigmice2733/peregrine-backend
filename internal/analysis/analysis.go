@@ -20,7 +20,7 @@ type SchemaFields struct {
 // MaxAvg holds a max and average for a specific stat
 type MaxAvg struct {
 	Max     int     `json:"max"`
-	Avg     float32 `json:"avg"`
+	Avg     float64 `json:"avg"`
 	Total   int     `json:"-"`
 	Matches int     `json:"-"`
 }
@@ -129,10 +129,10 @@ func processStatFields(stats []store.Stat, fields map[string]string, numeric map
 
 				totalAttempts := numeric[stat.Name].Attempts.Total
 				nAttempts := numeric[stat.Name].Attempts.Matches
-				numeric[stat.Name].Attempts.Avg = float32(totalAttempts) / float32(nAttempts)
+				numeric[stat.Name].Attempts.Avg = float64(totalAttempts) / float64(nAttempts)
 				totalSuccesses := numeric[stat.Name].Successes.Total
 				nSuccesses := numeric[stat.Name].Successes.Matches
-				numeric[stat.Name].Successes.Avg = float32(totalSuccesses) / float32(nSuccesses)
+				numeric[stat.Name].Successes.Avg = float64(totalSuccesses) / float64(nSuccesses)
 			}
 		}
 	}

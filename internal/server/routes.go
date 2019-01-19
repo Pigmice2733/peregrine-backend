@@ -22,6 +22,8 @@ func (s *Server) registerRoutes() *mux.Router {
 
 	r.Handle("/schemas", ihttp.ACL(s.getSchemasHandler(), false, false, false)).Methods("GET")
 	r.Handle("/schemas", ihttp.ACL(s.createSchemaHandler(), true, true, true)).Methods("POST")
+	// TODO(franklin): this endpoint doesn't really make sense RESTfully. Year should prob
+	// be a query param on /schemas or something
 	r.Handle("/schemas/year/{year}", ihttp.ACL(s.getSchemaByYearHandler(), false, false, false)).Methods("GET")
 	r.Handle("/schemas/{id}", ihttp.ACL(s.getSchemaByIDHandler(), false, false, false)).Methods("GET")
 
@@ -42,9 +44,9 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.putReport(), false, true, true)).Methods("PUT")
 
 	r.Handle("/realms", s.realmsHandler()).Methods("GET")
+	// TODO(franklin): replace with PUT
 	r.Handle("/realms", ihttp.ACL(s.createRealmHandler(), true, true, true)).Methods("POST")
 	r.Handle("/realms/{id}", s.realmHandler()).Methods("GET")
-	r.Handle("/realms/{id}", ihttp.ACL(s.patchRealmHandler(), true, true, true)).Methods("PATCH")
 	r.Handle("/realms/{id}", ihttp.ACL(s.deleteRealmHandler(), true, true, true)).Methods("DELETE")
 
 	return r

@@ -49,7 +49,7 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, id, http.StatusOK)
+		ihttp.Respond(w, id, http.StatusCreated)
 	}
 }
 
