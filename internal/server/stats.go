@@ -114,7 +114,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 		// fill in unreported teams
 		for _, team := range teamKeys {
 			if _, ok := analyzedStats[team]; !ok {
-				fullStats = append(fullStats, teamStats{Team: team})
+				fullStats = append(fullStats, teamStats{Team: team, Auto: make([]interface{}, 0), Teleop: make([]interface{}, 0)})
 			}
 		}
 
