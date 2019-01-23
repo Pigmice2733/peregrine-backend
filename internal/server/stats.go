@@ -86,7 +86,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 
 		fullStats := make([]teamStats, 0)
 		for _, ts := range analyzedStats {
-			stats := teamStats{Team: ts.Team}
+			stats := teamStats{Team: ts.Team, Auto: make([]interface{}, 0), Teleop: make([]interface{}, 0)}
 
 			for _, v := range ts.AutoBoolean {
 				stats.Auto = append(stats.Auto, v)
@@ -114,7 +114,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 		// fill in unreported teams
 		for _, team := range teamKeys {
 			if _, ok := analyzedStats[team]; !ok {
-				fullStats = append(fullStats, teamStats{Team: team})
+				fullStats = append(fullStats, teamStats{Team: team, Auto: make([]interface{}, 0), Teleop: make([]interface{}, 0)})
 			}
 		}
 
