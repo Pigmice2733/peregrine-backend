@@ -23,7 +23,6 @@ jobs:
           POSTGRES_DB: peregrine
     steps:
       - checkout
-      - run: go get -v -t -d ./...
       - run: go test -v ./...
       - run: go build -o migrate cmd/migrate/main.go
       - run: go build -o peregrine cmd/peregrine/main.go
@@ -41,7 +40,6 @@ jobs:
       - image: circleci/golang:1.11
     steps:
       - checkout
-      - run: go get -v -t -d ./...
       - run: mkdir -p /tmp/builds
       - run: go build -o /tmp/builds/peregrine cmd/peregrine/main.go
       - run: go build -o /tmp/builds/migrate cmd/migrate/main.go
@@ -58,7 +56,6 @@ jobs:
       - image: circleci/golang:1.11
     steps:
       - checkout
-      - run: go get -v -t -d ./...
       - run: mkdir -p /tmp/builds
       - run: go build -o /tmp/builds/peregrine cmd/peregrine/main.go
       - run: go build -o /tmp/builds/migrate cmd/migrate/main.go
