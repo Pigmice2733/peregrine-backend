@@ -31,6 +31,18 @@ test('realms', async () => {
   let d = await realmResp.json()
   realm.id = d
 
+  // /realms/{id} update
+  realm.name += "foobar"
+  realmResp = await fetch(api.address + `/realms/${realm.id}`, {
+    method: 'POST',
+    body: JSON.stringify(realm),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + (await api.getJWT()),
+    },
+  })
+  expect(realmResp.status).toBe(204)
+
   realmAdmin = {
     username: 'realmadmin' + Number(new Date()),
     password: 'password',

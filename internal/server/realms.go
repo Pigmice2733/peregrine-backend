@@ -174,7 +174,7 @@ func (s *Server) updateRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, id, http.StatusNoContent)
+		ihttp.Respond(w, nil, http.StatusNoContent)
 	}
 }
 
