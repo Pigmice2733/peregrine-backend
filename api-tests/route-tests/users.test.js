@@ -103,7 +103,7 @@ test('users CRUD', async () => {
   })
   expect(realmResp.status).toBe(201)
   let d = await realmResp.json()
-  otherRealmId = d
+  otherRealmId = d.id
 
   otherRealmAdmin = {
     username: 'usersotheradmin' + Number(new Date()),

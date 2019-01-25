@@ -172,7 +172,7 @@ test('stats endpoints', async () => {
   })
   expect(realmResp.status).toBe(201)
   d = await realmResp.json()
-  realm.id = d
+  realm.id = d.id
 
   let otherScout = {
     username: 'otherScout',
