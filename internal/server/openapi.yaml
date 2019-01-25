@@ -821,6 +821,16 @@ paths:
       responses:
         '201':
           description: Successfully created realm
+          content:
+            application/json:
+              schema:
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                    example: 45
         '401':
           $ref: '#/components/responses/unauthorizedError'
         '403':

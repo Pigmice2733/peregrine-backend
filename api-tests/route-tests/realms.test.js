@@ -29,7 +29,7 @@ test('realms', async () => {
   })
   expect(realmResp.status).toBe(201)
   let d = await realmResp.json()
-  realm.id = d
+  realm.id = d.id
 
   // /realms/{id} update
   realm.name += "foobar"

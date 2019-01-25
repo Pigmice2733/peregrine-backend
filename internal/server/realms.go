@@ -15,6 +15,10 @@ import (
 
 // createRealmHandler returns a handler to create a new realm.
 func (s *Server) createRealmHandler() http.HandlerFunc {
+	type createResponse struct {
+		ID int64 `json:"id"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		if roles := ihttp.GetRoles(r); !roles.IsSuperAdmin {
 			ihttp.Error(w, http.StatusForbidden)
@@ -42,7 +46,7 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, id, http.StatusCreated)
+		ihttp.Respond(w, createResponse{id}, http.StatusCreated)
 	}
 }
 
