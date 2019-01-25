@@ -24,12 +24,10 @@ func Respond(w http.ResponseWriter, data interface{}, httpCode int) {
 		resp = data
 	}
 
-	jsonData, err := json.Marshal(resp)
-	if err != nil {
-		Error(w, http.StatusInternalServerError)
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpCode)
-	w.Write(jsonData)
+
+	if resp != nil {
+		json.NewEncoder(w).Encode(resp)
+	}
 }

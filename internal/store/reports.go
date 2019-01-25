@@ -51,9 +51,34 @@ type Report struct {
 }
 
 // UpsertReport creates a new report in the db, or replaces the existing one if
-// the same reporter already has a report in the db for that team and match.
-func (s *Service) UpsertReport(ctx context.Context, r Report) error {
-	_, err := s.db.NamedExecContext(ctx, `
+// the same reporter already has a report in the db for that team and match. It
+// returns a boolean that is true when the report was created, and false when it
+// was updated.
+func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err error) {
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return false, errors.Wrap(err, "unable to begin transaction for report upsert")
+	}
+
+	if _, err := tx.Exec("LOCK TABLE reports IN EXCLUSIVE MODE"); err != nil {
+		s.logErr(errors.Wrap(tx.Rollback(), "rolling back report upsert tx"))
+		return false, errors.Wrap(err, "unable to lock reports")
+	}
+
+	var existed bool
+	err = tx.QueryRow(`
+		SELECT EXISTS(
+			SELECT FROM reports
+				WHERE match_key = $1 AND
+				team_key = $2
+		)
+		`, r.MatchKey, r.TeamKey).Scan(&existed)
+	if err != nil {
+		s.logErr(errors.Wrap(tx.Rollback(), "rolling back report upsert tx"))
+		return false, errors.Wrap(err, "unable to determine if report exists")
+	}
+
+	_, err = tx.NamedExecContext(ctx, `
 	INSERT
 		INTO
 			reports (match_key, team_key, reporter_id, realm_id, auto_name, data)
@@ -64,7 +89,12 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) error {
 					auto_name = :auto_name,
 					data = :data
 	`, r)
-	return err
+	if err != nil {
+		s.logErr(errors.Wrap(tx.Rollback(), "rolling back report upsert tx"))
+		return false, errors.Wrap(err, "unable to upsert report")
+	}
+
+	return !existed, errors.Wrap(tx.Commit(), "unable to commit transaction")
 }
 
 // GetTeamMatchReports retrieves all reports for a specific team and match from the db.

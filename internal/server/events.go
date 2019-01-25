@@ -84,6 +84,8 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 func (s *Server) upsertEventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		eventKey := mux.Vars(r)["eventKey"]
+
 		var e store.Event
 		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
@@ -96,10 +98,10 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 			return
 		}
 
+		e.Key = eventKey
 		e.RealmID = &creatorRealm
 
-		err = s.Store.EventsUpsert(r.Context(), []store.Event{e})
-
+		created, err := s.Store.UpsertEvent(r.Context(), e)
 		if err != nil {
 			switch errors.Cause(err).(type) {
 			case store.ErrFKeyViolation:
@@ -112,7 +114,11 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, nil, http.StatusCreated)
+		if created {
+			ihttp.Respond(w, nil, http.StatusCreated)
+		} else {
+			ihttp.Respond(w, nil, http.StatusNoContent)
+		}
 	}
 }
 

@@ -70,8 +70,7 @@ func (s *Server) putReport() http.HandlerFunc {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("checking that match exists")
 			return
-		}
-		if !exists {
+		} else if !exists {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		}
@@ -100,15 +99,17 @@ func (s *Server) putReport() http.HandlerFunc {
 		}
 		report.RealmID = &realmID
 
-		err = s.Store.UpsertReport(r.Context(), report)
+		created, err := s.Store.UpsertReport(r.Context(), report)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("upserting report")
 			return
 		}
 
-		// TODO(franklin): should respond with a 201 if created instead of replaced
-		// as well as the rest of the PUTs
-		ihttp.Respond(w, nil, http.StatusOK)
+		if created {
+			ihttp.Respond(w, nil, http.StatusCreated)
+		} else {
+			ihttp.Respond(w, nil, http.StatusNoContent)
+		}
 	}
 }

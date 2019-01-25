@@ -475,36 +475,6 @@ paths:
           $ref: '#/components/responses/forbiddenError'
         '500':
           $ref: '#/components/responses/internalServerError'
-    put:
-      summary: Create a new custom event (not on TBA)
-      operationId: putEvent
-      description:
-        This endpoint allows realm admins and global admins to create custom events. This can
-        be useful if an offseason event isn't on The Blue Alliance and you still want to scout
-        it. Note that if an event with that key already exists it will be replaced.
-      tags:
-        - events
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/event'
-      responses:
-        '201':
-          description: Successfully created event
-        '204':
-          description: Successfully replaced existing event
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '422':
-          $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
   /events/{eventKey}:
     parameters:
       - $ref: '#/components/parameters/eventKey'
@@ -531,6 +501,36 @@ paths:
           $ref: '#/components/responses/forbiddenError'
         '404':
           $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+    put:
+      summary: Create a new custom event (not on TBA)
+      operationId: putEvent
+      description:
+        This endpoint allows realm admins and global admins to create custom events. This can
+        be useful if an offseason event isn't on The Blue Alliance and you still want to scout
+        it.
+      tags:
+        - events
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/event'
+      responses:
+        '201':
+          description: Successfully created event
+        '204':
+          description: Successfully replaced existing event
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '422':
+          $ref: '#/components/responses/unprocessableEntityError'
         '500':
           $ref: '#/components/responses/internalServerError'
   /events/{eventKey}/stats:
