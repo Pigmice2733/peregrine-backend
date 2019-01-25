@@ -13,11 +13,6 @@ import (
 	validator "gopkg.in/go-playground/validator.v9"
 )
 
-type realm struct {
-	Name         string `json:"name" validate:"required"`
-	ShareReports bool   `json:"shareReports"`
-}
-
 // createRealmHandler returns a handler to create a new realm.
 func (s *Server) createRealmHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -26,18 +21,16 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		var rr realm
-		if err := json.NewDecoder(r.Body).Decode(&rr); err != nil {
+		var realm store.Realm
+		if err := json.NewDecoder(r.Body).Decode(&realm); err != nil {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
 			return
 		}
 
-		if err := validator.New().Struct(rr); err != nil {
+		if err := validator.New().Struct(realm); err != nil {
 			ihttp.Respond(w, err, http.StatusUnprocessableEntity)
 			return
 		}
-
-		realm := store.Realm{Name: rr.Name, ShareReports: rr.ShareReports}
 
 		id, err := s.Store.InsertRealm(r.Context(), realm)
 		if _, ok := errors.Cause(err).(store.ErrExists); ok {
@@ -45,7 +38,7 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving realms")
+			go s.Logger.WithError(err).Error("inserting realms")
 			return
 		}
 
@@ -133,13 +126,8 @@ func (s *Server) realmHandler() http.HandlerFunc {
 	}
 }
 
-// patchRealmHandler returns a handler to modify a specific realm.
-func (s *Server) patchRealmHandler() http.HandlerFunc {
-	type patchRealm struct {
-		Name         *string `json:"name" validate:"omitempty,gte=1,lte=32"`
-		ShareReports *bool   `json:"shareReports"`
-	}
-
+// updateRealmHandler returns a handler to update a specific realm.
+func (s *Server) updateRealmHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
 		if err != nil {
@@ -165,30 +153,28 @@ func (s *Server) patchRealmHandler() http.HandlerFunc {
 			}
 		}
 
-		var pr patchRealm
-		if err := json.NewDecoder(r.Body).Decode(&pr); err != nil {
+		var realm store.Realm
+		if err := json.NewDecoder(r.Body).Decode(&realm); err != nil {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
 			return
 		}
 
-		if err := validator.New().Struct(pr); err != nil {
+		if err := validator.New().Struct(realm); err != nil {
 			ihttp.Respond(w, err, http.StatusUnprocessableEntity)
 			return
 		}
 
-		sr := store.PatchRealm{ID: id, Name: pr.Name, ShareReports: pr.ShareReports}
-
-		err = s.Store.PatchRealm(r.Context(), sr)
+		err = s.Store.UpdateRealm(r.Context(), realm)
 		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
-			go s.Logger.WithError(err).Error("patching realm")
 			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("updating realms")
 			return
 		}
 
-		ihttp.Respond(w, nil, http.StatusNoContent)
+		ihttp.Respond(w, id, http.StatusNoContent)
 	}
 }
 

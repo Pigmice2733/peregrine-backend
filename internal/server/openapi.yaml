@@ -796,13 +796,10 @@ paths:
           $ref: '#/components/responses/unauthorizedError'
         '500':
           $ref: '#/components/responses/internalServerError'
-    put:
-      summary: Create a new realm or replace an existing realm
-      description:
-        Only global admins can create/replace realms. If you don't specify an id, a new
-        realm will be created. If you do specify an id, any realm with that id will be
-        replaced.
-      operationId: putRealm
+    post:
+      summary: Create a new realm
+      description: Only global admins can create realms.
+      operationId: createRealm
       tags:
         - realms
       security:
@@ -824,8 +821,6 @@ paths:
       responses:
         '201':
           description: Successfully created realm
-        '204':
-          description: Successfully replaced realm
         '401':
           $ref: '#/components/responses/unauthorizedError'
         '403':
@@ -856,6 +851,41 @@ paths:
           $ref: '#/components/responses/forbiddenError'
         '409':
           $ref: '#/components/responses/conflictError'
+        '422':
+          $ref: '#/components/responses/unprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+    post:
+      summary: Update a realm
+      description: Global admins can update any realm. Realm admins can update their realm.
+      operationId: updateRealm
+      tags:
+        - realms
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - name
+                - shareReports
+              properties:
+                name:
+                  type: string
+                  example: Pigmice
+                shareReports:
+                  type: boolean
+                  example: true
+      responses:
+        '204':
+          description: Successfully updated realm
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
         '422':
           $ref: '#/components/responses/unprocessableEntityError'
         '500':

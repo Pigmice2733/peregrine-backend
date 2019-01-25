@@ -11,15 +11,8 @@ import (
 // Realm holds the name of a realm, and whether to share the realms reports.
 type Realm struct {
 	ID           int64  `json:"id" db:"id"`
-	Name         string `json:"name" db:"name"`
+	Name         string `json:"name" db:"name" validate:"omitempty,gte=1,lte=32"`
 	ShareReports bool   `json:"shareReports" db:"share_reports"`
-}
-
-// PatchRealm is a nullable Realm, except for the ID.
-type PatchRealm struct {
-	ID           int64   `db:"id"`
-	Name         *string `db:"name"`
-	ShareReports *bool   `db:"share_reports"`
 }
 
 // GetRealms returns all realms in the database.
@@ -93,30 +86,21 @@ func (s *Service) DeleteRealm(ctx context.Context, id int64) error {
 	return tx.Commit()
 }
 
-// PatchRealm patches a realm.
-func (s *Service) PatchRealm(ctx context.Context, realm PatchRealm) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return errors.Wrap(err, "unable to begin transaction")
-	}
-
-	result, err := tx.NamedExecContext(ctx, `
+// UpdateRealm updates a realm.
+func (s *Service) UpdateRealm(ctx context.Context, realm Realm) error {
+	res, err := s.db.NamedExecContext(ctx, `
 	UPDATE realms
 	    SET
-		    name = COALESCE(:name, name),
-		    share_reports = COALESCE(:share_reports, share_reports)
+		    name = :name,
+		    share_reports = :share_reports
 	    WHERE
 		    id = :id
 	`, realm)
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return errors.Wrap(err, "unable to patch realm")
+	if err == nil {
+		if n, err := res.RowsAffected(); err != nil && n == 0 {
+			return ErrNoResults{errors.Wrap(err, "could not update non-existent realm")}
+		}
 	}
 
-	if count, err := result.RowsAffected(); err != nil || count == 0 {
-		s.logErr(tx.Rollback())
-		return ErrNoResults{errors.Wrapf(err, "realm %d not found", realm.ID)}
-	}
-
-	return errors.Wrap(tx.Commit(), "unable to patch realm")
+	return errors.Wrap(err, "unable to update realm")
 }

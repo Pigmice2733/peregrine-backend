@@ -44,9 +44,9 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.putReport(), false, true, true)).Methods("PUT")
 
 	r.Handle("/realms", s.realmsHandler()).Methods("GET")
-	// TODO(franklin): replace with PUT
 	r.Handle("/realms", ihttp.ACL(s.createRealmHandler(), true, true, true)).Methods("POST")
 	r.Handle("/realms/{id}", s.realmHandler()).Methods("GET")
+	r.Handle("/realms/{id}", ihttp.ACL(s.updateRealmHandler(), true, true, true)).Methods("POST")
 	r.Handle("/realms/{id}", ihttp.ACL(s.deleteRealmHandler(), true, true, true)).Methods("DELETE")
 
 	return r
