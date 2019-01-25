@@ -21,7 +21,7 @@ test('reports endpoint', async () => {
     webcasts: [],
   }
 
-  let eventResp = await fetch(api.address + '/events', {
+  await fetch(api.address + `/events/${event.key}`, {
     method: 'PUT',
     body: JSON.stringify(event),
     headers: {
@@ -29,7 +29,6 @@ test('reports endpoint', async () => {
       Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
-  expect(eventResp.status).toBe(201)
 
   let match = {
     key: 'foo123',
@@ -103,7 +102,7 @@ test('reports endpoint', async () => {
       },
     },
   )
-  expect(resp.status).toBe(200)
+  expect(resp.status).toBe(204)
 
   resp = await fetch(
     api.address + '/events/1970flir/matches/foo123/reports/frc1421',
@@ -134,7 +133,7 @@ test('reports endpoint', async () => {
       },
     },
   )
-  expect(resp.status).toBe(200)
+  expect(resp.status).toBe(204)
 
   resp = await fetch(
     api.address + '/events/1970flir/matches/foo123/reports/frc1421',

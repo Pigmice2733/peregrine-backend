@@ -68,7 +68,7 @@ test('stats endpoints', async () => {
     webcasts: [],
   }
 
-  let eventResp = await fetch(api.address + '/events', {
+  await fetch(api.address + `/events/${event.key}`, {
     method: 'PUT',
     body: JSON.stringify(event),
     headers: {
@@ -76,7 +76,6 @@ test('stats endpoints', async () => {
       Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
-  expect(eventResp.status).toBe(201)
 
   let match = {
     key: 'foo123',
@@ -234,7 +233,6 @@ test('stats endpoints', async () => {
       },
     },
   )
-  expect(resp.status).toBe(200)
 
   let secondReport = {
     autoName: 'Cubey',
@@ -272,7 +270,6 @@ test('stats endpoints', async () => {
       },
     },
   )
-  expect(resp.status).toBe(200)
 
   let report = {
     autoName: 'Cubey',
@@ -315,7 +312,6 @@ test('stats endpoints', async () => {
       },
     },
   )
-  expect(resp.status).toBe(200)
 
   let thirdReport = {
     autoName: 'Cubey',
@@ -358,7 +354,6 @@ test('stats endpoints', async () => {
       },
     },
   )
-  expect(resp.status).toBe(200)
 
   statsResp = await fetch(api.address + '/events/1968flir/stats', {
     method: 'GET',

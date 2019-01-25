@@ -29,7 +29,7 @@ test('events', async () => {
     webcasts: ['https://www.twitch.tv/firstwa_red'],
   }
 
-  resp = await fetch(api.address + '/events', {
+  resp = await fetch(api.address + `/events/${event.key}`, {
     method: 'PUT',
     body: JSON.stringify(event),
     headers: {

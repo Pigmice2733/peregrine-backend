@@ -82,7 +82,7 @@ test('/events/{eventKey}/matches', async () => {
     webcasts: [],
   }
 
-  let eventResp = await fetch(api.address + '/events', {
+  await fetch(api.address + `/events/${event.key}`, {
     method: 'PUT',
     body: JSON.stringify(event),
     headers: {
@@ -90,8 +90,6 @@ test('/events/{eventKey}/matches', async () => {
       Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
-
-  expect(eventResp.status).toBe(201)
 
   let match = {
     key: 'foo123',
