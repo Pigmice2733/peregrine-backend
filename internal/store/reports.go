@@ -11,7 +11,7 @@ import (
 // A Stat holds a single statistic from a single match, and could be either a
 // boolean or numeric statistic
 //
-// TODO(franklin): Remove booleans here, just use ints
+// TODO(brendan): Remove booleans here, just use ints
 type Stat struct {
 	Attempts  *int   `json:"attempts,omitempty"`
 	Successes *int   `json:"successes,omitempty"`

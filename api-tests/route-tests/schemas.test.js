@@ -88,7 +88,9 @@ test('schemas', async () => {
     },
   })
   expect(resp.status).toBe(200)
-  d = (await resp.json())[1]
+  d = await resp.json()
+  expect(d.length).toBe(1)
+  d = d[0]
 
   expect(d.year).toEqual(schema.year)
   expect(d.realmId).toBeUndefined()

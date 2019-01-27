@@ -62,13 +62,13 @@ func (s *Server) eventStats() http.HandlerFunc {
 			reports, err = s.Store.GetEventReports(r.Context(), eventKey, &realmID)
 		}
 
-		if _, ok := err.(*store.ErrNoResults); ok {
+		if _, ok := err.(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		}
 
 		schema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
-		if _, ok := err.(*store.ErrNoResults); ok {
+		if _, ok := err.(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
