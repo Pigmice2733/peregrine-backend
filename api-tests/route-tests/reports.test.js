@@ -102,7 +102,7 @@ test('reports endpoint', async () => {
       },
     },
   )
-  expect(resp.status).toBe(204)
+  expect(resp.status).toBe(201)
 
   resp = await fetch(
     api.address + '/events/1970flir/matches/foo123/reports/frc1421',
