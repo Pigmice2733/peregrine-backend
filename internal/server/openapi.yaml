@@ -347,6 +347,14 @@ paths:
         - schemas
       security:
         - BearerAuth: []
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: integer
+            example: 2018
+          required: false
+          description: Get schemas for a specified year
       responses:
         '200':
           content:
@@ -387,37 +395,6 @@ paths:
           $ref: '#/components/responses/conflictError'
         '422':
           $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
-  /schemas/year/{year}:
-    parameters:
-      - in: path
-        name: year
-        schema:
-          type: integer
-          format: int64
-          example: 2019
-        required: true
-        description: Numeric 4-digit year
-    get:
-      summary: Get a schema by year
-      operationId: getSchemaByYear
-      tags:
-        - schemas
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/schema'
-        '400':
-          $ref: '#/components/responses/badRequestError'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
         '500':
           $ref: '#/components/responses/internalServerError'
   /schemas/{id}:

@@ -60,6 +60,27 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 
 func (s *Server) getSchemasHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if yearQuery := r.URL.Query().Get("year"); yearQuery != "" {
+			year, err := strconv.Atoi(yearQuery)
+			if err != nil {
+				ihttp.Error(w, http.StatusBadRequest)
+				return
+			}
+
+			schema, err := s.Store.GetSchemaByYear(r.Context(), year)
+			if _, ok := err.(store.ErrNoResults); ok {
+				ihttp.Error(w, http.StatusNotFound)
+				return
+			} else if err != nil {
+				go s.Logger.WithError(err).Error("getting schema by year")
+				ihttp.Error(w, http.StatusInternalServerError)
+				return
+			}
+
+			ihttp.Respond(w, []store.Schema{schema}, http.StatusOK)
+			return
+		}
+
 		var schemas []store.Schema
 		var err error
 		roles := ihttp.GetRoles(r)
@@ -119,28 +140,6 @@ func (s *Server) getSchemaByIDHandler() http.HandlerFunc {
 
 		if schema.Year == nil && !roles.IsSuperAdmin && schema.RealmID != realmID {
 			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
-		ihttp.Respond(w, schema, http.StatusOK)
-	}
-}
-
-func (s *Server) getSchemaByYearHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		year, err := strconv.ParseInt(mux.Vars(r)["year"], 10, 64)
-		if err != nil {
-			ihttp.Error(w, http.StatusBadRequest)
-			return
-		}
-
-		schema, err := s.Store.GetSchemaByYear(r.Context(), int(year))
-		if _, ok := err.(*store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			go s.Logger.WithError(err).Error("getting schema by year")
-			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
 

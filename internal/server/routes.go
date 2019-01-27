@@ -22,9 +22,6 @@ func (s *Server) registerRoutes() *mux.Router {
 
 	r.Handle("/schemas", ihttp.ACL(s.getSchemasHandler(), false, false, false)).Methods("GET")
 	r.Handle("/schemas", ihttp.ACL(s.createSchemaHandler(), true, true, true)).Methods("POST")
-	// TODO(franklin): this endpoint doesn't really make sense RESTfully. Year should prob
-	// be a query param on /schemas or something
-	r.Handle("/schemas/year/{year}", ihttp.ACL(s.getSchemaByYearHandler(), false, false, false)).Methods("GET")
 	r.Handle("/schemas/{id}", ihttp.ACL(s.getSchemaByIDHandler(), false, false, false)).Methods("GET")
 
 	r.Handle("/events", s.eventsHandler()).Methods("GET")

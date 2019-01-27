@@ -80,7 +80,7 @@ test('schemas', async () => {
     'teleop',
   ])
 
-  resp = await fetch(api.address + `/schemas/year/${schema.year}`, {
+  resp = await fetch(api.address + `/schemas?year=${schema.year}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ test('schemas', async () => {
     },
   })
   expect(resp.status).toBe(200)
-  d = await resp.json()
+  d = (await resp.json())[1]
 
   expect(d.year).toEqual(schema.year)
   expect(d.realmId).toBeUndefined()
