@@ -88,16 +88,10 @@ func (s *Server) eventStats() http.HandlerFunc {
 		for _, ts := range analyzedStats {
 			stats := teamStats{Team: ts.Team, Auto: make([]interface{}, 0), Teleop: make([]interface{}, 0)}
 
-			for _, v := range ts.AutoBoolean {
+			for _, v := range ts.Auto {
 				stats.Auto = append(stats.Auto, v)
 			}
-			for _, v := range ts.AutoNumeric {
-				stats.Auto = append(stats.Auto, v)
-			}
-			for _, v := range ts.TeleopBoolean {
-				stats.Teleop = append(stats.Teleop, v)
-			}
-			for _, v := range ts.TeleopNumeric {
+			for _, v := range ts.Teleop {
 				stats.Teleop = append(stats.Teleop, v)
 			}
 

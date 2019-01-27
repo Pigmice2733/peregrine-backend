@@ -24,7 +24,7 @@ func TestAnalsyzeReports(t *testing.T) {
 					{Name: "Cubes", Attempts: newInt(5), Successes: newInt(3)},
 				},
 				Auto: []store.Stat{
-					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(false)},
+					{Name: "Line", Attempts: newInt(1), Successes: newInt(0)},
 				},
 			},
 		},
@@ -36,7 +36,7 @@ func TestAnalsyzeReports(t *testing.T) {
 					{Name: "Cubes", Attempts: newInt(8), Successes: newInt(6)},
 				},
 				Auto: []store.Stat{
-					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(true)},
+					{Name: "Line", Attempts: newInt(1), Successes: newInt(1)},
 				},
 			},
 		},
@@ -45,7 +45,7 @@ func TestAnalsyzeReports(t *testing.T) {
 			TeamKey: "frc2733",
 			Data: store.ReportData{
 				Teleop: []store.Stat{
-					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(false)},
+					{Name: "Line", Attempts: newInt(1), Successes: newInt(0)},
 				},
 				Auto: []store.Stat{
 					{Name: "Cubes", Attempts: newInt(5), Successes: newInt(3)},
@@ -60,7 +60,7 @@ func TestAnalsyzeReports(t *testing.T) {
 					{Name: "Cubes", Attempts: newInt(2), Successes: newInt(2)},
 				},
 				Auto: []store.Stat{
-					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(true)},
+					{Name: "Line", Attempts: newInt(0), Successes: newInt(1)},
 				},
 			},
 		},
@@ -90,19 +90,32 @@ func TestAnalsyzeReports(t *testing.T) {
 		t.Errorf("analysis for team frc2471 has wrong team key")
 	}
 
-	for name, stat := range analyzedStats["frc2471"].AutoBoolean {
+	for name, stat := range analyzedStats["frc2471"].Auto {
 		if stat.Name != name {
 			t.Errorf("stat %s has wrong stat name: %s", name, stat.Name)
 		}
 
 		if stat.Name != "Line" {
-			if stat.Attempts != 2 || stat.Successes != 1 {
+			attempts := MaxAvg{
+				Max:     1,
+				Avg:     0.5,
+				Total:   1,
+				Matches: 2,
+			}
+
+			successes := MaxAvg{
+				Max:     0,
+				Avg:     0,
+				Total:   0,
+				Matches: 2,
+			}
+			if stat.Attempts != attempts || stat.Successes != successes {
 				t.Errorf("analysis for frc2471 'Line' is wrong")
 			}
 		}
 	}
 
-	for name, stat := range analyzedStats["frc2471"].TeleopNumeric {
+	for name, stat := range analyzedStats["frc2471"].Teleop {
 		if stat.Name != name {
 			t.Errorf("stat %s has wrong stat name: %s", name, stat.Name)
 		}

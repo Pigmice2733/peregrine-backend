@@ -173,7 +173,7 @@ test('stats endpoints', async () => {
   d = await realmResp.json()
   realm.id = d.id
 
-  let otherScout = {
+  let otherRealmScout = {
     username: 'otherScout',
     password: 'password',
     realmId: realm.id,
@@ -184,7 +184,7 @@ test('stats endpoints', async () => {
 
   resp = await fetch(api.address + '/users', {
     method: 'POST',
-    body: JSON.stringify(otherScout),
+    body: JSON.stringify(otherRealmScout),
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + (await api.getJWT()),
@@ -198,8 +198,8 @@ test('stats endpoints', async () => {
       auto: [
         {
           name: 'Crossed Line',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 0,
         },
         {
           name: 'Cubes',
@@ -210,8 +210,8 @@ test('stats endpoints', async () => {
       teleop: [
         {
           name: 'Climbed',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 1,
         },
         {
           name: 'Cubes',
@@ -240,8 +240,8 @@ test('stats endpoints', async () => {
       auto: [
         {
           name: 'Crossed Line',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 1,
         },
         {
           name: 'Cubes',
@@ -277,8 +277,8 @@ test('stats endpoints', async () => {
       auto: [
         {
           name: 'Crossed Line',
-          attempted: false,
-          succeeded: false,
+          attempts: 0,
+          successes: 0,
         },
         {
           name: 'Cubes',
@@ -289,8 +289,8 @@ test('stats endpoints', async () => {
       teleop: [
         {
           name: 'Climbed',
-          attempted: false,
-          succeeded: true,
+          attempts: 0,
+          successes: 1,
         },
         {
           name: 'Cubes',
@@ -319,8 +319,8 @@ test('stats endpoints', async () => {
       auto: [
         {
           name: 'Crossed Line',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 1,
         },
         {
           name: 'Cubes',
@@ -331,8 +331,8 @@ test('stats endpoints', async () => {
       teleop: [
         {
           name: 'Climbed',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 1,
         },
         {
           name: 'Cubes',
@@ -350,7 +350,7 @@ test('stats endpoints', async () => {
       body: JSON.stringify(thirdReport),
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + (await api.getJWT(otherScout)),
+        Authorization: 'Bearer ' + (await api.getJWT(otherRealmScout)),
       },
     },
   )
@@ -377,8 +377,14 @@ test('stats endpoints', async () => {
       var lineIndex = teamStats.auto[0].name === 'Crossed Line' ? 0 : 1
       expect(teamStats.auto[lineIndex]).toEqual({
         name: 'Crossed Line',
-        attempts: 2,
-        successes: 2,
+        attempts: {
+          max: 1,
+          avg: 1,
+        },
+        successes: {
+          max: 1,
+          avg: 1 / 2,
+        },
       })
       expect(teamStats.auto[1 - lineIndex]).toEqual({
         name: 'Cubes',
@@ -395,8 +401,14 @@ test('stats endpoints', async () => {
       var climbedIndex = teamStats.teleop[0].name === 'Climbed' ? 0 : 1
       expect(teamStats.teleop[climbedIndex]).toEqual({
         name: 'Climbed',
-        attempts: 1,
-        successes: 1,
+        attempts: {
+          max: 1,
+          avg: 1,
+        },
+        successes: {
+          max: 1,
+          avg: 1,
+        },
       })
       expect(teamStats.teleop[1 - climbedIndex]).toEqual({
         name: 'Cubes',
