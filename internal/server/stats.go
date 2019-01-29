@@ -24,7 +24,10 @@ func (s *Server) eventStats() http.HandlerFunc {
 		eventKey := vars["eventKey"]
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if err != nil {
+		if _, ok := err.(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving event")
 			return
