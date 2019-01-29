@@ -1,6 +1,8 @@
 package analysis
 
 import (
+	"fmt"
+
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 )
 
@@ -11,12 +13,6 @@ func max(a, b int) int {
 	return b
 }
 
-// SchemaFields stores all the stat fields from a schema
-type SchemaFields struct {
-	Auto   map[string]string
-	Teleop map[string]string
-}
-
 // MaxAvg holds a max and average for a specific stat
 type MaxAvg struct {
 	Max     int     `json:"max"`
@@ -25,32 +21,32 @@ type MaxAvg struct {
 	Matches int     `json:"-"`
 }
 
-type numericStat struct {
+func (ma *MaxAvg) update(n *int) {
+	if n != nil {
+		ma.Total += *n
+		ma.Max = max(*n, ma.Max)
+	}
+	ma.Avg = float64(ma.Total) / float64(ma.Matches)
+}
+
+type stat struct {
 	Name      string `json:"name"`
 	Attempts  MaxAvg `json:"attempts"`
 	Successes MaxAvg `json:"successes"`
 }
 
-type booleanStat struct {
-	Name      string `json:"name"`
-	Attempts  int    `json:"attempts"`
-	Successes int    `json:"successes"`
-}
-
 // TeamStats holds the performance stats of one team
 type TeamStats struct {
-	Team          string
-	AutoNumeric   map[string]*numericStat
-	AutoBoolean   map[string]*booleanStat
-	TeleopNumeric map[string]*numericStat
-	TeleopBoolean map[string]*booleanStat
+	Team   string
+	Auto   map[string]*stat
+	Teleop map[string]*stat
 }
 
 // AnalyzeReports analyzes reports based on a schema
 func AnalyzeReports(schema store.Schema, eventReports []store.Report) (map[string]*TeamStats, error) {
 	stats := make(map[string]*TeamStats)
 
-	schemaFields, err := getSchemaFields(schema)
+	fields, err := getSchemaFields(schema)
 	if err != nil {
 		return nil, err
 	}
@@ -58,100 +54,63 @@ func AnalyzeReports(schema store.Schema, eventReports []store.Report) (map[strin
 	for _, report := range eventReports {
 		if _, ok := stats[report.TeamKey]; !ok {
 			rts := TeamStats{
-				Team:          report.TeamKey,
-				AutoNumeric:   make(map[string]*numericStat),
-				AutoBoolean:   make(map[string]*booleanStat),
-				TeleopNumeric: make(map[string]*numericStat),
-				TeleopBoolean: make(map[string]*booleanStat),
+				Team:   report.TeamKey,
+				Auto:   make(map[string]*stat),
+				Teleop: make(map[string]*stat),
 			}
 			stats[report.TeamKey] = &rts
 		}
 
-		processStatFields(report.Data.Auto, schemaFields.Auto, stats[report.TeamKey].AutoNumeric, stats[report.TeamKey].AutoBoolean)
-		processStatFields(report.Data.Teleop, schemaFields.Teleop, stats[report.TeamKey].TeleopNumeric, stats[report.TeamKey].TeleopBoolean)
+		processStatFields(report.Data.Auto, fields, stats[report.TeamKey].Auto)
+		processStatFields(report.Data.Teleop, fields, stats[report.TeamKey].Teleop)
 	}
 
 	return stats, nil
 }
 
 // processStatFields processes report statistics based on field types and stores them into numericStat and booleanStat types.
-func processStatFields(stats []store.Stat, fields map[string]string, numeric map[string]*numericStat, boolean map[string]*booleanStat) {
-	for _, stat := range stats {
-		if statType, ok := fields[stat.Name]; ok {
-			if statType == "boolean" {
-				if _, ok := boolean[stat.Name]; !ok {
-					boolStat := booleanStat{
-						Name:      stat.Name,
-						Attempts:  0,
-						Successes: 0,
-					}
-					boolean[stat.Name] = &boolStat
+func processStatFields(data []store.Stat, fields map[string]bool, stats map[string]*stat) {
+	for _, datum := range data {
+		if _, ok := fields[datum.Name]; ok {
+			if _, ok := stats[datum.Name]; !ok {
+				s := stat{
+					Name:      datum.Name,
+					Successes: MaxAvg{},
+					Attempts:  MaxAvg{},
 				}
-			} else if statType == "number" {
-				if _, ok := numeric[stat.Name]; !ok {
-					succ := MaxAvg{}
-					atmpt := MaxAvg{}
-					numStat := numericStat{
-						Name:      stat.Name,
-						Successes: succ,
-						Attempts:  atmpt,
-					}
-					numeric[stat.Name] = &numStat
+				stats[datum.Name] = &s
+			}
+
+			stats[datum.Name].Attempts.Matches++
+			stats[datum.Name].Successes.Matches++
+
+			if datum.Attempts != nil && datum.Successes != nil {
+				if *datum.Successes > *datum.Attempts {
+					*datum.Successes = *datum.Attempts
 				}
 			}
 
-			if statType == "boolean" {
-				if stat.Attempted != nil && stat.Succeeded != nil {
-					if *stat.Attempted {
-						boolean[stat.Name].Attempts++
-						if *stat.Succeeded {
-							boolean[stat.Name].Successes++
-						}
-					}
-				}
-			} else if statType == "number" {
-				numeric[stat.Name].Attempts.Matches++
-				numeric[stat.Name].Successes.Matches++
+			stats[datum.Name].Attempts.update(datum.Attempts)
+			stats[datum.Name].Successes.update(datum.Successes)
 
-				if stat.Attempts != nil && stat.Successes != nil {
-					if *stat.Successes > *stat.Attempts {
-						*stat.Successes = *stat.Attempts
-					}
-
-					numeric[stat.Name].Attempts.Total += *stat.Attempts
-					currMax := numeric[stat.Name].Attempts.Max
-					numeric[stat.Name].Attempts.Max = max(*stat.Attempts, currMax)
-
-					numeric[stat.Name].Successes.Total += *stat.Successes
-					currMax = numeric[stat.Name].Successes.Max
-					numeric[stat.Name].Successes.Max = max(*stat.Successes, currMax)
-				}
-
-				totalAttempts := numeric[stat.Name].Attempts.Total
-				nAttempts := numeric[stat.Name].Attempts.Matches
-				numeric[stat.Name].Attempts.Avg = float64(totalAttempts) / float64(nAttempts)
-				totalSuccesses := numeric[stat.Name].Successes.Total
-				nSuccesses := numeric[stat.Name].Successes.Matches
-				numeric[stat.Name].Successes.Avg = float64(totalSuccesses) / float64(nSuccesses)
+			if datum.Name == "Cubes" {
+				fmt.Printf("\n%d %f\n", *datum.Successes, stats[datum.Name].Successes.Avg)
 			}
 		}
 	}
 }
 
 // getSchemaFields creates a SchemaFields struct from a store.Schema
-func getSchemaFields(s store.Schema) (SchemaFields, error) {
-	sf := SchemaFields{
-		Auto:   make(map[string]string),
-		Teleop: make(map[string]string),
-	}
+func getSchemaFields(s store.Schema) (map[string]bool, error) {
+	fields := make(map[string]bool)
 
 	for _, field := range s.Auto {
-		sf.Auto[field.Name] = field.Type
+		fields[field.Name] = true
 	}
 
 	for _, field := range s.Teleop {
-		sf.Teleop[field.Name] = field.Type
+		fields[field.Name] = true
 	}
 
-	return sf, nil
+	return fields, nil
 }

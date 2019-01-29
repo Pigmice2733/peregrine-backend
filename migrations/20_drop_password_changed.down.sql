@@ -1,1 +1,2 @@
-DROP COLUMN password_changed;
+ALTER TABLE users
+    DROP COLUMN password_changed;

@@ -63,8 +63,8 @@ test('reports endpoint', async () => {
       auto: [
         {
           name: 'cross line',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 1,
         },
         {
           name: 'scale',

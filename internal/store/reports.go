@@ -10,13 +10,9 @@ import (
 
 // A Stat holds a single statistic from a single match, and could be either a
 // boolean or numeric statistic
-//
-// TODO(brendan): Remove booleans here, just use ints
 type Stat struct {
 	Attempts  *int   `json:"attempts,omitempty"`
 	Successes *int   `json:"successes,omitempty"`
-	Attempted *bool  `json:"attempted,omitempty"`
-	Succeeded *bool  `json:"succeeded,omitempty"`
 	Name      string `json:"name"`
 }
 
