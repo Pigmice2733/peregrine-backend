@@ -22,6 +22,10 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 		eventKey := mux.Vars(r)["eventKey"]
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		}
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving event")
@@ -63,6 +67,10 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 		eventKey, teamKey := vars["eventKey"], vars["teamKey"]
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		}
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving event")
@@ -103,6 +111,32 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 		}
 
 		ihttp.Respond(w, team, http.StatusOK)
+	}
+}
+
+// teamReportHandler returns a handler to get all reports about a specific team across all events.
+func (s *Server) teamReportHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		teamKey := vars["teamKey"]
+
+		realmID, err := ihttp.GetRealmID(r)
+
+		var reports []store.Report
+		
+		if(err != nil) {
+		    reports, err = s.Store.GetTeamReports(r.Context(), teamKey, nil)
+		} else {
+			reports, err = s.Store.GetTeamReports(r.Context(), teamKey, &realmID)
+		}
+
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("retrieving all-event team reports")
+			return
+		}
+
+		ihttp.Respond(w, reports, http.StatusOK)
 	}
 }
 

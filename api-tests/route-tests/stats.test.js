@@ -233,6 +233,7 @@ test('stats endpoints', async () => {
       },
     },
   )
+  expect(resp.status).toBe(201)
 
   let secondReport = {
     autoName: 'Cubey',
@@ -270,6 +271,7 @@ test('stats endpoints', async () => {
       },
     },
   )
+  expect(resp.status).toBe(201)
 
   let report = {
     autoName: 'Cubey',
@@ -312,6 +314,7 @@ test('stats endpoints', async () => {
       },
     },
   )
+  expect(resp.status).toBe(201)
 
   let thirdReport = {
     autoName: 'Cubey',
@@ -354,6 +357,7 @@ test('stats endpoints', async () => {
       },
     },
   )
+  expect(resp.status).toBe(403)
 
   statsResp = await fetch(api.address + '/events/1968flir/stats', {
     method: 'GET',

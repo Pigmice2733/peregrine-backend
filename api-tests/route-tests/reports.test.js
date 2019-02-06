@@ -5,6 +5,59 @@ test('reports endpoint', async () => {
   // /matches create endpoint
   expect(api.seedUser.roles.isSuperAdmin).toBe(true)
 
+  const realm = {
+    name: 'FRC 666' + Number(new Date()),
+    shareReports: false,
+  }
+
+  let realmResp = await fetch(api.address + '/realms', {
+    method: 'POST',
+    body: JSON.stringify(realm),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + (await api.getJWT()),
+    },
+  })
+  expect(realmResp.status).toBe(201)
+  let d = await realmResp.json()
+  realm.id = d.id
+
+  const otherRealm = {
+    name: 'FRC 555' + Number(new Date()),
+    shareReports: false,
+  }
+
+  realmResp = await fetch(api.address + '/realms', {
+    method: 'POST',
+    body: JSON.stringify(otherRealm),
+    headers: {
+      'Content-Type': 'applicatsion/json',
+      Authorization: 'Bearer ' + (await api.getJWT()),
+    },
+  })
+  expect(realmResp.status).toBe(201)
+  d = await realmResp.json()
+  otherRealm.id = d.id
+
+  let realmAdmin = {
+    username: 'radmin' + Number(new Date()),
+    password: 'password',
+    realmId: realm.id,
+    firstName: 'foo',
+    lastName: 'bar',
+    roles: { isVerified: true, isAdmin: true, isSuperAdmin: false },
+  }
+
+  let resp = await fetch(api.address + '/users', {
+    method: 'POST',
+    body: JSON.stringify(realmAdmin),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + (await api.getJWT()),
+    },
+  })
+  expect(resp.status).toBe(201)
+
   let event = {
     key: '1970flir',
     name: 'FLIR x Daimler',
@@ -26,9 +79,28 @@ test('reports endpoint', async () => {
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + (await api.getJWT(realmAdmin)),
+    },
+  })
+
+  let otherRealmAdmin = {
+    username: 'oradmin' + Number(new Date()),
+    password: 'password',
+    realmId: otherRealm.id,
+    firstName: 'foo',
+    lastName: 'bar',
+    roles: { isVerified: true, isAdmin: true, isSuperAdmin: false },
+  }
+
+  resp = await fetch(api.address + '/users', {
+    method: 'POST',
+    body: JSON.stringify(otherRealmAdmin),
+    headers: {
+      'Content-Type': 'application/json',
       Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
+  expect(resp.status).toBe(201)
 
   let match = {
     key: 'foo123',
@@ -49,11 +121,30 @@ test('reports endpoint', async () => {
   })
   expect(matchResp.status).toBe(201)
 
-  let resp = await fetch(
+  resp = await fetch(
     api.address + '/events/1970flir/matches/foo123/reports/frc1421',
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (await api.getJWT(otherRealmAdmin)),
+      },
+    },
+  )
+  expect(resp.status).toBe(403)
+
+  resp = await fetch(
+    api.address + '/events/1970flir/matches/foo123/reports/frc1421',
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (await api.getJWT()),
+      },
+    },
   )
   expect(resp.status).toBe(200)
-  let d = await resp.json()
+  d = await resp.json()
 
   expect(d).toHaveLength(0)
 
@@ -87,9 +178,13 @@ test('reports endpoint', async () => {
     {
       method: 'PUT',
       body: JSON.stringify(report),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (await api.getJWT(otherRealmAdmin)),
+      },
     },
   )
-  expect(resp.status).toBe(401)
+  expect(resp.status).toBe(403)
 
   resp = await fetch(
     api.address + '/events/1970flir/matches/foo123/reports/frc1421',
@@ -106,6 +201,13 @@ test('reports endpoint', async () => {
 
   resp = await fetch(
     api.address + '/events/1970flir/matches/foo123/reports/frc1421',
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (await api.getJWT()),
+      },
+    },
   )
   expect(resp.status).toBe(200)
   d = await resp.json()
@@ -137,6 +239,13 @@ test('reports endpoint', async () => {
 
   resp = await fetch(
     api.address + '/events/1970flir/matches/foo123/reports/frc1421',
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (await api.getJWT()),
+      },
+    },
   )
   expect(resp.status).toBe(200)
   d = await resp.json()

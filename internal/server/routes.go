@@ -25,6 +25,9 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/schemas/{id}", ihttp.ACL(s.getSchemaByIDHandler(), false, false, false)).Methods("GET")
 
 	r.Handle("/events", s.eventsHandler()).Methods("GET")
+
+	r.Handle("/events/reports/{teamKey}", s.teamReportHandler()).Methods("GET")
+
 	r.Handle("/events/{eventKey}", ihttp.ACL(s.upsertEventHandler(), true, true, true)).Methods("PUT")
 	r.Handle("/events/{eventKey}", s.eventHandler()).Methods("GET")
 

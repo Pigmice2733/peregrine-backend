@@ -1,8 +1,6 @@
 package analysis
 
 import (
-	"fmt"
-
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 )
 
@@ -92,10 +90,6 @@ func processStatFields(data []store.Stat, fields map[string]bool, stats map[stri
 
 			stats[datum.Name].Attempts.update(datum.Attempts)
 			stats[datum.Name].Successes.update(datum.Successes)
-
-			if datum.Name == "Cubes" {
-				fmt.Printf("\n%d %f\n", *datum.Successes, stats[datum.Name].Successes.Avg)
-			}
 		}
 	}
 }

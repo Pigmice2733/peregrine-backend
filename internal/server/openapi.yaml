@@ -452,6 +452,26 @@ paths:
           $ref: '#/components/responses/forbiddenError'
         '500':
           $ref: '#/components/responses/internalServerError'
+  /events/reports/{teamKey}:
+    parameters:
+      - $ref: '#/components/parameters/teamKey'
+    get:
+      summary: Get all reports for a specific team across all events
+      operationId: getTeamReports
+      security:
+        - BearerAuth: []
+      tags:
+        - reports
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/report'
+        '500':
+          $ref: '#/components/responses/internalServerError'
   /events/{eventKey}:
     parameters:
       - $ref: '#/components/parameters/eventKey'
@@ -720,6 +740,8 @@ paths:
                   $ref: '#/components/schemas/report'
         '401':
           $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
         '404':
           $ref: '#/components/responses/notFoundError'
         '500':

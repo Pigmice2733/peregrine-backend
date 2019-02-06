@@ -66,9 +66,10 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 		SELECT EXISTS(
 			SELECT FROM reports
 				WHERE match_key = $1 AND
-				team_key = $2
+				team_key = $2 AND
+				reporter_id = $3
 		)
-		`, r.MatchKey, r.TeamKey).Scan(&existed)
+		`, r.MatchKey, r.TeamKey, r.ReporterID).Scan(&existed)
 	if err != nil {
 		s.logErr(errors.Wrap(tx.Rollback(), "rolling back report upsert tx"))
 		return false, errors.Wrap(err, "unable to determine if report exists")
@@ -98,6 +99,33 @@ func (s *Service) GetTeamMatchReports(ctx context.Context, matchKey string, team
 	reports := []Report{}
 
 	return reports, s.db.SelectContext(ctx, &reports, "SELECT * FROM reports WHERE match_key = $1 AND team_key = $2", matchKey, teamKey)
+}
+
+// GetTeamReports retrieves all reports for a specific team across all events from the db.
+func (s *Service) GetTeamReports(ctx context.Context, teamKey string, realmID *int64) ([]Report, error) {
+	reports := []Report{}
+
+	if realmID != nil {
+		return reports, s.db.SelectContext(ctx, &reports, `
+	SELECT reports.*
+		FROM reports, matches, events
+		WHERE
+	    	reports.team_key = $1
+			AND reports.match_key = matches.key
+			AND matches.event_key = events.key
+			AND (events.realm_id = NULL OR events.realm_id = $2)
+	`, teamKey, *realmID)
+	}
+
+	return reports, s.db.SelectContext(ctx, &reports, `
+	SELECT reports.*
+		FROM reports, matches, events
+		WHERE
+	    	reports.team_key = $1
+			AND reports.match_key = matches.key
+			AND matches.event_key = events.key
+			AND events.realm_id = NULL
+	`, teamKey)
 }
 
 // GetEventReports retrieves all reports for an event from the db. If a realmID
@@ -178,6 +206,6 @@ func (s *Service) GetReportsBySchemaID(ctx context.Context, schemaID int64) ([]R
 	WHERE
 		reports.match_key = matches.key
 		AND matches.event_key = events.key
-		AND event.schema_id = $1
+		AND events.schema_id = $1
 	`, schemaID)
 }

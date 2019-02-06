@@ -9,6 +9,7 @@ import (
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 )
 
 func (s *Server) getReports() http.HandlerFunc {
@@ -18,8 +19,19 @@ func (s *Server) getReports() http.HandlerFunc {
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
-		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
+		event, err := s.Store.GetEvent(r.Context(), eventKey)
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.RealmID, r) {
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
@@ -56,8 +68,19 @@ func (s *Server) putReport() http.HandlerFunc {
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
-		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
+		event, err := s.Store.GetEvent(r.Context(), eventKey)
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
+			return
+		}
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.RealmID, r) {
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 

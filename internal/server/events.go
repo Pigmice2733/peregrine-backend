@@ -165,7 +165,6 @@ func (s *Server) checkEventAccess(eventRealm *int64, r *http.Request) bool {
 	}
 
 	roles := ihttp.GetRoles(r)
-
 	if roles.IsSuperAdmin {
 		return true
 	}
@@ -174,5 +173,5 @@ func (s *Server) checkEventAccess(eventRealm *int64, r *http.Request) bool {
 	if err != nil {
 		return false
 	}
-	return *eventRealm != userRealm
+	return *eventRealm == userRealm
 }
