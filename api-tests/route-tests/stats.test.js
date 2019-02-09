@@ -109,9 +109,11 @@ test('stats endpoints', async () => {
 
   let teams = ['frc1592', 'frc5722', 'frc1421', 'frc6322', 'frc4024', 'frc5283']
 
-  d.forEach(teamStats => {
-    expect(teams).toContain(teamStats.team)
-    teams.splice(teams.findIndex(t => t === teamStats.team), 1)
+  Object.keys(d).forEach(team => {
+    const teamStats = d[team]
+
+    expect(teams).toContain(team)
+    teams.splice(teams.findIndex(t => t === team), 1)
     expect(teamStats.auto).not.toBeUndefined()
     expect(teamStats.teleop).not.toBeUndefined()
   })
@@ -368,12 +370,16 @@ test('stats endpoints', async () => {
 
   teams = ['frc1592', 'frc5722', 'frc1421', 'frc6322', 'frc4024', 'frc5283']
 
-  d.forEach(teamStats => {
-    expect(teams).toContain(teamStats.team)
-    teams.splice(teams.findIndex(t => t === teamStats.team), 1)
+  Object.keys(d).forEach(team => {
+    const teamStats = d[team]
+
+    expect(teams).toContain(team)
+    teams.splice(teams.findIndex(t => t === team), 1)
     expect(teamStats.auto).not.toBeUndefined()
     expect(teamStats.teleop).not.toBeUndefined()
-    if (teamStats.team === 'frc1421') {
+
+    if (team === 'frc1421') {
+      console.log(teamStats)
       var lineIndex = teamStats.auto[0].name === 'Crossed Line' ? 0 : 1
       expect(teamStats.auto[lineIndex]).toEqual({
         name: 'Crossed Line',
