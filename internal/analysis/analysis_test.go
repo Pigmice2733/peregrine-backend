@@ -83,13 +83,6 @@ func TestAnalsyzeReports(t *testing.T) {
 		t.Errorf("analysis doesn't contain team frc2471")
 	}
 
-	if analyzedStats["frc2733"].Team != "frc2733" {
-		t.Errorf("analysis for team frc2733 has wrong team key")
-	}
-	if analyzedStats["frc2471"].Team != "frc2471" {
-		t.Errorf("analysis for team frc2471 has wrong team key")
-	}
-
 	for name, stat := range analyzedStats["frc2471"].Auto {
 		if stat.Name != name {
 			t.Errorf("stat %s has wrong stat name: %s", name, stat.Name)
