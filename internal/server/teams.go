@@ -123,9 +123,9 @@ func (s *Server) teamReportHandler() http.HandlerFunc {
 		realmID, err := ihttp.GetRealmID(r)
 
 		var reports []store.Report
-		
-		if(err != nil) {
-		    reports, err = s.Store.GetTeamReports(r.Context(), teamKey, nil)
+
+		if err != nil {
+			reports, err = s.Store.GetTeamReports(r.Context(), teamKey, nil)
 		} else {
 			reports, err = s.Store.GetTeamReports(r.Context(), teamKey, &realmID)
 		}
