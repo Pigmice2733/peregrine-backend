@@ -1,8 +1,6 @@
 package analysis
 
 import (
-	"fmt"
-
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 )
 
@@ -33,52 +31,52 @@ type stat struct {
 	Name      string `json:"name"`
 	Attempts  MaxAvg `json:"attempts"`
 	Successes MaxAvg `json:"successes"`
+	Type      string `json:"type"`
 }
 
 // TeamStats holds the performance stats of one team
 type TeamStats struct {
-	Team   string
-	Auto   map[string]*stat
-	Teleop map[string]*stat
+	Auto   map[string]*stat `json:"auto"`
+	Teleop map[string]*stat `json:"teleop"`
 }
 
 // AnalyzeReports analyzes reports based on a schema
-func AnalyzeReports(schema store.Schema, eventReports []store.Report) (map[string]*TeamStats, error) {
-	stats := make(map[string]*TeamStats)
+func AnalyzeReports(schema store.Schema, eventReports []store.Report) (map[string]TeamStats, error) {
+	stats := make(map[string]TeamStats)
 
-	fields, err := getSchemaFields(schema)
-	if err != nil {
-		return nil, err
+	concatedSchema := make(map[string]store.StatDescription)
+	for _, v := range schema.Auto {
+		concatedSchema[v.Name] = v
+	}
+	for _, v := range schema.Teleop {
+		concatedSchema[v.Name] = v
 	}
 
 	for _, report := range eventReports {
 		if _, ok := stats[report.TeamKey]; !ok {
-			rts := TeamStats{
-				Team:   report.TeamKey,
+			stats[report.TeamKey] = TeamStats{
 				Auto:   make(map[string]*stat),
 				Teleop: make(map[string]*stat),
 			}
-			stats[report.TeamKey] = &rts
 		}
 
-		processStatFields(report.Data.Auto, fields, stats[report.TeamKey].Auto)
-		processStatFields(report.Data.Teleop, fields, stats[report.TeamKey].Teleop)
+		processStatFields(report.Data.Auto, concatedSchema, stats[report.TeamKey].Auto)
+		processStatFields(report.Data.Teleop, concatedSchema, stats[report.TeamKey].Teleop)
 	}
 
 	return stats, nil
 }
 
-// processStatFields processes report statistics based on field types and stores them into numericStat and booleanStat types.
-func processStatFields(data []store.Stat, fields map[string]bool, stats map[string]*stat) {
+func processStatFields(data []store.Stat, schema map[string]store.StatDescription, stats map[string]*stat) {
 	for _, datum := range data {
-		if _, ok := fields[datum.Name]; ok {
+		if schemaField, ok := schema[datum.Name]; ok {
 			if _, ok := stats[datum.Name]; !ok {
-				s := stat{
+				stats[datum.Name] = &stat{
 					Name:      datum.Name,
 					Successes: MaxAvg{},
 					Attempts:  MaxAvg{},
+					Type:      schemaField.Type,
 				}
-				stats[datum.Name] = &s
 			}
 
 			stats[datum.Name].Attempts.Matches++
@@ -92,25 +90,6 @@ func processStatFields(data []store.Stat, fields map[string]bool, stats map[stri
 
 			stats[datum.Name].Attempts.update(datum.Attempts)
 			stats[datum.Name].Successes.update(datum.Successes)
-
-			if datum.Name == "Cubes" {
-				fmt.Printf("\n%d %f\n", *datum.Successes, stats[datum.Name].Successes.Avg)
-			}
 		}
 	}
-}
-
-// getSchemaFields creates a SchemaFields struct from a store.Schema
-func getSchemaFields(s store.Schema) (map[string]bool, error) {
-	fields := make(map[string]bool)
-
-	for _, field := range s.Auto {
-		fields[field.Name] = true
-	}
-
-	for _, field := range s.Teleop {
-		fields[field.Name] = true
-	}
-
-	return fields, nil
 }

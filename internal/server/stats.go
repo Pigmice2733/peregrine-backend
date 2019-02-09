@@ -11,12 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type teamStats struct {
-	Team   string        `json:"team"`
-	Auto   []interface{} `json:"auto"`
-	Teleop []interface{} `json:"teleop"`
-}
-
 // eventStats analyzes the event-wide statistics of every team at an event with submitted reports
 func (s *Server) eventStats() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -87,19 +81,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		fullStats := make([]teamStats, 0)
-		for _, ts := range analyzedStats {
-			stats := teamStats{Team: ts.Team, Auto: make([]interface{}, 0), Teleop: make([]interface{}, 0)}
-
-			for _, v := range ts.Auto {
-				stats.Auto = append(stats.Auto, v)
-			}
-			for _, v := range ts.Teleop {
-				stats.Teleop = append(stats.Teleop, v)
-			}
-
-			fullStats = append(fullStats, stats)
-		}
+		// fill in unreported teams
 
 		teamKeys, err := s.Store.GetTeamKeys(r.Context(), eventKey)
 		if err != nil {
@@ -108,13 +90,12 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		// fill in unreported teams
 		for _, team := range teamKeys {
 			if _, ok := analyzedStats[team]; !ok {
-				fullStats = append(fullStats, teamStats{Team: team, Auto: make([]interface{}, 0), Teleop: make([]interface{}, 0)})
+				analyzedStats[team] = analysis.TeamStats{}
 			}
 		}
 
-		ihttp.Respond(w, fullStats, http.StatusOK)
+		ihttp.Respond(w, analyzedStats, http.StatusOK)
 	}
 }
