@@ -379,10 +379,7 @@ test('stats endpoints', async () => {
     expect(teamStats.teleop).not.toBeUndefined()
 
     if (team === 'frc1421') {
-      console.log(teamStats)
-      var lineIndex = teamStats.auto[0].name === 'Crossed Line' ? 0 : 1
-      expect(teamStats.auto[lineIndex]).toEqual({
-        name: 'Crossed Line',
+      expect(teamStats.auto['Crossed Line']).toEqual({
         attempts: {
           max: 1,
           avg: 1,
@@ -391,9 +388,10 @@ test('stats endpoints', async () => {
           max: 1,
           avg: 1 / 2,
         },
+        type: "boolean",
       })
-      expect(teamStats.auto[1 - lineIndex]).toEqual({
-        name: 'Cubes',
+
+      expect(teamStats.auto['Cubes']).toEqual({
         attempts: {
           max: 2,
           avg: 2,
@@ -402,11 +400,10 @@ test('stats endpoints', async () => {
           max: 2,
           avg: 1.5,
         },
+        type: "number",
       })
 
-      var climbedIndex = teamStats.teleop[0].name === 'Climbed' ? 0 : 1
-      expect(teamStats.teleop[climbedIndex]).toEqual({
-        name: 'Climbed',
+      expect(teamStats.teleop['Climbed']).toEqual({
         attempts: {
           max: 1,
           avg: 1,
@@ -415,9 +412,10 @@ test('stats endpoints', async () => {
           max: 1,
           avg: 1,
         },
+        type: "boolean",
       })
-      expect(teamStats.teleop[1 - climbedIndex]).toEqual({
-        name: 'Cubes',
+
+      expect(teamStats.teleop['Cubes']).toEqual({
         attempts: {
           max: 12,
           avg: 9,
@@ -426,6 +424,7 @@ test('stats endpoints', async () => {
           max: 10,
           avg: 8,
         },
+        type: "number",
       })
     }
   })

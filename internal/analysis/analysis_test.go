@@ -21,10 +21,10 @@ func TestAnalsyzeReports(t *testing.T) {
 			TeamKey: "frc2471",
 			Data: store.ReportData{
 				Teleop: []store.Stat{
-					{Name: "Cubes", Attempts: newInt(5), Successes: newInt(3)},
+					{Attempts: newInt(5), Successes: newInt(3)},
 				},
 				Auto: []store.Stat{
-					{Name: "Line", Attempts: newInt(1), Successes: newInt(0)},
+					{Attempts: newInt(1), Successes: newInt(0)},
 				},
 			},
 		},
@@ -33,10 +33,10 @@ func TestAnalsyzeReports(t *testing.T) {
 			TeamKey: "frc2733",
 			Data: store.ReportData{
 				Teleop: []store.Stat{
-					{Name: "Cubes", Attempts: newInt(8), Successes: newInt(6)},
+					{Attempts: newInt(8), Successes: newInt(6)},
 				},
 				Auto: []store.Stat{
-					{Name: "Line", Attempts: newInt(1), Successes: newInt(1)},
+					{Attempts: newInt(1), Successes: newInt(1)},
 				},
 			},
 		},
@@ -45,10 +45,10 @@ func TestAnalsyzeReports(t *testing.T) {
 			TeamKey: "frc2733",
 			Data: store.ReportData{
 				Teleop: []store.Stat{
-					{Name: "Line", Attempts: newInt(1), Successes: newInt(0)},
+					{Attempts: newInt(1), Successes: newInt(0)},
 				},
 				Auto: []store.Stat{
-					{Name: "Cubes", Attempts: newInt(5), Successes: newInt(3)},
+					{Attempts: newInt(5), Successes: newInt(3)},
 				},
 			},
 		},
@@ -57,18 +57,18 @@ func TestAnalsyzeReports(t *testing.T) {
 			TeamKey: "frc2471",
 			Data: store.ReportData{
 				Teleop: []store.Stat{
-					{Name: "Cubes", Attempts: newInt(2), Successes: newInt(2)},
+					{Attempts: newInt(2), Successes: newInt(2)},
 				},
 				Auto: []store.Stat{
-					{Name: "Line", Attempts: newInt(0), Successes: newInt(1)},
+					{Attempts: newInt(0), Successes: newInt(1)},
 				},
 			},
 		},
 	}
 
 	schema := store.Schema{
-		Auto:   []store.StatDescription{{Name: "Line", Type: "boolean"}},
-		Teleop: []store.StatDescription{{Name: "Cubes", Type: "number"}},
+		Auto:   []store.StatDescription{{Type: "boolean"}},
+		Teleop: []store.StatDescription{{Type: "number"}},
 	}
 
 	analyzedStats, err := AnalyzeReports(schema, reports)
@@ -84,11 +84,7 @@ func TestAnalsyzeReports(t *testing.T) {
 	}
 
 	for name, stat := range analyzedStats["frc2471"].Auto {
-		if stat.Name != name {
-			t.Errorf("stat %s has wrong stat name: %s", name, stat.Name)
-		}
-
-		if stat.Name != "Line" {
+		if name != "Line" {
 			attempts := MaxAvg{
 				Max:     1,
 				Avg:     0.5,
@@ -109,11 +105,7 @@ func TestAnalsyzeReports(t *testing.T) {
 	}
 
 	for name, stat := range analyzedStats["frc2471"].Teleop {
-		if stat.Name != name {
-			t.Errorf("stat %s has wrong stat name: %s", name, stat.Name)
-		}
-
-		if stat.Name == "Cubes" {
+		if name == "Cubes" {
 			attempts := MaxAvg{
 				Max:     5,
 				Avg:     3.5,

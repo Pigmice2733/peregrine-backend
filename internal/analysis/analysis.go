@@ -28,7 +28,6 @@ func (ma *MaxAvg) update(n *int) {
 }
 
 type stat struct {
-	Name      string `json:"name"`
 	Attempts  MaxAvg `json:"attempts"`
 	Successes MaxAvg `json:"successes"`
 	Type      string `json:"type"`
@@ -72,7 +71,6 @@ func processStatFields(data []store.Stat, schema map[string]store.StatDescriptio
 		if schemaField, ok := schema[datum.Name]; ok {
 			if _, ok := stats[datum.Name]; !ok {
 				stats[datum.Name] = &stat{
-					Name:      datum.Name,
 					Successes: MaxAvg{},
 					Attempts:  MaxAvg{},
 					Type:      schemaField.Type,
