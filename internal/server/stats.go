@@ -74,15 +74,6 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		analyzedStats, err := analysis.AnalyzeReports(schema, reports)
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("analyzing event data")
-			return
-		}
-
-		// fill in unreported teams
-
 		teamKeys, err := s.Store.GetTeamKeys(r.Context(), eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -90,10 +81,11 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		for _, team := range teamKeys {
-			if _, ok := analyzedStats[team]; !ok {
-				analyzedStats[team] = analysis.TeamStats{}
-			}
+		analyzedStats, err := analysis.AnalyzeReports(schema, reports, teamKeys)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("analyzing event data")
+			return
 		}
 
 		ihttp.Respond(w, analyzedStats, http.StatusOK)

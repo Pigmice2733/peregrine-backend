@@ -37,10 +37,11 @@ type stat struct {
 type TeamStats struct {
 	Auto   map[string]*stat `json:"auto"`
 	Teleop map[string]*stat `json:"teleop"`
+	Team   string           `json:"team"`
 }
 
 // AnalyzeReports analyzes reports based on a schema
-func AnalyzeReports(schema store.Schema, eventReports []store.Report) (map[string]TeamStats, error) {
+func AnalyzeReports(schema store.Schema, eventReports []store.Report, teamKeys []string) ([]TeamStats, error) {
 	stats := make(map[string]TeamStats)
 
 	concatedSchema := make(map[string]store.StatDescription)
@@ -63,7 +64,19 @@ func AnalyzeReports(schema store.Schema, eventReports []store.Report) (map[strin
 		processStatFields(report.Data.Teleop, concatedSchema, stats[report.TeamKey].Teleop)
 	}
 
-	return stats, nil
+	for _, team := range teamKeys {
+		if _, ok := stats[team]; !ok {
+			stats[team] = TeamStats{}
+		}
+	}
+
+	var statsList []TeamStats
+	for team, stats := range stats {
+		stats.Team = team
+		statsList = append(statsList, stats)
+	}
+
+	return statsList, nil
 }
 
 func processStatFields(data []store.Stat, schema map[string]store.StatDescription, stats map[string]*stat) {
