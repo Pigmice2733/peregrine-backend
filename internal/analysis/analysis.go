@@ -66,7 +66,7 @@ func AnalyzeReports(schema store.Schema, eventReports []store.Report, teamKeys [
 
 	for _, team := range teamKeys {
 		if _, ok := stats[team]; !ok {
-			stats[team] = TeamStats{}
+			stats[team] = TeamStats{Auto: make(map[string]*stat), Teleop: make(map[string]*stat)}
 		}
 	}
 
