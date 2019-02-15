@@ -70,7 +70,7 @@ func AnalyzeReports(schema store.Schema, eventReports []store.Report, teamKeys [
 		}
 	}
 
-	var statsList []TeamStats
+	statsList := make([]TeamStats, 0)
 	for team, stats := range stats {
 		stats.Team = team
 		statsList = append(statsList, stats)
