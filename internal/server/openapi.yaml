@@ -525,16 +525,18 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                  - team
-                properties:
-                  team:
-                    type: string
-                    example: frc2733
-                  auto:
-                    $ref: '#/components/schemas/stats'
-                  teleop:
-                    $ref: '#/components/schemas/stats'
+                type: array
+                items:
+                  required:
+                    - team
+                  properties:
+                    team:
+                      type: string
+                      example: frc2733
+                    auto:
+                      $ref: '#/components/schemas/stats'
+                    teleop:
+                      $ref: '#/components/schemas/stats'
         '400':
           $ref: '#/components/responses/badRequestError'
         '401':
@@ -1072,20 +1074,21 @@ components:
             type: string
             example: frc4488
     stats:
-      type: array
-      items:
-        required:
-          - attempts
-          - successes
-          - type
-        properties:
-          attempts:
-            $ref: '#/components/schemas/statPoint'
-          successes:
-            $ref: '#/components/schemas/statPoint'
-          type:
-            type: string
-            enum: [number, boolean]
+      properties:
+        statName:
+          description: There is a key for each stat
+          required:
+            - attempts
+            - successes
+            - type
+          properties:
+            attempts:
+              $ref: '#/components/schemas/statPoint'
+            successes:
+              $ref: '#/components/schemas/statPoint'
+            type:
+              type: string
+              enum: [number, boolean]
     statPoint:
       required:
         - max
