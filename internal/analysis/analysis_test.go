@@ -106,8 +106,8 @@ func TestAnalsyzeReports(t *testing.T) {
 			Team: "frc2733",
 		},
 		TeamStats{
-			Auto:   map[string]*stat{},
-			Teleop: map[string]*stat{},
+			Auto:   make(map[string]*stat),
+			Teleop: make(map[string]*stat),
 			Team:   "frc4488",
 		},
 	}
