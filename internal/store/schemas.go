@@ -81,7 +81,7 @@ func (s *Service) GetSchemaByID(ctx context.Context, id int64) (Schema, error) {
 
 	err := s.db.GetContext(ctx, &schema, "SELECT * FROM schemas WHERE id = $1", id)
 	if err == sql.ErrNoRows {
-		return schema, &ErrNoResults{fmt.Errorf("schema %d does not exist", schema.ID)}
+		return schema, ErrNoResults{fmt.Errorf("schema %d does not exist", schema.ID)}
 	}
 
 	return schema, errors.Wrap(err, "unable to retrieve schema")
@@ -93,7 +93,7 @@ func (s *Service) GetSchemaByYear(ctx context.Context, year int) (Schema, error)
 
 	err := s.db.GetContext(ctx, &schema, "SELECT * FROM schemas WHERE year = $1", year)
 	if err == sql.ErrNoRows {
-		return schema, &ErrNoResults{fmt.Errorf("no schema for year %d exists", year)}
+		return schema, ErrNoResults{fmt.Errorf("no schema for year %d exists", year)}
 	}
 
 	return schema, errors.Wrap(err, "unable to retrieve schema")

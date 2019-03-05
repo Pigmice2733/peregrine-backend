@@ -21,15 +21,14 @@ test('reports endpoint', async () => {
     webcasts: [],
   }
 
-  let eventResp = await fetch(api.address + '/events', {
-    method: 'POST',
+  await fetch(api.address + `/events/${event.key}`, {
+    method: 'PUT',
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
-  expect(eventResp.status).toBe(201)
 
   let match = {
     key: 'foo123',
@@ -56,7 +55,7 @@ test('reports endpoint', async () => {
   expect(resp.status).toBe(200)
   let d = await resp.json()
 
-  expect(d.data).toHaveLength(0)
+  expect(d).toHaveLength(0)
 
   let report = {
     autoName: 'FarScale',
@@ -64,8 +63,8 @@ test('reports endpoint', async () => {
       auto: [
         {
           name: 'cross line',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 1,
         },
         {
           name: 'scale',
@@ -103,7 +102,7 @@ test('reports endpoint', async () => {
       },
     },
   )
-  expect(resp.status).toBe(200)
+  expect(resp.status).toBe(201)
 
   resp = await fetch(
     api.address + '/events/1970flir/matches/foo123/reports/frc1421',
@@ -111,18 +110,14 @@ test('reports endpoint', async () => {
   expect(resp.status).toBe(200)
   d = await resp.json()
 
-  expect(d.data).toHaveLength(1)
-  let reporterId = d.data[0].reporterId
+  expect(d).toHaveLength(1)
+  let reporterId = d[0].reporterId
   expect(reporterId).not.toBeUndefined()
-  expect(d.data[0].autoName).toEqual(report.autoName)
-  expect(d.data[0].data).not.toBeUndefined()
-  expect(d.data[0].data.auto).toEqual(report.data.auto)
-  expect(d.data[0].data.teleop).toEqual(report.data.teleop)
-  expect(Object.keys(d.data[0])).toBeASubsetOf([
-    'reporterId',
-    'autoName',
-    'data',
-  ])
+  expect(d[0].autoName).toEqual(report.autoName)
+  expect(d[0].data).not.toBeUndefined()
+  expect(d[0].data.auto).toEqual(report.data.auto)
+  expect(d[0].data.teleop).toEqual(report.data.teleop)
+  expect(Object.keys(d[0])).toBeASubsetOf(['reporterId', 'autoName', 'data'])
 
   report.auto = []
   report.autoName = 'NearScale'
@@ -138,7 +133,7 @@ test('reports endpoint', async () => {
       },
     },
   )
-  expect(resp.status).toBe(200)
+  expect(resp.status).toBe(204)
 
   resp = await fetch(
     api.address + '/events/1970flir/matches/foo123/reports/frc1421',
@@ -146,15 +141,11 @@ test('reports endpoint', async () => {
   expect(resp.status).toBe(200)
   d = await resp.json()
 
-  expect(d.data).toHaveLength(1)
-  expect(d.data[0].reporterId).toEqual(reporterId)
-  expect(d.data[0].autoName).toEqual(report.autoName)
-  expect(d.data[0].data).not.toBeUndefined()
-  expect(d.data[0].data.auto).toEqual(report.data.auto)
-  expect(d.data[0].data.teleop).toEqual(report.data.teleop)
-  expect(Object.keys(d.data[0])).toBeASubsetOf([
-    'reporterId',
-    'autoName',
-    'data',
-  ])
+  expect(d).toHaveLength(1)
+  expect(d[0].reporterId).toEqual(reporterId)
+  expect(d[0].autoName).toEqual(report.autoName)
+  expect(d[0].data).not.toBeUndefined()
+  expect(d[0].data.auto).toEqual(report.data.auto)
+  expect(d[0].data.teleop).toEqual(report.data.teleop)
+  expect(Object.keys(d[0])).toBeASubsetOf(['reporterId', 'autoName', 'data'])
 })

@@ -3,6 +3,8 @@ package analysis
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 )
 
@@ -21,10 +23,10 @@ func TestAnalsyzeReports(t *testing.T) {
 			TeamKey: "frc2471",
 			Data: store.ReportData{
 				Teleop: []store.Stat{
-					{Name: "Cubes", Attempts: newInt(5), Successes: newInt(3)},
+					{Name: "foobar-teleop", Attempts: newInt(5), Successes: newInt(3)},
 				},
 				Auto: []store.Stat{
-					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(false)},
+					{Name: "foobar", Attempts: newInt(1), Successes: newInt(0)},
 				},
 			},
 		},
@@ -33,10 +35,10 @@ func TestAnalsyzeReports(t *testing.T) {
 			TeamKey: "frc2733",
 			Data: store.ReportData{
 				Teleop: []store.Stat{
-					{Name: "Cubes", Attempts: newInt(8), Successes: newInt(6)},
+					{Name: "foobar-teleop", Attempts: newInt(8), Successes: newInt(6)},
 				},
 				Auto: []store.Stat{
-					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(true)},
+					{Name: "foobar", Attempts: newInt(1), Successes: newInt(1)},
 				},
 			},
 		},
@@ -45,10 +47,10 @@ func TestAnalsyzeReports(t *testing.T) {
 			TeamKey: "frc2733",
 			Data: store.ReportData{
 				Teleop: []store.Stat{
-					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(false)},
+					{Name: "foobar-teleop", Attempts: newInt(1), Successes: newInt(0)},
 				},
 				Auto: []store.Stat{
-					{Name: "Cubes", Attempts: newInt(5), Successes: newInt(3)},
+					{Name: "foobar", Attempts: newInt(5), Successes: newInt(3)},
 				},
 			},
 		},
@@ -57,73 +59,58 @@ func TestAnalsyzeReports(t *testing.T) {
 			TeamKey: "frc2471",
 			Data: store.ReportData{
 				Teleop: []store.Stat{
-					{Name: "Cubes", Attempts: newInt(2), Successes: newInt(2)},
+					{Name: "foobar-teleop", Attempts: newInt(2), Successes: newInt(2)},
 				},
 				Auto: []store.Stat{
-					{Name: "Line", Attempted: newBool(true), Succeeded: newBool(true)},
+					{Name: "foobar", Attempts: newInt(0), Successes: newInt(1)},
 				},
 			},
 		},
 	}
 
 	schema := store.Schema{
-		Auto:   []store.StatDescription{{Name: "Line", Type: "boolean"}},
-		Teleop: []store.StatDescription{{Name: "Cubes", Type: "number"}},
+		Auto:   []store.StatDescription{{Name: "foobar", Type: "boolean"}},
+		Teleop: []store.StatDescription{{Name: "foobar-teleop", Type: "number"}},
 	}
 
-	analyzedStats, err := AnalyzeReports(schema, reports)
+	analyzedStats, err := AnalyzeReports(schema, reports, []string{"frc4488"})
 	if err != nil {
 		t.Errorf("analysis failed with error: %v", err)
 	}
 
-	if _, ok := analyzedStats["frc2733"]; !ok {
-		t.Errorf("analysis doesn't contain team frc2733")
-	}
-	if _, ok := analyzedStats["frc2471"]; !ok {
-		t.Errorf("analysis doesn't contain team frc2471")
+	expected := []TeamStats{
+		TeamStats{
+			Auto: map[string]*stat{"foobar": &stat{
+				Attempts:  MaxAvg{Max: 1, Avg: 0.5, Total: 1, Matches: 2},
+				Successes: MaxAvg{Max: 0, Avg: 0, Total: 0, Matches: 2},
+				Type:      "boolean",
+			}},
+			Teleop: map[string]*stat{"foobar-teleop": &stat{
+				Attempts:  MaxAvg{Max: 5, Avg: 3.5, Total: 7, Matches: 2},
+				Successes: MaxAvg{Max: 3, Avg: 2.5, Total: 5, Matches: 2},
+				Type:      "number",
+			}},
+			Team: "frc2471",
+		},
+		TeamStats{
+			Auto: map[string]*stat{"foobar": &stat{
+				Attempts:  MaxAvg{Max: 5, Avg: 3, Total: 6, Matches: 2},
+				Successes: MaxAvg{Max: 3, Avg: 2, Total: 4, Matches: 2},
+				Type:      "boolean",
+			}},
+			Teleop: map[string]*stat{"foobar-teleop": &stat{
+				Attempts:  MaxAvg{Max: 8, Avg: 4.5, Total: 9, Matches: 2},
+				Successes: MaxAvg{Max: 6, Avg: 3, Total: 6, Matches: 2},
+				Type:      "number",
+			}},
+			Team: "frc2733",
+		},
+		TeamStats{
+			Auto:   make(map[string]*stat),
+			Teleop: make(map[string]*stat),
+			Team:   "frc4488",
+		},
 	}
 
-	if analyzedStats["frc2733"].Team != "frc2733" {
-		t.Errorf("analysis for team frc2733 has wrong team key")
-	}
-	if analyzedStats["frc2471"].Team != "frc2471" {
-		t.Errorf("analysis for team frc2471 has wrong team key")
-	}
-
-	for name, stat := range analyzedStats["frc2471"].AutoBoolean {
-		if stat.Name != name {
-			t.Errorf("stat %s has wrong stat name: %s", name, stat.Name)
-		}
-
-		if stat.Name != "Line" {
-			if stat.Attempts != 2 || stat.Successes != 1 {
-				t.Errorf("analysis for frc2471 'Line' is wrong")
-			}
-		}
-	}
-
-	for name, stat := range analyzedStats["frc2471"].TeleopNumeric {
-		if stat.Name != name {
-			t.Errorf("stat %s has wrong stat name: %s", name, stat.Name)
-		}
-
-		if stat.Name == "Cubes" {
-			attempts := MaxAvg{
-				Max:     5,
-				Avg:     3.5,
-				Total:   7,
-				Matches: 2,
-			}
-
-			successes := MaxAvg{
-				Max:     3,
-				Avg:     2.5,
-				Total:   5,
-				Matches: 2,
-			}
-			if stat.Attempts != attempts || stat.Successes != successes {
-				t.Errorf("analysis for frc2471 'Cubes' is wrong")
-			}
-		}
-	}
+	assert.Equal(t, expected, analyzedStats)
 }

@@ -13,6 +13,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+//go:generate go run ../cmd/pack/pack.go -package server -in openapi.yaml -out openapi.go -name openAPI
+var openAPI []byte
+
 // Server is the scouting API server
 type Server struct {
 	config.Server
@@ -102,6 +105,13 @@ type status struct {
 	Listen    listen   `json:"listen"`
 	Services  services `json:"services"`
 	Ok        bool     `json:"ok"`
+}
+
+func (s *Server) openAPIHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/x-yaml")
+		w.Write(openAPI)
+	}
 }
 
 func (s *Server) healthHandler() http.HandlerFunc {

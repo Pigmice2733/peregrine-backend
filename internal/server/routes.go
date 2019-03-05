@@ -9,6 +9,7 @@ func (s *Server) registerRoutes() *mux.Router {
 	r := mux.NewRouter()
 
 	r.Handle("/", s.healthHandler()).Methods("GET")
+	r.Handle("/openapi.yaml", s.openAPIHandler()).Methods("GET")
 
 	r.Handle("/authenticate", s.authenticateHandler()).Methods("POST")
 	r.Handle("/refresh", s.refreshHandler()).Methods("POST")
@@ -21,14 +22,13 @@ func (s *Server) registerRoutes() *mux.Router {
 
 	r.Handle("/schemas", ihttp.ACL(s.getSchemasHandler(), false, false, false)).Methods("GET")
 	r.Handle("/schemas", ihttp.ACL(s.createSchemaHandler(), true, true, true)).Methods("POST")
-	r.Handle("/schemas/year/{year}", ihttp.ACL(s.getSchemaByYearHandler(), false, false, false)).Methods("GET")
 	r.Handle("/schemas/{id}", ihttp.ACL(s.getSchemaByIDHandler(), false, false, false)).Methods("GET")
 
-	r.Handle("/events/{eventKey}/stats", s.eventStats()).Methods("GET")
-
 	r.Handle("/events", s.eventsHandler()).Methods("GET")
-	r.Handle("/events", ihttp.ACL(s.createEventHandler(), true, true, true)).Methods("POST")
+	r.Handle("/events/{eventKey}", ihttp.ACL(s.upsertEventHandler(), true, true, true)).Methods("PUT")
 	r.Handle("/events/{eventKey}", s.eventHandler()).Methods("GET")
+
+	r.Handle("/events/{eventKey}/stats", s.eventStats()).Methods("GET")
 
 	r.Handle("/events/{eventKey}/matches", s.matchesHandler()).Methods("GET")
 	r.Handle("/events/{eventKey}/matches", ihttp.ACL(s.createMatchHandler(), true, true, true)).Methods("POST")
@@ -43,7 +43,7 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/realms", s.realmsHandler()).Methods("GET")
 	r.Handle("/realms", ihttp.ACL(s.createRealmHandler(), true, true, true)).Methods("POST")
 	r.Handle("/realms/{id}", s.realmHandler()).Methods("GET")
-	r.Handle("/realms/{id}", ihttp.ACL(s.patchRealmHandler(), true, true, true)).Methods("PATCH")
+	r.Handle("/realms/{id}", ihttp.ACL(s.updateRealmHandler(), true, true, true)).Methods("POST")
 	r.Handle("/realms/{id}", ihttp.ACL(s.deleteRealmHandler(), true, true, true)).Methods("DELETE")
 
 	return r

@@ -49,7 +49,7 @@ test('stats endpoints', async () => {
   expect(resp.status).toBe(200)
 
   let d = await resp.json()
-  let foundSchema = d.data.find(curSchema => schema.year === curSchema.year)
+  let foundSchema = d.find(curSchema => schema.year === curSchema.year)
 
   let event = {
     key: '1968flir',
@@ -68,15 +68,14 @@ test('stats endpoints', async () => {
     webcasts: [],
   }
 
-  let eventResp = await fetch(api.address + '/events', {
-    method: 'POST',
+  await fetch(api.address + `/events/${event.key}`, {
+    method: 'PUT',
     body: JSON.stringify(event),
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
-  expect(eventResp.status).toBe(201)
 
   let match = {
     key: 'foo123',
@@ -110,7 +109,7 @@ test('stats endpoints', async () => {
 
   let teams = ['frc1592', 'frc5722', 'frc1421', 'frc6322', 'frc4024', 'frc5283']
 
-  d.data.forEach(teamStats => {
+  d.forEach(teamStats => {
     expect(teams).toContain(teamStats.team)
     teams.splice(teams.findIndex(t => t === teamStats.team), 1)
     expect(teamStats.auto).not.toBeUndefined()
@@ -170,11 +169,11 @@ test('stats endpoints', async () => {
       Authorization: 'Bearer ' + (await api.getJWT()),
     },
   })
-  expect(realmResp.status).toBe(200)
+  expect(realmResp.status).toBe(201)
   d = await realmResp.json()
-  realm.id = d.data
+  realm.id = d.id
 
-  let otherScout = {
+  let otherRealmScout = {
     username: 'otherScout',
     password: 'password',
     realmId: realm.id,
@@ -185,7 +184,7 @@ test('stats endpoints', async () => {
 
   resp = await fetch(api.address + '/users', {
     method: 'POST',
-    body: JSON.stringify(otherScout),
+    body: JSON.stringify(otherRealmScout),
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + (await api.getJWT()),
@@ -199,8 +198,8 @@ test('stats endpoints', async () => {
       auto: [
         {
           name: 'Crossed Line',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 0,
         },
         {
           name: 'Cubes',
@@ -211,8 +210,8 @@ test('stats endpoints', async () => {
       teleop: [
         {
           name: 'Climbed',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 1,
         },
         {
           name: 'Cubes',
@@ -234,7 +233,6 @@ test('stats endpoints', async () => {
       },
     },
   )
-  expect(resp.status).toBe(200)
 
   let secondReport = {
     autoName: 'Cubey',
@@ -242,8 +240,8 @@ test('stats endpoints', async () => {
       auto: [
         {
           name: 'Crossed Line',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 1,
         },
         {
           name: 'Cubes',
@@ -272,7 +270,6 @@ test('stats endpoints', async () => {
       },
     },
   )
-  expect(resp.status).toBe(200)
 
   let report = {
     autoName: 'Cubey',
@@ -280,8 +277,8 @@ test('stats endpoints', async () => {
       auto: [
         {
           name: 'Crossed Line',
-          attempted: false,
-          succeeded: false,
+          attempts: 0,
+          successes: 0,
         },
         {
           name: 'Cubes',
@@ -292,8 +289,8 @@ test('stats endpoints', async () => {
       teleop: [
         {
           name: 'Climbed',
-          attempted: false,
-          succeeded: true,
+          attempts: 0,
+          successes: 1,
         },
         {
           name: 'Cubes',
@@ -315,7 +312,6 @@ test('stats endpoints', async () => {
       },
     },
   )
-  expect(resp.status).toBe(200)
 
   let thirdReport = {
     autoName: 'Cubey',
@@ -323,8 +319,8 @@ test('stats endpoints', async () => {
       auto: [
         {
           name: 'Crossed Line',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 1,
         },
         {
           name: 'Cubes',
@@ -335,8 +331,8 @@ test('stats endpoints', async () => {
       teleop: [
         {
           name: 'Climbed',
-          attempted: true,
-          succeeded: true,
+          attempts: 1,
+          successes: 1,
         },
         {
           name: 'Cubes',
@@ -354,11 +350,10 @@ test('stats endpoints', async () => {
       body: JSON.stringify(thirdReport),
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + (await api.getJWT(otherScout)),
+        Authorization: 'Bearer ' + (await api.getJWT(otherRealmScout)),
       },
     },
   )
-  expect(resp.status).toBe(200)
 
   statsResp = await fetch(api.address + '/events/1968flir/stats', {
     method: 'GET',
@@ -373,20 +368,26 @@ test('stats endpoints', async () => {
 
   teams = ['frc1592', 'frc5722', 'frc1421', 'frc6322', 'frc4024', 'frc5283']
 
-  d.data.forEach(teamStats => {
+  d.forEach(teamStats => {
     expect(teams).toContain(teamStats.team)
     teams.splice(teams.findIndex(t => t === teamStats.team), 1)
     expect(teamStats.auto).not.toBeUndefined()
     expect(teamStats.teleop).not.toBeUndefined()
+
     if (teamStats.team === 'frc1421') {
-      var lineIndex = teamStats.auto[0].name === 'Crossed Line' ? 0 : 1
-      expect(teamStats.auto[lineIndex]).toEqual({
-        name: 'Crossed Line',
-        attempts: 2,
-        successes: 2,
+      expect(teamStats.auto['Crossed Line']).toEqual({
+        attempts: {
+          max: 1,
+          avg: 1,
+        },
+        successes: {
+          max: 1,
+          avg: 1 / 2,
+        },
+        type: "boolean",
       })
-      expect(teamStats.auto[1 - lineIndex]).toEqual({
-        name: 'Cubes',
+
+      expect(teamStats.auto['Cubes']).toEqual({
         attempts: {
           max: 2,
           avg: 2,
@@ -395,16 +396,22 @@ test('stats endpoints', async () => {
           max: 2,
           avg: 1.5,
         },
+        type: "number",
       })
 
-      var climbedIndex = teamStats.teleop[0].name === 'Climbed' ? 0 : 1
-      expect(teamStats.teleop[climbedIndex]).toEqual({
-        name: 'Climbed',
-        attempts: 1,
-        successes: 1,
+      expect(teamStats.teleop['Climbed']).toEqual({
+        attempts: {
+          max: 1,
+          avg: 1,
+        },
+        successes: {
+          max: 1,
+          avg: 1,
+        },
+        type: "boolean",
       })
-      expect(teamStats.teleop[1 - climbedIndex]).toEqual({
-        name: 'Cubes',
+
+      expect(teamStats.teleop['Cubes']).toEqual({
         attempts: {
           max: 12,
           avg: 9,
@@ -413,6 +420,7 @@ test('stats endpoints', async () => {
           max: 10,
           avg: 8,
         },
+        type: "number",
       })
     }
   })

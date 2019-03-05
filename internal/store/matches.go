@@ -2,8 +2,10 @@ package store
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/lib/pq"
+	"github.com/pkg/errors"
 )
 
 // Match holds information about an FRC match at a specific event
@@ -101,6 +103,9 @@ func (s *Service) GetMatch(ctx context.Context, matchKey string) (Match, error) 
 		matches.key = b.match_key AND b.is_blue = true
 	WHERE
 		matches.key = $1`, matchKey)
+	if err == sql.ErrNoRows {
+		return m, ErrNoResults{errors.Wrap(err, "unable to get match")}
+	}
 
 	return m, err
 }

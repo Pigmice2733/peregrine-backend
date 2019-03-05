@@ -27,6 +27,7 @@ type requestUser struct {
 	FirstName string      `json:"firstName" validate:"required"`
 	LastName  string      `json:"lastName" validate:"required"`
 	Roles     store.Roles `json:"roles"`
+	Stars     []string    `json:"stars"`
 }
 
 const (
@@ -165,7 +166,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 
 		// user password has been updated since refresh token was issued
 		if user.PasswordChanged != claims.PasswordChanged {
-			ihttp.Error(w, http.StatusUnauthorized)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
@@ -214,7 +215,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 		err := s.Store.CheckSimilarUsernameExists(r.Context(), ru.Username, nil)
 		if _, ok := errors.Cause(err).(store.ErrExists); ok {
-			ihttp.Respond(w, err, http.StatusConflict)
+			ihttp.Error(w, http.StatusConflict)
 			return
 		} else if err != nil {
 			go s.Logger.WithError(err).Error("checking whether similar user exists")
@@ -222,7 +223,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			return
 		}
 
-		u := store.User{Username: ru.Username, RealmID: ru.RealmID, Roles: ru.Roles, FirstName: ru.FirstName, LastName: ru.LastName}
+		u := store.User{Username: ru.Username, RealmID: ru.RealmID, Roles: ru.Roles, Stars: ru.Stars, FirstName: ru.FirstName, LastName: ru.LastName}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcryptCost)
 		if err != nil {
@@ -266,7 +267,7 @@ func (s *Server) getUsersHandler() http.HandlerFunc {
 			var realmID int64
 			realmID, err = ihttp.GetRealmID(r)
 			if err != nil {
-				ihttp.Error(w, http.StatusUnauthorized)
+				ihttp.Error(w, http.StatusForbidden)
 				return
 			}
 			users, err = s.Store.GetUsersByRealm(r.Context(), realmID)
@@ -292,7 +293,7 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 
 		sub, err := ihttp.GetSubject(r)
 		if err != nil {
-			ihttp.Error(w, http.StatusUnauthorized)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 		roles := ihttp.GetRoles(r)
@@ -344,7 +345,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 
 		subjectID, err := ihttp.GetSubject(r)
 		if err != nil {
-			ihttp.Error(w, http.StatusUnauthorized)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 		roles := ihttp.GetRoles(r)
@@ -445,7 +446,7 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 
 		requestID, err := ihttp.GetSubject(r)
 		if err != nil {
-			ihttp.Error(w, http.StatusUnauthorized)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 		roles := ihttp.GetRoles(r)

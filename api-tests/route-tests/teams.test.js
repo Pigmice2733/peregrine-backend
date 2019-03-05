@@ -8,7 +8,7 @@ test('events/{eventKey}/teams', async () => {
   expect(resp.status).toBe(200)
   let d = await resp.json()
 
-  const teams = d.data
+  const teams = d
   expect(teams.length).toBeGreaterThan(0)
   expect(teams).toEqual(expect.any(Array))
   expect(teams[0]).toEqual(expect.any(String))
@@ -19,7 +19,7 @@ test('events/{eventKey}/teams', async () => {
 
   d = await resp.json()
 
-  const info = d.data
+  const info = d
   expect(info.rank).toBeUndefinedOr(Number)
   expect(info.rankingScore).toBeUndefinedOr(Number)
   expect(Object.keys(info)).toBeASubsetOf(['rank', 'rankingScore'])

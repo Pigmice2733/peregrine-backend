@@ -82,8 +82,10 @@ func (s *Server) eventHandler() http.HandlerFunc {
 	}
 }
 
-func (s *Server) createEventHandler() http.HandlerFunc {
+func (s *Server) upsertEventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		eventKey := mux.Vars(r)["eventKey"]
+
 		var e store.Event
 		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
@@ -92,18 +94,16 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 
 		creatorRealm, err := ihttp.GetRealmID(r)
 		if err != nil {
-			ihttp.Error(w, http.StatusUnauthorized)
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
+		e.Key = eventKey
 		e.RealmID = &creatorRealm
 
-		err = s.Store.EventsUpsert(r.Context(), []store.Event{e})
-
+		created, err := s.Store.UpsertEvent(r.Context(), e)
 		if err != nil {
 			switch errors.Cause(err).(type) {
-			case store.ErrNoResults:
-				ihttp.Error(w, http.StatusNotFound)
 			case store.ErrFKeyViolation:
 				ihttp.Error(w, http.StatusUnprocessableEntity)
 			default:
@@ -114,7 +114,11 @@ func (s *Server) createEventHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, nil, http.StatusCreated)
+		if created {
+			ihttp.Respond(w, nil, http.StatusCreated)
+		} else {
+			ihttp.Respond(w, nil, http.StatusNoContent)
+		}
 	}
 }
 
@@ -129,7 +133,7 @@ func (s *Server) updateEvents(ctx context.Context) error {
 		schema, err := s.Store.GetSchemaByYear(ctx, s.Year)
 		var schemaID *int64
 		if err != nil {
-			_, ok := err.(*store.ErrNoResults)
+			_, ok := err.(store.ErrNoResults)
 			if !ok {
 				return err
 			}

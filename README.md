@@ -30,6 +30,7 @@ cd peregrine-backend
 > **NOTE**: If you cloned the repo to somewhere in your GOPATH (e.g. with `go get`) you'll need to `export GO111MODULE=on`.
 
 ```
+go generate ./... # neccessary to compile OpenAPI documentation into the binary
 go install ./...
 ```
 
@@ -57,6 +58,13 @@ migrate -up
 ```
 peregrine
 ```
+
+## API Documentation
+
+Peregrine's entire API is documented with OpenAPI 3.0.0 (previously known as Swagger). You can
+view the documentation [here](http://petstore.swagger.io/?url=http://edge.api.peregrine.ga:8080/openapi.yaml#/),
+or by running peregrine locally and going [here](http://petstore.swagger.io/?url=http://localhost:8080/openapi.yaml#/).
+If you notice any inaccuracies please let us know so the documentation can be corrected.
 
 ## Testing
 
