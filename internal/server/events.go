@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sort"
 	"time"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
@@ -45,6 +46,8 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 			go s.Logger.WithError(err).Error("retrieving event data")
 			return
 		}
+
+		sort.Sort(store.Events(events))
 
 		ihttp.Respond(w, &events, http.StatusOK)
 	}
