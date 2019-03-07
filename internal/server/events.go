@@ -115,9 +115,9 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 		}
 
 		if created {
-			ihttp.Respond(w, nil, http.StatusCreated)
+			w.WriteHeader(http.StatusCreated)
 		} else {
-			ihttp.Respond(w, nil, http.StatusNoContent)
+			w.WriteHeader(http.StatusNoContent)
 		}
 	}
 }
