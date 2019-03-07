@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -25,33 +24,6 @@ type Event struct {
 	LocationName string         `json:"locationName" db:"location_name"`
 	Lat          float64        `json:"lat" db:"lat"`
 	Lon          float64        `json:"lon" db:"lon"`
-}
-
-func abs(a int64) int64 {
-	if a < 0 {
-		return a * -1
-	}
-
-	return a
-}
-
-type Events []Event
-
-func (e Events) Len() int      { return len(e) }
-func (e Events) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
-func (e Events) Less(i, j int) bool {
-	now := time.Now().Unix()
-
-	iDiff := now - e[i].EndDate.Unix
-	jDiff := now - e[j].EndDate.Unix
-
-	if iDiff < 0 && jDiff >= 0 {
-		return true
-	} else if jDiff < 0 && iDiff >= 0 {
-		return false
-	}
-
-	return abs(now-e[i].StartDate.Unix) < abs(now-e[j].StartDate.Unix)
 }
 
 const eventsQuery = `
