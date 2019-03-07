@@ -179,31 +179,7 @@ paths:
         content:
           application/json:
             schema:
-              required:
-                - username
-                - password
-                - realmId
-                - firstName
-                - lastName
-              properties:
-                username:
-                  type: string
-                  example: franklin
-                password:
-                  type: string
-                  example: Q6qA6A22WLTO
-                realmId:
-                  $ref: '#/components/schemas/id'
-                firstName:
-                  type: string
-                  example: Franklin
-                lastName:
-                  type: string
-                  example: Harding
-                stars:
-                  $ref: '#/components/schemas/stars'
-                roles:
-                  $ref: '#/components/schemas/roles'
+              $ref: '#/components/schemas/user'
       responses:
         '201':
           description: Successfully created user
@@ -288,25 +264,7 @@ paths:
         content:
           application/json:
             schema:
-              properties:
-                username:
-                  type: string
-                  example: franklin
-                password:
-                  type: string
-                  example: Q6qA6A22WLTO
-                realmId:
-                  $ref: '#/components/schemas/id'
-                firstName:
-                  type: string
-                  example: Franklin
-                lastName:
-                  type: string
-                  example: Harding
-                stars:
-                  $ref: '#/components/schemas/stars'
-                roles:
-                  $ref: '#/components/schemas/roles'
+              $ref: '#/components/schemas/user'
       responses:
         '204':
           description: Successfully patched user
@@ -787,29 +745,14 @@ paths:
         content:
           application/json:
             schema:
-              required:
-                - name
-                - shareReports
-              properties:
-                name:
-                  type: string
-                  example: Pigmice
-                shareReports:
-                  type: boolean
-                  example: true
+              $ref: '#/components/schemas/realm'
       responses:
         '201':
           description: Successfully created realm
           content:
             application/json:
               schema:
-                required:
-                  - id
-                properties:
-                  id:
-                    type: integer
-                    format: int64
-                    example: 45
+                $ref: '#/components/schemas/realm'
         '401':
           $ref: '#/components/responses/unauthorizedError'
         '403':
@@ -856,16 +799,7 @@ paths:
         content:
           application/json:
             schema:
-              required:
-                - name
-                - shareReports
-              properties:
-                name:
-                  type: string
-                  example: Pigmice
-                shareReports:
-                  type: boolean
-                  example: true
+              $ref: '#/components/schemas/realm'
       responses:
         '204':
           description: Successfully updated realm
@@ -997,9 +931,7 @@ components:
           type: boolean
           example: true
         id:
-          type: integer
-          format: int64
-          example: 1
+          $ref: '#/components/schemas/id'
     reportStat:
       required:
         - name
@@ -1160,6 +1092,7 @@ components:
       type: integer
       format: int64
       example: 1
+      readOnly: true
     schema:
       required:
         - id
@@ -1193,17 +1126,20 @@ components:
       required:
         - id
         - username
+        - password
         - realmId
         - firstName
         - lastName
-        - roles
-        - stars
       properties:
         id:
           $ref: '#/components/schemas/id'
         username:
           type: string
           example: franklin
+        password:
+          type: string
+          example: Sxam0dO3aMQW
+          writeOnly: true
         realmId:
           $ref: '#/components/schemas/id'
         firstName:
