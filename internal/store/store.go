@@ -31,7 +31,7 @@ type ErrFKeyViolation struct {
 const pgExists = "23505"
 const pgFKeyViolation = "23503"
 
-// Service is an interface to manipulate the data store.
+// Service provides methods for storing data in a PostgreSQL database.
 type Service struct {
 	db     *sqlx.DB
 	logger *logrus.Logger
