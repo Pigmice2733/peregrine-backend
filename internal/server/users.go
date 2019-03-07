@@ -250,7 +250,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, nil, http.StatusCreated)
+		w.WriteHeader(http.StatusCreated)
 	}
 }
 
@@ -432,7 +432,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, nil, http.StatusNoContent)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
@@ -477,6 +477,6 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, nil, http.StatusNoContent)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }

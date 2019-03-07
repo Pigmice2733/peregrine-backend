@@ -195,7 +195,7 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, nil, http.StatusCreated)
+		w.WriteHeader(http.StatusCreated)
 	}
 }
 

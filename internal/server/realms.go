@@ -144,7 +144,7 @@ func (s *Server) updateRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, nil, http.StatusNoContent)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
@@ -182,6 +182,6 @@ func (s *Server) deleteRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		ihttp.Respond(w, nil, http.StatusNoContent)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }

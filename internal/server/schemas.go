@@ -54,7 +54,7 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 			s.eventsLastUpdate = &expiredUpdate
 		}
 
-		ihttp.Respond(w, nil, http.StatusCreated)
+		w.WriteHeader(http.StatusCreated)
 	}
 }
 
