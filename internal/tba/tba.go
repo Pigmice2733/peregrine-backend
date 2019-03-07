@@ -13,8 +13,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Service provides an interface to retrieve data from
-// The Blue Alliance's API
+// Service provides methods for retrieving data from
+// The Blue Alliance API
 type Service struct {
 	URL       string
 	APIKey    string
