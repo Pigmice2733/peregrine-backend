@@ -112,5 +112,5 @@ func TestAnalsyzeReports(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, expected, analyzedStats)
+	assert.ElementsMatch(t, expected, analyzedStats)
 }
