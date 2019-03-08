@@ -102,7 +102,7 @@ test('realms', async () => {
   })
   expect(resp.status).toBe(200)
   d = await resp.json()
-  expect(d).toHaveLength(0)
+  expect(d).toHaveLength(2)
 
   // /realms/{id} endpoint
   // /realms/{id} get super-admin

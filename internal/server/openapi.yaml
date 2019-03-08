@@ -757,7 +757,7 @@ paths:
           $ref: '#/components/responses/internalServerError'
   /realms:
     get:
-      summary: Get all visible realms
+      summary: Get all realms
       operationId: getRealms
       security:
         - BearerAuth: []
