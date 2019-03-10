@@ -113,3 +113,16 @@ func (s *Server) putReport() http.HandlerFunc {
 		}
 	}
 }
+
+func (s *Server) leaderboardHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		leaderboard, err := s.Store.GetLeaderboard(r.Context())
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("getting leaderboard")
+			return
+		}
+
+		ihttp.Respond(w, leaderboard, http.StatusOK)
+	}
+}

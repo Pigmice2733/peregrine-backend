@@ -148,4 +148,12 @@ test('reports endpoint', async () => {
   expect(d[0].data.auto).toEqual(report.data.auto)
   expect(d[0].data.teleop).toEqual(report.data.teleop)
   expect(Object.keys(d[0])).toBeASubsetOf(['reporterId', 'autoName', 'data'])
+
+  resp = await fetch(
+    api.address + '/events/1970flir/matches/foo123/reports/frc1421',
+  )
+  expect(resp.status).toBe(200)
+  d = await resp.json()
+
+  expect(d).toEqual([{"autoName": "NearScale", "data": {"auto": [{"attempts": 1, "name": "cross line", "successes": 1}, {"attempts": 2, "name": "scale", "successes": 0}], "teleop": [{"attempts": 12, "name": "exchange", "successes": 10}]}, "reporterId": 1}])
 })

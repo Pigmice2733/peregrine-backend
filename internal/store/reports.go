@@ -46,6 +46,12 @@ type Report struct {
 	Data       ReportData `json:"data" db:"data"`
 }
 
+// Leaderboard holds information about how many reports each reporter submitted.
+type Leaderboard []struct {
+	ReporterID int64 `json:"reporterId" db:"reporter_id"`
+	Reports    int64 `json:"reports" db:"num_reports"`
+}
+
 // UpsertReport creates a new report in the db, or replaces the existing one if
 // the same reporter already has a report in the db for that team and match. It
 // returns a boolean that is true when the report was created, and false when it
@@ -180,4 +186,19 @@ func (s *Service) GetReportsBySchemaID(ctx context.Context, schemaID int64) ([]R
 		AND matches.event_key = events.key
 		AND event.schema_id = $1
 	`, schemaID)
+}
+
+// GetLeaderboard retrieves leaderboard information from the reports and users table.
+func (s *Service) GetLeaderboard(ctx context.Context) (Leaderboard, error) {
+	leaderboard := Leaderboard{}
+
+	return leaderboard, s.db.SelectContext(ctx, &leaderboard, `
+	SELECT
+		users.id AS reporter_id, COUNT(reports.reporter_id) AS num_reports
+	FROM users
+	LEFT JOIN reports
+		ON (users.id = reports.reporter_id)
+	GROUP BY users.id
+	ORDER BY num_reports DESC;
+	`)
 }

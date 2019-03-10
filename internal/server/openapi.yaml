@@ -755,6 +755,28 @@ paths:
           $ref: '#/components/responses/unprocessableEntityError'
         '500':
           $ref: '#/components/responses/internalServerError'
+  /leaderboard:
+    get:
+      summary: Get a count of reports submitted for each reporter
+      operationId: getLeaderboard
+      tags:
+        - leaderboard
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties:
+                    reporterId:
+                      type: integer
+                      example: 4 # josiah
+                    reports:
+                      type: integer
+                      example: 9001
+        '500':
+          $ref: '#/components/responses/internalServerError'
   /realms:
     get:
       summary: Get all realms
