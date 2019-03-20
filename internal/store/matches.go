@@ -200,16 +200,20 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, matches []Match, eventKe
 		_, err = tx.ExecContext(ctx, `
 		DELETE FROM matches m
 			USING events e
-			WHERE e.key = $1 AND
-				  e.key = m.event_key AND
-				  NOT (m.key = ANY($2)) 
+			WHERE
+				e.key = $1
+				AND e.key = m.event_key
+				AND NOT (m.key = ANY($2)) 
+				AND NOT EXISTS (SELECT id FROM reports WHERE match_key = m.key)
 	`, eventKey, pq.Array(matchKeys))
 	} else {
 		_, err = tx.ExecContext(ctx, `
 		DELETE FROM matches m
 			USING events e
-			WHERE e.key = m.event_key AND
-				  NOT (m.key = ANY($1)) 
+			WHERE
+				e.key = m.event_key
+				AND NOT (m.key = ANY($1))
+				AND NOT EXISTS (SELECT id FROM reports WHERE match_key = m.key)
 	`, pq.Array(matchKeys))
 	}
 
