@@ -18,6 +18,8 @@ type Comment struct {
 	Comment    string `json:"comment" db:"comment"`
 }
 
+// UpsertComment will upsert a comment for a team in a match. There can only be one comment
+// per reporter per team per match per event.
 func (s *Service) UpsertComment(ctx context.Context, c Comment) (created bool, err error) {
 	var existed bool
 
