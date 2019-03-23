@@ -36,12 +36,13 @@ func (s *Server) registerRoutes() *mux.Router {
 
 	r.Handle("/events/{eventKey}/teams", s.teamsHandler()).Methods("GET")
 	r.Handle("/events/{eventKey}/teams/{teamKey}", s.teamInfoHandler()).Methods("GET")
+	r.Handle("/events/{eventKey}/teams/{teamKey}/comments", ihttp.ACL(s.getEventComments(), false, false, false)).Methods("GET")
 
 	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.getReports(), false, false, false)).Methods("GET")
 	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.putReport(), false, true, true)).Methods("PUT")
 
-	r.Handle("/events/{eventKey}/matches/{matchKey}/comments/{teamKey}", ihttp.ACL(s.getComments(), false, false, false)).Methods("GET")
-	r.Handle("/events/{eventKey}/matches/{matchKey}/comments/{teamKey}", ihttp.ACL(s.putComments(), false, true, true)).Methods("PUT")
+	r.Handle("/events/{eventKey}/matches/{matchKey}/comments/{teamKey}", ihttp.ACL(s.getMatchTeamComments(), false, false, false)).Methods("GET")
+	r.Handle("/events/{eventKey}/matches/{matchKey}/comments/{teamKey}", ihttp.ACL(s.putMatchTeamComment(), false, true, true)).Methods("PUT")
 
 	r.Handle("/leaderboard", s.leaderboardHandler()).Methods("GET")
 

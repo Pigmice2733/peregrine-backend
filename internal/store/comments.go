@@ -11,6 +11,7 @@ import (
 // qualitative equivalent of a report.
 type Comment struct {
 	ID         int64  `json:"-" db:"id"`
+	EventKey   string `json:"-" db:"event_key"`
 	MatchKey   string `json:"-" db:"match_key"`
 	TeamKey    string `json:"-" db:"team_key"`
 	ReporterID *int64 `json:"reporterId" db:"reporter_id"`
@@ -18,9 +19,9 @@ type Comment struct {
 	Comment    string `json:"comment" db:"comment"`
 }
 
-// UpsertComment will upsert a comment for a team in a match. There can only be one comment
+// UpsertMatchTeamComment will upsert a comment for a team in a match. There can only be one comment
 // per reporter per team per match per event.
-func (s *Service) UpsertComment(ctx context.Context, c Comment) (created bool, err error) {
+func (s *Service) UpsertMatchTeamComment(ctx context.Context, c Comment) (created bool, err error) {
 	var existed bool
 
 	err = s.doTransaction(ctx, func(tx *sqlx.Tx) error {
@@ -43,9 +44,9 @@ func (s *Service) UpsertComment(ctx context.Context, c Comment) (created bool, e
 		_, err = tx.NamedExecContext(ctx, `
 		INSERT
 			INTO
-				comments (match_key, team_key, reporter_id, realm_id, comment)
-			VALUES (:match_key, :team_key, :reporter_id, :realm_id, :comment)
-			ON CONFLICT (match_key, team_key, reporter_id) DO
+				comments (event_key, match_key, team_key, reporter_id, realm_id, comment)
+			VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :comment)
+			ON CONFLICT (event_key, match_key, team_key, reporter_id) DO
 				UPDATE
 					SET
 						comment = :comment`, c)
@@ -59,8 +60,14 @@ func (s *Service) UpsertComment(ctx context.Context, c Comment) (created bool, e
 	return !existed, err
 }
 
-// GetComments gets all comments for a given team in a match.
-func (s *Service) GetComments(ctx context.Context, matchKey, teamKey string) (comments []Comment, err error) {
+// GetMatchTeamComments gets all comments for a given team in a match.
+func (s *Service) GetMatchTeamComments(ctx context.Context, matchKey, teamKey string) (comments []Comment, err error) {
 	comments = []Comment{}
 	return comments, s.db.SelectContext(ctx, &comments, "SELECT * FROM comments WHERE match_key = $1 AND team_key = $2", matchKey, teamKey)
+}
+
+// GetEventComments gets all comments for a given team in an event.
+func (s *Service) GetEventComments(ctx context.Context, eventKey, teamKey string) (comments []Comment, err error) {
+	comments = []Comment{}
+	return comments, s.db.SelectContext(ctx, &comments, "SELECT * FROM comments WHERE event_key = $1 AND team_key = $2", eventKey, teamKey)
 }

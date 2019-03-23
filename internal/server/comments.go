@@ -10,9 +10,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (s *Server) getComments() http.HandlerFunc {
+func (s *Server) getMatchTeamComments() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("bla")
 		vars := mux.Vars(r)
 		eventKey := vars["eventKey"]
 		partialMatchKey := vars["matchKey"]
@@ -38,7 +37,7 @@ func (s *Server) getComments() http.HandlerFunc {
 			return
 		}
 
-		comments, err := s.Store.GetComments(r.Context(), matchKey, teamKey)
+		comments, err := s.Store.GetMatchTeamComments(r.Context(), matchKey, teamKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("getting comments")
@@ -49,7 +48,29 @@ func (s *Server) getComments() http.HandlerFunc {
 	}
 }
 
-func (s *Server) putComments() http.HandlerFunc {
+func (s *Server) getEventComments() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		eventKey := vars["eventKey"]
+		teamKey := vars["teamKey"]
+
+		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		}
+
+		comments, err := s.Store.GetEventComments(r.Context(), eventKey, teamKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("getting comments")
+			return
+		}
+
+		ihttp.Respond(w, comments, http.StatusOK)
+	}
+}
+
+func (s *Server) putMatchTeamComment() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		eventKey := vars["eventKey"]
@@ -81,6 +102,7 @@ func (s *Server) putComments() http.HandlerFunc {
 			return
 		}
 
+		comment.EventKey = eventKey
 		comment.MatchKey = matchKey
 		comment.TeamKey = teamKey
 
@@ -99,7 +121,7 @@ func (s *Server) putComments() http.HandlerFunc {
 		}
 		comment.RealmID = &realmID
 
-		created, err := s.Store.UpsertComment(r.Context(), comment)
+		created, err := s.Store.UpsertMatchTeamComment(r.Context(), comment)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("upserting comment")
