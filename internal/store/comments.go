@@ -11,9 +11,9 @@ import (
 // qualitative equivalent of a report.
 type Comment struct {
 	ID         int64  `json:"-" db:"id"`
-	EventKey   string `json:"-" db:"event_key"`
-	MatchKey   string `json:"-" db:"match_key"`
-	TeamKey    string `json:"-" db:"team_key"`
+	EventKey   string `json:"eventKey" db:"event_key"`
+	MatchKey   string `json:"matchKey" db:"match_key"`
+	TeamKey    string `json:"teamKey" db:"team_key"`
 	ReporterID *int64 `json:"reporterId" db:"reporter_id"`
 	RealmID    *int64 `json:"-" db:"realm_id"`
 	Comment    string `json:"comment" db:"comment"`

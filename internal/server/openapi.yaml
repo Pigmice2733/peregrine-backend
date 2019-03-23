@@ -1060,12 +1060,21 @@ components:
     comment:
       required:
         - comment
+        - eventKey
+        - matchKey
+        - teamKey
       properties:
         reporterId:
           $ref: '#/components/schemas/id'
         comment:
           type: string
           example: 'Played good defense'
+        eventKey:
+          $ref: '#/components/schemas/eventKey'
+        matchKey:
+          $ref: '#/components/schemas/matchKey'
+        teamKey:
+          $ref: '#/components/schemas/teamKey'
     reportData:
       required:
         - auto
