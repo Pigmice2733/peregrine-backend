@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Register lib/pq PostreSQL driver
@@ -73,6 +74,23 @@ func (s *Service) logErr(err error) {
 	if err != nil {
 		s.logger.Error(err)
 	}
+}
+
+func (s *Service) doTransaction(ctx context.Context, txWrapper func(*sqlx.Tx) error) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "unable to begin transaction")
+	}
+
+	if err := txWrapper(tx); err != nil {
+		if rbErr := tx.Rollback(); rbErr != nil {
+			s.logErr(errors.Wrap(err, "unable to rollback transaction"))
+		}
+
+		return errors.Wrap(err, "error in transaction wrapper")
+	}
+
+	return errors.Wrap(tx.Commit(), "unable to commit transaction")
 }
 
 // UnixTime exists so that we can have times that look like time.Time's to

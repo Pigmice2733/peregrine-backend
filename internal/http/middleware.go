@@ -68,27 +68,34 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 		roles := GetRoles(r)
 
 		fields := logrus.Fields{
-			"method":       r.Method,
-			"remote_addr":  r.RemoteAddr,
-			"url":          r.URL.String(),
-			"start_time":   start.Unix(),
-			"request_time": end.Sub(start).Seconds(),
-			"status_code":  rr.code,
-			"body_size":    rr.len,
-			"admin":        roles.IsAdmin,
-			"super_admin":  roles.IsSuperAdmin,
-			"user_agent":   r.Header.Get("User-Agent"),
+			"method":      r.Method,
+			"remoteAddr":  r.RemoteAddr,
+			"url":         r.URL.String(),
+			"startTime":   start.Unix(),
+			"requestTime": end.Sub(start).Seconds(),
+			"statusCode":  rr.code,
+			"bodySize":    rr.len,
+			"admin":       roles.IsAdmin,
+			"superAdmin":  roles.IsSuperAdmin,
+			"userAgent":   r.Header.Get("User-Agent"),
 		}
 
 		if sub, err := GetSubject(r); err == nil {
-			fields["user_id"] = sub
+			fields["userId"] = sub
 		}
 
 		if realm, err := GetRealmID(r); err == nil {
-			fields["realm_id"] = realm
+			fields["realmId"] = realm
 		}
 
-		l.WithFields(fields).Info("got request")
+		withFields := l.WithFields(fields)
+		if rr.code >= 200 && rr.code < 300 {
+			withFields.Info("got request")
+		} else if rr.code < 500 {
+			withFields.Warn("got request")
+		} else {
+			withFields.Error("got request")
+		}
 	}
 }
 
