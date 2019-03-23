@@ -36,8 +36,8 @@ func LimitBody(next http.Handler) http.Handler {
 }
 
 type recorder struct {
-	len  int
-	code int
+	length int
+	code   int
 	http.ResponseWriter
 }
 
@@ -47,7 +47,7 @@ func (r *recorder) Write(b []byte) (int, error) {
 	}
 
 	n, err := r.ResponseWriter.Write(b)
-	r.len += n
+	r.length += n
 	return n, err
 }
 
@@ -74,7 +74,7 @@ func Log(next http.Handler, l *logrus.Logger) http.HandlerFunc {
 			"startTime":   start.Unix(),
 			"requestTime": end.Sub(start).Seconds(),
 			"statusCode":  rr.code,
-			"bodySize":    rr.len,
+			"bodySize":    rr.length,
 			"admin":       roles.IsAdmin,
 			"superAdmin":  roles.IsSuperAdmin,
 			"userAgent":   r.Header.Get("User-Agent"),
