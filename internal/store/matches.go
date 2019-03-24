@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 )
@@ -19,6 +20,7 @@ type Match struct {
 	BlueScore     *int           `json:"blueScore" db:"blue_score"`
 	RedAlliance   pq.StringArray `json:"redAlliance" db:"red_alliance"`
 	BlueAlliance  pq.StringArray `json:"blueAlliance" db:"blue_alliance"`
+	TBADeleted    bool           `json:"tba_deleted" db:"tba_deleted"`
 }
 
 // GetTime returns the actual match time if available, and if not, predicted time
@@ -38,39 +40,48 @@ func (s *Service) CheckMatchKeyExists(matchKey string) (bool, error) {
 	return exists, s.db.Get(&exists, "SELECT EXISTS(SELECT true FROM matches WHERE key = $1)", matchKey)
 }
 
+const matchesQuery = `
+SELECT
+	key,
+	predicted_time,
+	scheduled_time,
+	actual_time,
+	blue_score,
+	red_score,
+	tba_deleted,
+	r.team_keys AS red_alliance,
+	b.team_keys AS blue_alliance
+FROM
+	matches
+INNER JOIN
+	alliances r
+ON
+	matches.key = r.match_key AND r.is_blue = false
+INNER JOIN
+	alliances b
+ON
+	matches.key = b.match_key AND b.is_blue = true
+WHERE
+	matches.event_key = $1 AND
+	(r.team_keys || b.team_keys) @> $2`
+
 // GetMatches returns all matches from a specific event that include the given
 // teams. If teams is nil or empty a list of all the matches for that event are
-// returned.
-func (s *Service) GetMatches(ctx context.Context, eventKey string, teamKeys []string) ([]Match, error) {
+// returned. // If tbaDeleted is true, matches that have been deleted from TBA
+// will be returned in addition to matches that have not been deleted. Otherwise,
+// only matches that have not been deleted will be returned.
+func (s *Service) GetMatches(ctx context.Context, eventKey string, teamKeys []string, tbaDeleted bool) ([]Match, error) {
 	if teamKeys == nil {
 		teamKeys = []string{}
 	}
 
+	query := matchesQuery
+	if !tbaDeleted {
+		query += " AND NOT matches.tba_deleted"
+	}
+
 	matches := []Match{}
-	err := s.db.SelectContext(ctx, &matches, `
-	SELECT
-		key,
-		predicted_time,
-		scheduled_time,
-		actual_time,
-		blue_score,
-		red_score,
-		r.team_keys AS red_alliance,
-		b.team_keys AS blue_alliance
-	FROM
-		matches
-	INNER JOIN
-		alliances r
-	ON
-		matches.key = r.match_key AND r.is_blue = false
-	INNER JOIN
-		alliances b
-	ON
-		matches.key = b.match_key AND b.is_blue = true
-	WHERE
-		matches.event_key = $1 AND
-		(r.team_keys || b.team_keys) @> $2
-			`, eventKey, pq.Array(teamKeys))
+	err := s.db.SelectContext(ctx, &matches, query, eventKey, pq.Array(teamKeys))
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +100,7 @@ func (s *Service) GetMatch(ctx context.Context, matchKey string) (Match, error) 
 		actual_time,
 		blue_score,
 		red_score,
+		tba_deleted,
 		r.team_keys AS red_alliance,
 		b.team_keys AS blue_alliance
 	FROM
@@ -110,7 +122,8 @@ func (s *Service) GetMatch(ctx context.Context, matchKey string) (Match, error) 
 	return m, err
 }
 
-// UpsertMatch upserts a match and its alliances into the database.
+// UpsertMatch upserts a match and its alliances into the database. It will
+// set tba_deleted to false for all updated matches.
 func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -118,8 +131,8 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 	}
 
 	_, err = tx.NamedExecContext(ctx, `
-		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score)
-		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score)
+		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted)
+		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, tba_deleted)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -129,7 +142,8 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 					scheduled_time = :scheduled_time,
 					actual_time = :actual_time,
 					red_score = :red_score,
-					blue_score = :blue_score
+					blue_score = :blue_score,
+					tba_deleted = false
 	`, match)
 	if err != nil {
 		s.logErr(tx.Rollback())
@@ -149,20 +163,36 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 	return tx.Commit()
 }
 
+// MarkMatchesDeleted will set tba_deleted to true on all matches for an event
+// that were *not* included in the passed matches slice.
+func (s *Service) MarkMatchesDeleted(ctx context.Context, eventKey string, matches []Match) error {
+	keys := pq.StringArray{}
+	for _, e := range matches {
+		keys = append(keys, e.Key)
+	}
+
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE matches
+			SET
+				tba_deleted = true
+			WHERE
+				event_key = $1 AND
+				key != ALL($2)
+	`, eventKey, keys)
+
+	return errors.Wrap(err, "unable to mark tba_deleted on missing matches")
+}
+
 // UpdateTBAMatches puts a set of multiple matches and their alliances from TBA
 // into the database. New matches are added, existing matches will be updated,
 // and matches deleted from TBA will be deleted from the database. User-created
 // matches will be unaffected. If eventKey is specified, only matches from that
-// event will be affected.
-func (s *Service) UpdateTBAMatches(ctx context.Context, matches []Match, eventKey string) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	upsert, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score)
-		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score)
+// event will be affected. It will set tba_deleted to false for all updated matches.
+func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches []Match) error {
+	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+		upsert, err := tx.PrepareNamedContext(ctx, `
+		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted)
+		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -172,55 +202,22 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, matches []Match, eventKe
 					scheduled_time = :scheduled_time,
 					actual_time = :actual_time,
 					red_score = :red_score,
-					blue_score = :blue_score
+					blue_score = :blue_score,
+					tba_deleted = false
 	`)
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
-	defer upsert.Close()
-
-	matchKeys := make([]string, len(matches))
-
-	for i, match := range matches {
-		if _, err = upsert.ExecContext(ctx, match); err != nil {
-			s.logErr(tx.Rollback())
-			return err
+		if err != nil {
+			return errors.Wrap(err, "unable to prepare query to upsert matches")
 		}
-		if err = s.AlliancesUpsert(ctx, match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
-			s.logErr(tx.Rollback())
-			return err
+
+		for _, match := range matches {
+			if _, err = upsert.ExecContext(ctx, match); err != nil {
+				return errors.Wrap(err, "unable to upsert match")
+			}
+			if err = s.AlliancesUpsert(ctx, match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
+				return errors.Wrap(err, "unable to upsert alliances")
+			}
 		}
-		matchKeys[i] = match.Key
-	}
 
-	upsert.Close()
-
-	if eventKey != "" {
-		_, err = tx.ExecContext(ctx, `
-		DELETE FROM matches m
-			USING events e
-			WHERE
-				e.key = $1
-				AND e.key = m.event_key
-				AND NOT (m.key = ANY($2)) 
-				AND NOT EXISTS (SELECT id FROM reports WHERE match_key = m.key)
-	`, eventKey, pq.Array(matchKeys))
-	} else {
-		_, err = tx.ExecContext(ctx, `
-		DELETE FROM matches m
-			USING events e
-			WHERE
-				e.key = m.event_key
-				AND NOT (m.key = ANY($1))
-				AND NOT EXISTS (SELECT id FROM reports WHERE match_key = m.key)
-	`, pq.Array(matchKeys))
-	}
-
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
-
-	return tx.Commit()
+		return nil
+	})
 }

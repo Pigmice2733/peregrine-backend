@@ -16,27 +16,26 @@ import (
 // eventsHandler returns a handler to get all events in a given year.
 func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Get new event data from TBA if event data is over 24 hours old
 		if err := s.updateEvents(r.Context()); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
-		var events []store.Event
+		tbaDeleted := r.URL.Query().Get("tbaDeleted") == "true"
 
 		roles := ihttp.GetRoles(r)
-
 		userRealm, getRealmErr := ihttp.GetRealmID(r)
 
+		var events []store.Event
 		var err error
 		if roles.IsSuperAdmin {
-			events, err = s.Store.GetEvents(r.Context())
+			events, err = s.Store.GetEvents(r.Context(), tbaDeleted)
 		} else {
 			if getRealmErr != nil {
-				events, err = s.Store.GetEventsFromRealm(r.Context(), nil)
+				events, err = s.Store.GetEventsFromRealm(r.Context(), nil, tbaDeleted)
 			} else {
-				events, err = s.Store.GetEventsFromRealm(r.Context(), &userRealm)
+				events, err = s.Store.GetEventsFromRealm(r.Context(), &userRealm, tbaDeleted)
 			}
 		}
 
@@ -150,6 +149,10 @@ func (s *Server) updateEvents(ctx context.Context) error {
 
 		if err := s.Store.EventsUpsert(ctx, events); err != nil {
 			return errors.Wrap(err, "upserting events")
+		}
+
+		if err := s.Store.MarkEventsDeleted(ctx, events); err != nil {
+			return errors.Wrap(err, "marking missing events deleted")
 		}
 
 		s.eventsLastUpdate = &now

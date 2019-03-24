@@ -22,14 +22,15 @@ type match struct {
 	BlueScore     *int            `json:"blueScore,omitempty"`
 	RedAlliance   []string        `json:"redAlliance"`
 	BlueAlliance  []string        `json:"blueAlliance"`
+	TBADeleted    bool            `json:"tbaDeleted"`
 }
 
 // matchesHandler returns a handler to get all matches at a given event.
 func (s *Server) matchesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
-
 		teams := r.URL.Query()["team"]
+		tbaDeleted := r.URL.Query().Get("tbaDeleted") == "true"
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
 		if _, ok := err.(store.ErrNoResults); ok {
@@ -46,8 +47,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			return
 		}
 
-		// Get new match data from TBA
-		if err := s.updateMatches(r.Context(), eventKey); err != nil {
+		if err := s.updateMatches(r.Context(), event); err != nil {
 			// 404 if eventKey isn't a real event
 			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
@@ -58,7 +58,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			return
 		}
 
-		fullMatches, err := s.Store.GetMatches(r.Context(), eventKey, teams)
+		fullMatches, err := s.Store.GetMatches(r.Context(), eventKey, teams, tbaDeleted)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving event matches")
@@ -78,6 +78,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 				BlueScore:     fullMatch.BlueScore,
 				RedAlliance:   fullMatch.RedAlliance,
 				BlueAlliance:  fullMatch.BlueAlliance,
+				TBADeleted:    fullMatch.TBADeleted,
 			})
 		}
 
@@ -110,8 +111,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		// unique and consistent with TBA match keys.
 		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
 
-		// Get new match data from TBA
-		if err := s.updateMatches(r.Context(), eventKey); err != nil {
+		if err := s.updateMatches(r.Context(), event); err != nil {
 			// 404 if eventKey isn't a real event
 			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
@@ -143,6 +143,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 			BlueScore:    fullMatch.BlueScore,
 			RedAlliance:  fullMatch.RedAlliance,
 			BlueAlliance: fullMatch.BlueAlliance,
+			TBADeleted:   fullMatch.TBADeleted,
 		}
 
 		ihttp.Respond(w, match, http.StatusOK)
@@ -200,22 +201,31 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 }
 
 // Get new match data from TBA for a particular event. Upsert match data into database.
-func (s *Server) updateMatches(ctx context.Context, eventKey string) error {
+func (s *Server) updateMatches(ctx context.Context, event store.Event) error {
 	// Check that eventKey is a valid event key
-	valid, err := s.Store.CheckTBAEventKeyExists(ctx, eventKey)
+	valid, err := s.Store.CheckTBAEventKeyExists(ctx, event.Key)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "unable to check if tba event key exists")
 	}
 	if !valid {
 		return nil
 	}
 
-	fullMatches, err := s.TBA.GetMatches(ctx, eventKey)
-	if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
-		return nil
-	} else if err != nil {
-		return err
+	var fullMatches []store.Match
+
+	if !event.TBADeleted {
+		fullMatches, err = s.TBA.GetMatches(ctx, event.Key)
+		if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
+			return nil
+		} else if err != nil {
+			return errors.Wrap(err, "unable to fetch matches from TBA")
+		}
+
+		if err := s.Store.UpdateTBAMatches(ctx, event.Key, fullMatches); err != nil {
+			return errors.Wrap(err, "unable to update matches")
+		}
 	}
 
-	return s.Store.UpdateTBAMatches(ctx, fullMatches, eventKey)
+	err = s.Store.MarkMatchesDeleted(ctx, event.Key, fullMatches)
+	return errors.Wrap(err, "unable to mark deleted matches")
 }
