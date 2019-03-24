@@ -4,11 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
 )
+
+// this is a hack because match keys are stored weirdly right now
+func trimMatchKey(key string) string {
+	parts := strings.Split(key, "_")
+	if len(parts) != 2 {
+		return ""
+	}
+
+	return parts[1]
+}
 
 func (s *Server) getMatchTeamComments() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +55,11 @@ func (s *Server) getMatchTeamComments() http.HandlerFunc {
 			return
 		}
 
+		// this is a hack since match keys are stored weirdly right now
+		for i, c := range comments {
+			comments[i].MatchKey = trimMatchKey(c.MatchKey)
+		}
+
 		ihttp.Respond(w, comments, http.StatusOK)
 	}
 }
@@ -64,6 +80,11 @@ func (s *Server) getEventComments() http.HandlerFunc {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("getting comments")
 			return
+		}
+
+		// this is a hack since match keys are stored weirdly right now
+		for i, c := range comments {
+			comments[i].MatchKey = trimMatchKey(c.MatchKey)
 		}
 
 		ihttp.Respond(w, comments, http.StatusOK)
