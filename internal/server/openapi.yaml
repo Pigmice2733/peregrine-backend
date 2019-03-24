@@ -658,6 +658,31 @@ paths:
           $ref: '#/components/responses/notFoundError'
         '500':
           $ref: '#/components/responses/internalServerError'
+  /events/{eventKey}/teams/{teamKey}/comments:
+    parameters:
+      - $ref: '#/components/parameters/eventKey'
+      - $ref: '#/components/parameters/teamKey'
+    get:
+      summary: Get comments about a team at an event
+      operationId: getTeamEventComments
+      security:
+        - BearerAuth: []
+      tags:
+        - comments
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/comment'
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
   /events/{eventKey}/matches/{matchKey}/reports/{teamKey}:
     parameters:
       - $ref: '#/components/parameters/eventKey'
@@ -701,6 +726,59 @@ paths:
           description: Submitted new report
         '204':
           description: Successfully replaced existing report
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '403':
+          $ref: '#/components/responses/forbiddenError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '422':
+          $ref: '#/components/responses/unprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+  /events/{eventKey}/matches/{matchKey}/comments/{teamKey}:
+    parameters:
+      - $ref: '#/components/parameters/eventKey'
+      - $ref: '#/components/parameters/matchKey'
+      - $ref: '#/components/parameters/teamKey'
+    get:
+      summary: Get comments for a team in a match at an event
+      operationId: getTeamMatchComments
+      security:
+        - BearerAuth: []
+      tags:
+        - comments
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/comment'
+        '401':
+          $ref: '#/components/responses/unauthorizedError'
+        '404':
+          $ref: '#/components/responses/notFoundError'
+        '500':
+          $ref: '#/components/responses/internalServerError'
+    put:
+      summary: Submit a comment for a team in a match at an event
+      security:
+        - BearerAuth: []
+      operationId: postTeamMatchComment
+      tags:
+        - comments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/comment'
+      responses:
+        '201':
+          description: Submitted new comment
+        '204':
+          description: Successfully replaced existing comment
         '401':
           $ref: '#/components/responses/unauthorizedError'
         '403':
@@ -979,6 +1057,24 @@ components:
           example: Center Scale
         data:
           $ref: '#/components/schemas/reportData'
+    comment:
+      required:
+        - comment
+        - eventKey
+        - matchKey
+        - teamKey
+      properties:
+        reporterId:
+          $ref: '#/components/schemas/id'
+        comment:
+          type: string
+          example: 'Played good defense'
+        eventKey:
+          $ref: '#/components/schemas/eventKey'
+        matchKey:
+          $ref: '#/components/schemas/matchKey'
+        teamKey:
+          $ref: '#/components/schemas/teamKey'
     reportData:
       required:
         - auto
