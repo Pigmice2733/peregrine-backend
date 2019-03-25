@@ -122,8 +122,7 @@ func (s *Service) GetMatch(ctx context.Context, matchKey string) (Match, error) 
 	return m, err
 }
 
-// UpsertMatch upserts a match and its alliances into the database. It will
-// set tba_deleted to false for all updated matches.
+// UpsertMatch upserts a match and its alliances into the database.
 func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -132,7 +131,7 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 
 	_, err = tx.NamedExecContext(ctx, `
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted)
-		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, tba_deleted)
+		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -143,7 +142,7 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 					actual_time = :actual_time,
 					red_score = :red_score,
 					blue_score = :blue_score,
-					tba_deleted = false
+					tba_deleted = :tba_deleted
 	`, match)
 	if err != nil {
 		s.logErr(tx.Rollback())
