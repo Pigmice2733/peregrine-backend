@@ -86,6 +86,7 @@ module.exports = {
     try {
       expect(received.key).toBeA(String)
       expect(received.time).toBeADateString()
+      expect(received.tbaDeleted).toBeA(Boolean)
       expect(received.redScore).toBeUndefinedOr(Number)
       expect(received.blueScore).toBeUndefinedOr(Number)
       expect(received.redAlliance).toEqual(expect.any(Array))
@@ -106,6 +107,7 @@ module.exports = {
         'blueAlliance',
         'redScore',
         'blueScore',
+        'tbaDeleted',
       ])
     } catch (error) {
       return {

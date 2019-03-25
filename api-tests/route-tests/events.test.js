@@ -63,6 +63,7 @@ test('events', async () => {
     lat: event.lat,
     lon: event.lon,
     webcasts: event.webcasts,
+    tbaDeleted: false,
   })
 
   // /events/{eventKey} endpoint
