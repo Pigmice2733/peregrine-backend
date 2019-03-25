@@ -12,6 +12,8 @@ require (
 	github.com/go-playground/locales v0.12.1 // indirect
 	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/golang-migrate/migrate v3.5.4+incompatible
+	github.com/google/go-github v17.0.0+incompatible // indirect
+	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/uuid v1.1.0
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2

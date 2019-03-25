@@ -59,7 +59,7 @@ func (s *Server) Run(ctx context.Context) error {
 	s.start = time.Now()
 
 	go func() {
-		s.Logger.WithField("http_address", s.HTTPAddress).Info("serving http")
+		s.Logger.WithField("httpAddress", s.HTTPAddress).Info("serving http")
 		errs <- httpServer.ListenAndServe()
 	}()
 
@@ -76,7 +76,7 @@ func (s *Server) Run(ctx context.Context) error {
 		defer httpsServer.Close()
 
 		go func() {
-			s.Logger.WithField("https_address", s.HTTPSAddress).Info("serving https")
+			s.Logger.WithField("httpsAddress", s.HTTPSAddress).Info("serving https")
 			errs <- httpsServer.ListenAndServeTLS(s.CertFile, s.KeyFile)
 		}()
 	}
