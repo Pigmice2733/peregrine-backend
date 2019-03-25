@@ -27,6 +27,7 @@ test('events', async () => {
     lat: 45.498555,
     lon: -122.6385231,
     webcasts: ['https://www.twitch.tv/firstwa_red'],
+    tbaDeleted: false,
   }
 
   resp = await fetch(api.address + `/events/${event.key}`, {
@@ -63,7 +64,7 @@ test('events', async () => {
     lat: event.lat,
     lon: event.lon,
     webcasts: event.webcasts,
-    tbaDeleted: false,
+    tbaDeleted: event.tbaDeleted,
   })
 
   // /events/{eventKey} endpoint
