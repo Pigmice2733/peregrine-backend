@@ -32,7 +32,7 @@ test('realms', async () => {
   realm.id = d.id
 
   // /realms/{id} update
-  realm.name += "foobar"
+  realm.name += 'foobar'
   realmResp = await fetch(api.address + `/realms/${realm.id}`, {
     method: 'POST',
     body: JSON.stringify(realm),
@@ -102,7 +102,7 @@ test('realms', async () => {
   })
   expect(resp.status).toBe(200)
   d = await resp.json()
-  expect(d).toHaveLength(2)
+  expect(d).toHaveLength(3)
 
   // /realms/{id} endpoint
   // /realms/{id} get super-admin
