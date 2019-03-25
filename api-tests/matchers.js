@@ -57,6 +57,7 @@ module.exports = {
       expect(received.fullDistrict).toBeUndefinedOr(String)
       expect(received.week).toBeUndefinedOr(Number)
       expect(received.webcasts).toBeA(Array)
+      expect(received.tbaDeleted).toBeA(Boolean)
       expect(Object.keys(received)).toBeASubsetOf([
         'key',
         'realmId',
@@ -71,6 +72,7 @@ module.exports = {
         'district',
         'fullDistrict',
         'webcasts',
+        'tbaDeleted',
       ])
     } catch (error) {
       return {
@@ -84,6 +86,7 @@ module.exports = {
     try {
       expect(received.key).toBeA(String)
       expect(received.time).toBeADateString()
+      expect(received.tbaDeleted).toBeA(Boolean)
       expect(received.redScore).toBeUndefinedOr(Number)
       expect(received.blueScore).toBeUndefinedOr(Number)
       expect(received.redAlliance).toEqual(expect.any(Array))
@@ -104,6 +107,7 @@ module.exports = {
         'blueAlliance',
         'redScore',
         'blueScore',
+        'tbaDeleted',
       ])
     } catch (error) {
       return {

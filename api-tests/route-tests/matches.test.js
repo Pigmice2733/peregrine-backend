@@ -98,6 +98,7 @@ test('/events/{eventKey}/matches', async () => {
     blueScore: 74,
     redAlliance: ['frc1592', 'frc5722', 'frc1421'],
     blueAlliance: ['frc6322', 'frc4024', 'frc5283'],
+    tbaDeleted: false,
   }
 
   resp = await fetch(api.address + '/events/1970flir/matches', {
@@ -135,6 +136,7 @@ test('/events/{eventKey}/matches', async () => {
     blueScore: match.blueScore,
     redAlliance: match.redAlliance,
     blueAlliance: match.blueAlliance,
+    tbaDeleted: match.tbaDeleted,
   })
 
   // /events/{eventKey}/matches/{matchKey} endpoint

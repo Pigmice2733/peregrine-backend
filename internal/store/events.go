@@ -24,6 +24,7 @@ type Event struct {
 	LocationName string         `json:"locationName" db:"location_name"`
 	Lat          float64        `json:"lat" db:"lat"`
 	Lon          float64        `json:"lon" db:"lon"`
+	TBADeleted   bool           `json:"tbaDeleted" db:"tba_deleted"`
 }
 
 const eventsQuery = `
@@ -39,6 +40,7 @@ SELECT
 		location_name,
 		lat,
 		lon,
+		tba_deleted,
 		events.realm_id,
 		COALESCE(schema_id, s.id) AS schema_id
 	FROM
@@ -49,20 +51,34 @@ SELECT
 	    s.year = EXTRACT(YEAR FROM start_date)`
 
 // GetEvents returns all events from the database. event.Webcasts and schemaID will be nil for every event.
-func (s *Service) GetEvents(ctx context.Context) ([]Event, error) {
+// If tbaDeleted is true, events that have been deleted from TBA will be returned in addition to events that
+// have not been deleted. Otherwise, only events that have not been deleted will be returned.
+func (s *Service) GetEvents(ctx context.Context, tbaDeleted bool) ([]Event, error) {
+	query := eventsQuery
+	if !tbaDeleted {
+		query += " WHERE NOT tba_deleted"
+	}
+
 	events := []Event{}
-	return events, s.db.SelectContext(ctx, &events, eventsQuery)
+	return events, s.db.SelectContext(ctx, &events, query)
 }
 
 // GetEventsFromRealm returns all events from a specific realm. Additionally all
 // TBA events will be retrieved. If no realm is specified (nil) then just the TBA
 // events will be retrieved. event.Webcasts and schemaID will be nil for every event.
-func (s *Service) GetEventsFromRealm(ctx context.Context, realm *int64) ([]Event, error) {
+// If tbaDeleted is true, events that have been deleted from TBA will be returned in addition to events that
+// have not been deleted. Otherwise, only events that have not been deleted will be returned.
+func (s *Service) GetEventsFromRealm(ctx context.Context, realm *int64, tbaDeleted bool) ([]Event, error) {
+	query := eventsQuery
+	if !tbaDeleted {
+		query += " WHERE NOT tba_deleted"
+	}
+
 	events := []Event{}
 	if realm == nil {
-		return events, s.db.SelectContext(ctx, &events, eventsQuery+" WHERE events.realm_id IS NULL")
+		return events, s.db.SelectContext(ctx, &events, query+" AND events.realm_id IS NULL")
 	}
-	return events, s.db.SelectContext(ctx, &events, eventsQuery+" WHERE events.realm_id IS NULL OR events.realm_id = $1", *realm)
+	return events, s.db.SelectContext(ctx, &events, query+" AND events.realm_id IS NULL OR events.realm_id = $1", *realm)
 }
 
 // CheckTBAEventKeyExists checks whether a specific event key exists and is from
@@ -92,7 +108,8 @@ func (s *Service) GetEvent(ctx context.Context, eventKey string) (Event, error) 
 	return event, err
 }
 
-// EventsUpsert upserts multiple events into the database.
+// EventsUpsert upserts multiple events into the database. It will set tba_deleted
+// to false for all updated events.
 func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -100,8 +117,8 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 	}
 
 	eventStmt, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, lat, lon, realm_id, schema_id)
-		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :lat, :lon, :realm_id, :schema_id)
+		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, lat, lon, realm_id, schema_id, tba_deleted)
+		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -117,7 +134,8 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 					lat = :lat,
 					lon = :lon,
 					realm_id = :realm_id,
-					schema_id = :schema_id
+					schema_id = :schema_id,
+					tba_deleted = false
 	`)
 	if err != nil {
 		s.logErr(errors.Wrap(tx.Rollback(), "rolling back events upsert tx"))
@@ -142,6 +160,26 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 	return tx.Commit()
 }
 
+// MarkEventsDeleted will set tba_deleted to true on all events that were
+// *not* included in the events slice and are not custom events (have a NULL realm_id).
+func (s *Service) MarkEventsDeleted(ctx context.Context, events []Event) error {
+	keys := pq.StringArray{}
+	for _, e := range events {
+		keys = append(keys, e.Key)
+	}
+
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE events
+			SET
+				tba_deleted = true
+			WHERE
+				key != ALL($1) AND
+				realm_id IS NULL
+	`, keys)
+
+	return errors.Wrap(err, "unable to mark tba_deleted on missing events")
+}
+
 // UpsertEvent upserts a single event into the database and returns whether
 // the event was created or updated.
 func (s *Service) UpsertEvent(ctx context.Context, event Event) (created bool, err error) {
@@ -163,8 +201,8 @@ func (s *Service) UpsertEvent(ctx context.Context, event Event) (created bool, e
 	}
 
 	_, err = tx.NamedExecContext(ctx, `
-		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, lat, lon, realm_id, schema_id)
-		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :lat, :lon, :realm_id, :schema_id)
+		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, lat, lon, realm_id, schema_id, tba_deleted)
+		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -180,7 +218,8 @@ func (s *Service) UpsertEvent(ctx context.Context, event Event) (created bool, e
 					lat = :lat,
 					lon = :lon,
 					realm_id = :realm_id,
-					schema_id = :schema_id
+					schema_id = :schema_id,
+					tba_deleted = :tba_deleted
 	`, event)
 	if err != nil {
 		s.logErr(errors.Wrap(tx.Rollback(), "rolling back event upsert tx"))
@@ -188,5 +227,4 @@ func (s *Service) UpsertEvent(ctx context.Context, event Event) (created bool, e
 	}
 
 	return !existed, errors.Wrap(tx.Commit(), "unable to commit transaction")
-
 }
