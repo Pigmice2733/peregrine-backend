@@ -57,6 +57,7 @@ module.exports = {
       expect(received.fullDistrict).toBeUndefinedOr(String)
       expect(received.week).toBeUndefinedOr(Number)
       expect(received.webcasts).toBeA(Array)
+      expect(received.tbaDeleted).toBeA(Boolean)
       expect(Object.keys(received)).toBeASubsetOf([
         'key',
         'realmId',
@@ -71,6 +72,7 @@ module.exports = {
         'district',
         'fullDistrict',
         'webcasts',
+        'tbaDeleted',
       ])
     } catch (error) {
       return {
