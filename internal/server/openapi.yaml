@@ -1,6 +1,6 @@
 openapi: '3.0.0'
 info:
-  version: 0.1.0
+  version: 1.0.0
   title: Peregrine API documentation
 servers:
   - url: http://edge.api.peregrine.ga:8080/
