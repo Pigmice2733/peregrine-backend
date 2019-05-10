@@ -1,7 +1,0 @@
-server:
-  httpAddress: 0.0.0.0:8080
-
-tba:
-    apiKey: "your-api-key-here"
-
-dsn: user=postgres port=5432 dbname=peregrine sslmode=disable

@@ -2,7 +2,5 @@
 /cmd/migrate/migrate
 /vendor/
 /.vscode
-/etc/config*.yaml
-!/etc/config.testing.yaml
-!/etc/config.docker.yaml
 *.exe
+/config.json

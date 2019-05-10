@@ -1,5 +1,0 @@
-server:
-  httpAddress: localhost:8080
-  year: 2018
-
-dsn: user=peregrine port=5432 dbname=peregrine sslmode=disable

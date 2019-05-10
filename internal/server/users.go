@@ -85,7 +85,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		accessToken, err := generateAccessToken(user, s.Secret)
+		accessToken, err := generateAccessToken(user, s.JWTSecret)
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt access token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -98,7 +98,7 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 				Subject:   strconv.FormatInt(user.ID, 10),
 			},
 			PasswordChanged: user.PasswordChanged,
-		}).SignedString([]byte(s.Secret))
+		}).SignedString([]byte(s.JWTSecret))
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt refresh token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -130,7 +130,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 
-			return []byte(s.Secret), nil
+			return []byte(s.JWTSecret), nil
 		})
 		if err != nil {
 			ihttp.Error(w, http.StatusUnauthorized)
@@ -170,7 +170,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 			return
 		}
 
-		accessToken, err := generateAccessToken(user, s.Secret)
+		accessToken, err := generateAccessToken(user, s.JWTSecret)
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt access token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
