@@ -1,5 +1,4 @@
 /cmd/peregrine/peregrine
-/cmd/migrate/migrate
 /vendor/
 /.vscode
 *.exe

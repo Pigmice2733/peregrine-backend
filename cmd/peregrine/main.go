@@ -39,7 +39,7 @@ func run(configPath string) error {
 		return errors.Wrap(err, "unable to open config")
 	}
 
-	tba := tba.Service{
+	tba := &tba.Service{
 		URL:    c.TBA.URL,
 		APIKey: c.TBA.APIKey,
 	}

@@ -221,6 +221,7 @@ func TestGetEvents(t *testing.T) {
 		},
 	}
 
+	// TODO(brendan): SUB TESTS
 	for index, tt := range testCases {
 		server.getEventsHandler = tt.getEventsHandler
 

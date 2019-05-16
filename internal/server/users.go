@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	validator "gopkg.in/go-playground/validator.v9"
 )
@@ -36,10 +38,10 @@ const (
 	bcryptCost           = 12                     // ~236ms per hash on my i7-8550U
 )
 
-func generateAccessToken(user store.User, secret string) (string, error) {
+func generateAccessToken(user store.User, expires time.Time, secret string) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.Claims{
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(accessTokenDuration).Unix(),
+			ExpiresAt: expires.Unix(),
 			Subject:   strconv.FormatInt(user.ID, 10),
 		},
 		Roles:   user.Roles,
@@ -47,11 +49,18 @@ func generateAccessToken(user store.User, secret string) (string, error) {
 	}).SignedString([]byte(secret))
 }
 
-func (s *Server) authenticateHandler() http.HandlerFunc {
-	type authenticateResponse struct {
-		AccessToken  string `json:"accessToken"`
-		RefreshToken string `json:"refreshToken"`
-	}
+type authenticateResponse struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+}
+
+// UserByNameGetter is used for retrieving users from a store by username.
+type UserByNameGetter interface {
+	GetUserByUsername(context.Context, string) (store.User, error)
+}
+
+func authenticateHandler(logger *logrus.Logger, now func() time.Time, userStore UserByNameGetter, secret string) http.HandlerFunc {
+	validate := validator.New()
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var ru baseUser
@@ -60,17 +69,17 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			return
 		}
 
-		if err := validator.New().Struct(ru); err != nil {
+		if err := validate.Struct(ru); err != nil {
 			ihttp.Respond(w, err, http.StatusUnprocessableEntity)
 			return
 		}
 
-		user, err := s.Store.GetUserByUsername(r.Context(), ru.Username)
+		user, err := userStore.GetUserByUsername(r.Context(), ru.Username)
 		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
-			go s.Logger.WithError(err).Error("retrieving user from database")
+			logger.WithError(err).Error("retrieving user from database")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -80,27 +89,27 @@ func (s *Server) authenticateHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
-			go s.Logger.WithError(err).Error("comparing user hash and password")
+			logger.WithError(err).Error("comparing user hash and password")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
 
-		accessToken, err := generateAccessToken(user, s.JWTSecret)
+		accessToken, err := generateAccessToken(user, now().Add(accessTokenDuration), secret)
 		if err != nil {
-			go s.Logger.WithError(err).Error("generating jwt access token signed string")
+			logger.WithError(err).Error("generating jwt access token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
 
 		refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &ihttp.RefreshClaims{
 			StandardClaims: jwt.StandardClaims{
-				ExpiresAt: time.Now().Add(refreshTokenDuration).Unix(),
+				ExpiresAt: now().Add(refreshTokenDuration).Unix(),
 				Subject:   strconv.FormatInt(user.ID, 10),
 			},
 			PasswordChanged: user.PasswordChanged,
-		}).SignedString([]byte(s.JWTSecret))
+		}).SignedString([]byte(secret))
 		if err != nil {
-			go s.Logger.WithError(err).Error("generating jwt refresh token signed string")
+			logger.WithError(err).Error("generating jwt refresh token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -170,7 +179,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 			return
 		}
 
-		accessToken, err := generateAccessToken(user, s.JWTSecret)
+		accessToken, err := generateAccessToken(user, time.Now().Add(accessTokenDuration), s.JWTSecret)
 		if err != nil {
 			go s.Logger.WithError(err).Error("generating jwt access token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)

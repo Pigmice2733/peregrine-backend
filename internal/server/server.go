@@ -20,11 +20,15 @@ var openAPI []byte
 type Server struct {
 	config.Server
 
-	TBA              tba.Service
-	Store            store.Service
+	TBA              *tba.Service
+	Store            *store.Service
 	Logger           *logrus.Logger
 	eventsLastUpdate *time.Time
 	start            time.Time
+}
+
+func (s *Server) uptime() time.Duration {
+	return time.Since(s.start)
 }
 
 // Run starts the server, and returns if it runs into an error
@@ -57,42 +61,4 @@ func (s *Server) Run() error {
 	s.start = time.Now()
 	s.Logger.WithField("httpAddress", s.Listen).Info("serving http")
 	return httpServer.ListenAndServe()
-}
-
-type services struct {
-	TBA        bool `json:"tba"`
-	PostgreSQL bool `json:"postgresql"`
-}
-
-type status struct {
-	StartTime int64    `json:"startTime"`
-	Uptime    int64    `json:"uptime"`
-	Listen    string   `json:"listen"`
-	Services  services `json:"services"`
-	Ok        bool     `json:"ok"`
-}
-
-func (s *Server) openAPIHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/x-yaml")
-		w.Write(openAPI)
-	}
-}
-
-func (s *Server) healthHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		tbaHealthy := s.TBA.Ping(r.Context()) == nil
-		pgHealthy := s.Store.Ping(r.Context()) == nil
-
-		ihttp.Respond(w, status{
-			StartTime: s.start.Unix(),
-			Uptime:    int64(time.Since(s.start).Seconds()),
-			Listen:    s.Listen, //todo update swagger
-			Services: services{
-				TBA:        tbaHealthy,
-				PostgreSQL: pgHealthy,
-			},
-			Ok: tbaHealthy && pgHealthy,
-		}, http.StatusOK)
-	}
 }

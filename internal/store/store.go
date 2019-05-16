@@ -41,13 +41,13 @@ type Service struct {
 // New creates a new store service from a dataSourceName. The logger is used to
 // log errors that would not otherwise be returned such as issues rolling back
 // transactions. The context passed is used for pinging the database.
-func New(ctx context.Context, dsn string, logger *logrus.Logger) (Service, error) {
+func New(ctx context.Context, dsn string, logger *logrus.Logger) (*Service, error) {
 	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
-		return Service{}, err
+		return nil, err
 	}
 
-	s := Service{db: db, logger: logger}
+	s := &Service{db: db, logger: logger}
 	return s, s.Ping(ctx)
 }
 
