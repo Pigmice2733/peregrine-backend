@@ -32,7 +32,7 @@ type healthStatus struct {
 	Ok       bool           `json:"ok"`
 }
 
-func healthHandler(getUptime func() time.Duration, tba Pinger, postgres Pinger) http.HandlerFunc {
+func healthHandler(getUptime func() time.Duration, tba, postgres Pinger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		services := healthServices{
 			TBA:        tba.Ping(r.Context()) == nil,
