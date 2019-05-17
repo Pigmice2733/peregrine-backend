@@ -1,0 +1,11 @@
+FROM golang:1.12.5
+
+WORKDIR /src/peregrine-backend
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+ENTRYPOINT [ "go" ]
+CMD [ "test", "/src/peregrine-backend/...", "-v" ]
