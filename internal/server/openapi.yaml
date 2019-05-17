@@ -1,4 +1,4 @@
-openapi: '3.0.0'
+openapi: "3.0.0"
 info:
   version: 1.0.0
   title: Peregrine API documentation
@@ -12,7 +12,7 @@ paths:
       summary: Get server uptime and health information
       operationId: health
       responses:
-        '200':
+        "200":
           description: Server uptime and health information
           content:
             application/json:
@@ -24,32 +24,12 @@ paths:
                   - services
                   - ok
                 properties:
-                  startTime:
-                    description: Unix time that specifies when the server started
-                    type: integer
-                    format: int64
-                    example: 1547344071
                   uptime:
-                    description: Number of seconds that the server has been running
-                    type: integer
-                    format: int64
-                    example: 236252
-                  listen:
-                    description: Information about addresses the server is listening on
-                    required:
-                      - http
-                      - https
-                    properties:
-                      http:
-                        description: HTTP address the server is listening on
-                        type: string
-                        example: ':8080'
-                      https:
-                        description: HTTPS address the server is listening on
-                        type: string
-                        example: ':8081'
+                    description: Amount of time the server has been up
+                    type: string
+                    example: 9.614298073s
                   services:
-                    description: Health information about services peregrine relies on
+                    description: Health of the services peregrine depends upon
                     required:
                       - tba
                       - postgresql
@@ -90,7 +70,7 @@ paths:
                   description: A string between 8 and 128 characters
                   example: Q6qA6A22WLTO
       responses:
-        '200':
+        "200":
           description: Successful authentication
           content:
             application/json:
@@ -100,17 +80,17 @@ paths:
                   - accessToken
                 properties:
                   refreshToken:
-                    $ref: '#/components/schemas/refreshToken'
+                    $ref: "#/components/schemas/refreshToken"
                   accessToken:
-                    $ref: '#/components/schemas/accessToken'
-        '401':
+                    $ref: "#/components/schemas/accessToken"
+        "401":
           description: Failed to authenticate due to an incorrect username or password
           content:
             text/plain:
               schema:
                 type: string
                 example: Unauthorized
-        '422':
+        "422":
           description: Failed to validate username or password, or request body syntax was invalid
           content:
             text/plain:
@@ -119,9 +99,9 @@ paths:
                 example: Unprocessable Entity
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                $ref: "#/components/schemas/ValidationError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /refresh:
     post:
       summary: Retrieve a new access token via a refresh token
@@ -137,9 +117,9 @@ paths:
                 - refreshToken
               properties:
                 refreshToken:
-                  $ref: '#/components/schemas/refreshToken'
+                  $ref: "#/components/schemas/refreshToken"
       responses:
-        '200':
+        "200":
           description: Sucessfully generated a new access token
           content:
             application/json:
@@ -148,20 +128,20 @@ paths:
                   - accessToken
                 properties:
                   accessToken:
-                    $ref: '#/components/schemas/accessToken'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '422':
+                    $ref: "#/components/schemas/accessToken"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "422":
           description: Request body syntax was invalid
           content:
             text/plain:
               schema:
                 type: string
                 example: Unprocessable Entity
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /users:
     post:
       summary: Create a new user
@@ -179,20 +159,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/user'
+              $ref: "#/components/schemas/user"
       responses:
-        '201':
+        "201":
           description: Successfully created user
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '409':
-          $ref: '#/components/responses/conflictError'
-        '422':
-          $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "409":
+          $ref: "#/components/responses/conflictError"
+        "422":
+          $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     get:
       summary: Get all visible users
       description:
@@ -204,26 +184,26 @@ paths:
       tags:
         - users
       responses:
-        '200':
+        "200":
           description: Successfully fetched users
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/user'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                  $ref: "#/components/schemas/user"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /users/{id}:
     parameters:
       - in: path
         name: id
         schema:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
         required: true
         description: Numeric User ID
     get:
@@ -234,21 +214,21 @@ paths:
       tags:
         - users
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/user'
-        '400':
-          $ref: '#/components/responses/badRequestError'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                $ref: "#/components/schemas/user"
+        "400":
+          $ref: "#/components/responses/badRequestError"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     patch:
       summary: Update all or parts of a user
       description:
@@ -264,18 +244,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/user'
+              $ref: "#/components/schemas/user"
       responses:
-        '204':
+        "204":
           description: Successfully patched user
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     delete:
       summary: Delete a user
       operationId: deleteUser
@@ -284,16 +264,16 @@ paths:
       tags:
         - users
       responses:
-        '204':
+        "204":
           description: Successfully deleted user
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /schemas:
     get:
       summary: Get all visible schemas
@@ -314,17 +294,17 @@ paths:
           required: false
           description: Get schemas for a specified year
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/schema'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                  $ref: "#/components/schemas/schema"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     post:
       summary: Create a new schema
       description:
@@ -341,26 +321,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/schema'
+              $ref: "#/components/schemas/schema"
       responses:
-        '201':
+        "201":
           description: Successfully created schema
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '409':
-          $ref: '#/components/responses/conflictError'
-        '422':
-          $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "409":
+          $ref: "#/components/responses/conflictError"
+        "422":
+          $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /schemas/{id}:
     parameters:
       - in: path
         name: id
         schema:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
         required: true
         description: Numeric Schema ID
     get:
@@ -371,21 +351,21 @@ paths:
       tags:
         - schemas
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/schema'
-        '400':
-          $ref: '#/components/responses/badRequestError'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                $ref: "#/components/schemas/schema"
+        "400":
+          $ref: "#/components/responses/badRequestError"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /events:
     get:
       summary: Get all visible events
@@ -395,24 +375,24 @@ paths:
       tags:
         - events
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/event'
-        '400':
-          $ref: '#/components/responses/badRequestError'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                  $ref: "#/components/schemas/event"
+        "400":
+          $ref: "#/components/responses/badRequestError"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /events/{eventKey}:
     parameters:
-      - $ref: '#/components/parameters/eventKey'
+      - $ref: "#/components/parameters/eventKey"
     get:
       summary: Get a specific event
       operationId: getEvent
@@ -421,23 +401,23 @@ paths:
       tags:
         - events
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/event'
-        '400':
-          $ref: '#/components/responses/badRequestError'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                  $ref: "#/components/schemas/event"
+        "400":
+          $ref: "#/components/responses/badRequestError"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     put:
       summary: Create a new custom event (not on TBA)
       operationId: putEvent
@@ -454,23 +434,23 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/event'
+              $ref: "#/components/schemas/event"
       responses:
-        '201':
+        "201":
           description: Successfully created event
-        '204':
+        "204":
           description: Successfully replaced existing event
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '422':
-          $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "422":
+          $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/stats:
     parameters:
-      - $ref: '#/components/parameters/eventKey'
+      - $ref: "#/components/parameters/eventKey"
     get:
       summary: Get performance stats for all teams at an event
       operationId: getEventStats
@@ -479,7 +459,7 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
@@ -492,28 +472,28 @@ paths:
                       type: string
                       example: frc2733
                     auto:
-                      $ref: '#/components/schemas/stats'
+                      $ref: "#/components/schemas/stats"
                     teleop:
-                      $ref: '#/components/schemas/stats'
-        '400':
-          $ref: '#/components/responses/badRequestError'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                      $ref: "#/components/schemas/stats"
+        "400":
+          $ref: "#/components/responses/badRequestError"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/matches:
     parameters:
-      - $ref: '#/components/parameters/eventKey'
+      - $ref: "#/components/parameters/eventKey"
       - in: query
         name: team
         schema:
           type: array
           items:
-            $ref: '#/components/schemas/teamKey'
+            $ref: "#/components/schemas/teamKey"
         description: Filter matches with specified teams. Supports multiple teams.
         style: form
         explode: true
@@ -525,21 +505,21 @@ paths:
       tags:
         - matches
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/match'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                  $ref: "#/components/schemas/match"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     post:
       summary: Create a new match for an event
       operationId: createMatch
@@ -556,24 +536,24 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/match'
+              $ref: "#/components/schemas/match"
       responses:
-        '201':
+        "201":
           description: Successfully created event
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '422':
-          $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "422":
+          $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/matches/{matchKey}:
     parameters:
-      - $ref: '#/components/parameters/eventKey'
-      - $ref: '#/components/parameters/matchKey'
+      - $ref: "#/components/parameters/eventKey"
+      - $ref: "#/components/parameters/matchKey"
     get:
       summary: Get a match
       description:
@@ -586,22 +566,22 @@ paths:
       tags:
         - matches
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/match'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                $ref: "#/components/schemas/match"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/teams:
     parameters:
-      - $ref: '#/components/parameters/eventKey'
+      - $ref: "#/components/parameters/eventKey"
     get:
       summary: Get a list of teams at an event
       operationId: getEventTeams
@@ -610,7 +590,7 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
@@ -618,18 +598,18 @@ paths:
                 items:
                   type: string
                   example: frc2733
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/teams/{teamKey}:
     parameters:
-      - $ref: '#/components/parameters/eventKey'
-      - $ref: '#/components/parameters/teamKey'
+      - $ref: "#/components/parameters/eventKey"
+      - $ref: "#/components/parameters/teamKey"
     get:
       summary: Get ranking information about a team at an event
       operationId: getTeamRankingData
@@ -638,7 +618,7 @@ paths:
       tags:
         - teams
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
@@ -650,18 +630,18 @@ paths:
                     type: number
                     format: double
                     example: 1.909999966621399
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/teams/{teamKey}/comments:
     parameters:
-      - $ref: '#/components/parameters/eventKey'
-      - $ref: '#/components/parameters/teamKey'
+      - $ref: "#/components/parameters/eventKey"
+      - $ref: "#/components/parameters/teamKey"
     get:
       summary: Get comments about a team at an event
       operationId: getTeamEventComments
@@ -670,24 +650,24 @@ paths:
       tags:
         - comments
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/comment'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                  $ref: "#/components/schemas/comment"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/matches/{matchKey}/reports/{teamKey}:
     parameters:
-      - $ref: '#/components/parameters/eventKey'
-      - $ref: '#/components/parameters/matchKey'
-      - $ref: '#/components/parameters/teamKey'
+      - $ref: "#/components/parameters/eventKey"
+      - $ref: "#/components/parameters/matchKey"
+      - $ref: "#/components/parameters/teamKey"
     get:
       summary: Get reports for a team in a match at an event
       operationId: getTeamMatchReports
@@ -696,19 +676,19 @@ paths:
       tags:
         - reports
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/report'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                  $ref: "#/components/schemas/report"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     put:
       summary: Submit a report for a team in a match at an event
       security:
@@ -720,27 +700,27 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/report'
+              $ref: "#/components/schemas/report"
       responses:
-        '201':
+        "201":
           description: Submitted new report
-        '204':
+        "204":
           description: Successfully replaced existing report
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '422':
-          $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "422":
+          $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/matches/{matchKey}/comments/{teamKey}:
     parameters:
-      - $ref: '#/components/parameters/eventKey'
-      - $ref: '#/components/parameters/matchKey'
-      - $ref: '#/components/parameters/teamKey'
+      - $ref: "#/components/parameters/eventKey"
+      - $ref: "#/components/parameters/matchKey"
+      - $ref: "#/components/parameters/teamKey"
     get:
       summary: Get comments for a team in a match at an event
       operationId: getTeamMatchComments
@@ -749,19 +729,19 @@ paths:
       tags:
         - comments
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/comment'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                  $ref: "#/components/schemas/comment"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     put:
       summary: Submit a comment for a team in a match at an event
       security:
@@ -773,22 +753,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/comment'
+              $ref: "#/components/schemas/comment"
       responses:
-        '201':
+        "201":
           description: Submitted new comment
-        '204':
+        "204":
           description: Successfully replaced existing comment
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '422':
-          $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "422":
+          $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /leaderboard:
     get:
       summary: Get a count of reports submitted for each reporter
@@ -796,7 +776,7 @@ paths:
       tags:
         - leaderboard
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
@@ -809,8 +789,8 @@ paths:
                     reports:
                       type: integer
                       example: 9001
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /realms:
     get:
       summary: Get all realms
@@ -820,17 +800,17 @@ paths:
       tags:
         - realms
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/realm'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                  $ref: "#/components/schemas/realm"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     post:
       summary: Create a new realm
       description: Only global admins can create realms.
@@ -843,24 +823,24 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/realm'
+              $ref: "#/components/schemas/realm"
       responses:
-        '201':
+        "201":
           description: Successfully created realm
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/realm'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '409':
-          $ref: '#/components/responses/conflictError'
-        '422':
-          $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                $ref: "#/components/schemas/realm"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "409":
+          $ref: "#/components/responses/conflictError"
+        "422":
+          $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /realms/{id}:
     get:
       summary: Get a realm by ID
@@ -870,21 +850,21 @@ paths:
       tags:
         - realms
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/realm'
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '409':
-          $ref: '#/components/responses/conflictError'
-        '422':
-          $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+                $ref: "#/components/schemas/realm"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "409":
+          $ref: "#/components/responses/conflictError"
+        "422":
+          $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     post:
       summary: Update a realm
       description: Global admins can update any realm. Realm admins can update their realm.
@@ -897,20 +877,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/realm'
+              $ref: "#/components/schemas/realm"
       responses:
-        '204':
+        "204":
           description: Successfully updated realm
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '404':
-          $ref: '#/components/responses/notFoundError'
-        '422':
-          $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "422":
+          $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     delete:
       summary: Delete a realm
       operationId: deleteRealm
@@ -919,39 +899,39 @@ paths:
       tags:
         - realms
       responses:
-        '204':
+        "204":
           description: Successfully deleted realm
-        '401':
-          $ref: '#/components/responses/unauthorizedError'
-        '403':
-          $ref: '#/components/responses/forbiddenError'
-        '409':
-          $ref: '#/components/responses/conflictError'
-        '422':
-          $ref: '#/components/responses/unprocessableEntityError'
-        '500':
-          $ref: '#/components/responses/internalServerError'
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "409":
+          $ref: "#/components/responses/conflictError"
+        "422":
+          $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
 components:
   parameters:
     teamKey:
       in: path
       name: teamKey
       schema:
-        $ref: '#/components/schemas/teamKey'
+        $ref: "#/components/schemas/teamKey"
       required: true
       description: Team Key
     eventKey:
       in: path
       name: eventKey
       schema:
-        $ref: '#/components/schemas/eventKey'
+        $ref: "#/components/schemas/eventKey"
       required: true
       description: Event Key
     matchKey:
       in: path
       name: matchKey
       schema:
-        $ref: '#/components/schemas/matchKey'
+        $ref: "#/components/schemas/matchKey"
       required: true
       description: Match Key
   responses:
@@ -960,7 +940,7 @@ components:
       content:
         text/plain:
           schema:
-            $ref: '#/components/schemas/internalServerError'
+            $ref: "#/components/schemas/internalServerError"
     unauthorizedError:
       description: Invalid access token, please obtain a new access token
       content:
@@ -1029,7 +1009,7 @@ components:
           type: boolean
           example: true
         id:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
     reportStat:
       required:
         - name
@@ -1051,26 +1031,26 @@ components:
         - data
       properties:
         reporterId:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
         autoName:
           type: string
           example: Center Scale
         data:
-          $ref: '#/components/schemas/reportData'
+          $ref: "#/components/schemas/reportData"
     comment:
       required:
         - comment
         - matchKey
       properties:
         id:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
         reporterId:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
         comment:
           type: string
-          example: 'Played good defense'
+          example: "Played good defense"
         matchKey:
-          $ref: '#/components/schemas/matchKey'
+          $ref: "#/components/schemas/matchKey"
     reportData:
       required:
         - auto
@@ -1079,11 +1059,11 @@ components:
         auto:
           type: array
           items:
-            $ref: '#/components/schemas/reportStat'
+            $ref: "#/components/schemas/reportStat"
         teleop:
           type: array
           items:
-            $ref: '#/components/schemas/reportStat'
+            $ref: "#/components/schemas/reportStat"
     match:
       required:
         - key
@@ -1092,15 +1072,15 @@ components:
         - blueAlliance
       properties:
         key:
-          $ref: '#/components/schemas/matchKey'
+          $ref: "#/components/schemas/matchKey"
         time:
           type: string
           format: date-time
-          example: '2018-04-06T23:21:38Z'
+          example: "2018-04-06T23:21:38Z"
         scheduledTime:
           type: string
           format: date-time
-          example: '2018-04-06T23:18:00Z'
+          example: "2018-04-06T23:18:00Z"
         redScore:
           type: integer
           example: 426
@@ -1127,9 +1107,9 @@ components:
             - type
           properties:
             attempts:
-              $ref: '#/components/schemas/statPoint'
+              $ref: "#/components/schemas/statPoint"
             successes:
-              $ref: '#/components/schemas/statPoint'
+              $ref: "#/components/schemas/statPoint"
             type:
               type: string
               enum: [number, boolean]
@@ -1158,11 +1138,11 @@ components:
         - lon
       properties:
         key:
-          $ref: '#/components/schemas/eventKey'
+          $ref: "#/components/schemas/eventKey"
         realmId:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
         schemaId:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
         name:
           type: string
           example: Gibraltar
@@ -1178,11 +1158,11 @@ components:
         startDate:
           type: string
           format: date-time
-          example: '2019-02-28T05:00:00Z'
+          example: "2019-02-28T05:00:00Z"
         endDate:
           type: string
           format: date-time
-          example: '2019-03-02T05:00:00Z'
+          example: "2019-03-02T05:00:00Z"
         webcasts:
           type: array
           items:
@@ -1212,17 +1192,17 @@ components:
         - teleop
       properties:
         id:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
         year:
           type: integer
           format: int64
           example: 2018
         realmId:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
         auto:
-          $ref: '#/components/schemas/statDescriptions'
+          $ref: "#/components/schemas/statDescriptions"
         teleop:
-          $ref: '#/components/schemas/statDescriptions'
+          $ref: "#/components/schemas/statDescriptions"
     statDescriptions:
       type: array
       items:
@@ -1244,7 +1224,7 @@ components:
         - lastName
       properties:
         id:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
         username:
           type: string
           example: franklin
@@ -1253,7 +1233,7 @@ components:
           example: Sxam0dO3aMQW
           writeOnly: true
         realmId:
-          $ref: '#/components/schemas/id'
+          $ref: "#/components/schemas/id"
         firstName:
           type: string
           example: Franklin
@@ -1261,9 +1241,9 @@ components:
           type: string
           example: Harding
         stars:
-          $ref: '#/components/schemas/stars'
+          $ref: "#/components/schemas/stars"
         roles:
-          $ref: '#/components/schemas/roles'
+          $ref: "#/components/schemas/roles"
     stars:
       type: array
       items:

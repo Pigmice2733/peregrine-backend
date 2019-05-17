@@ -27,7 +27,7 @@ type healthServices struct {
 }
 
 type healthStatus struct {
-	Uptime   string         `json:"uptime"` // TODO: update swagger since I removed Listen and starttime and changed uptime
+	Uptime   string         `json:"uptime"`
 	Services healthServices `json:"services"`
 	Ok       bool           `json:"ok"`
 }
