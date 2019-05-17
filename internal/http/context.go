@@ -26,7 +26,7 @@ type Claims struct {
 
 // RefreshClaims holds the standard jwt claims plus
 type RefreshClaims struct {
-	PasswordChanged store.UnixTime `json:"peregrinePasswordChanged"`
+	PasswordChanged int64 `json:"peregrinePasswordChanged"`
 	jwt.StandardClaims
 }
 

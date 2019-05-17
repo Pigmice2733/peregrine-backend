@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -13,9 +14,9 @@ import (
 type Match struct {
 	Key           string         `json:"key" db:"key"`
 	EventKey      string         `json:"eventKey" db:"event_key"`
-	PredictedTime *UnixTime      `json:"predictedTime" db:"predicted_time"`
-	ActualTime    *UnixTime      `json:"actualTime" db:"actual_time"`
-	ScheduledTime *UnixTime      `json:"scheduledTime" db:"scheduled_time"`
+	PredictedTime *time.Time     `json:"predictedTime" db:"predicted_time"`
+	ActualTime    *time.Time     `json:"actualTime" db:"actual_time"`
+	ScheduledTime *time.Time     `json:"scheduledTime" db:"scheduled_time"`
 	RedScore      *int           `json:"redScore" db:"red_score"`
 	BlueScore     *int           `json:"blueScore" db:"blue_score"`
 	RedAlliance   pq.StringArray `json:"redAlliance" db:"red_alliance"`
@@ -24,7 +25,7 @@ type Match struct {
 }
 
 // GetTime returns the actual match time if available, and if not, predicted time
-func (m *Match) GetTime() *UnixTime {
+func (m *Match) GetTime() *time.Time {
 	if m.ActualTime != nil {
 		return m.ActualTime
 	}

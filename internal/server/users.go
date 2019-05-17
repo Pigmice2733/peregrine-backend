@@ -106,7 +106,7 @@ func authenticateHandler(logger *logrus.Logger, now func() time.Time, userStore 
 				ExpiresAt: now().Add(refreshTokenDuration).Unix(),
 				Subject:   strconv.FormatInt(user.ID, 10),
 			},
-			PasswordChanged: user.PasswordChanged,
+			PasswordChanged: user.PasswordChanged.Unix(),
 		}).SignedString([]byte(secret))
 		if err != nil {
 			logger.WithError(err).Error("generating jwt refresh token signed string")
@@ -141,12 +141,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 
 			return []byte(s.JWTSecret), nil
 		})
-		if err != nil {
-			ihttp.Error(w, http.StatusUnauthorized)
-			return
-		}
-
-		if !token.Valid {
+		if err != nil || !token.Valid {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
@@ -174,7 +169,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 		}
 
 		// user password has been updated since refresh token was issued
-		if user.PasswordChanged != claims.PasswordChanged {
+		if user.PasswordChanged.Unix() != claims.PasswordChanged {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}

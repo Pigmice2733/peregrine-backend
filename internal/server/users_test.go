@@ -126,7 +126,7 @@ func TestAuthenticateHandler(t *testing.T) {
 			returnedUser: store.User{
 				Username:        "franklin",
 				HashedPassword:  "$2a$10$sAG1oh48UCBIx8lNLT/vUu5Ppjbl.XKE92.2Z5jabYSbmJ20lgxUS",
-				PasswordChanged: store.UnixTime{Unix: 1000},
+				PasswordChanged: time.Unix(1558054459, 0),
 			},
 			expectedStatusCode:    http.StatusUnauthorized,
 			expectedPlainResponse: http.StatusText(http.StatusUnauthorized) + "\n",
@@ -141,17 +141,17 @@ func TestAuthenticateHandler(t *testing.T) {
 			returnedUser: store.User{
 				Username:        "franklin",
 				HashedPassword:  "$2a$10$L.wVyII3NNQARQVXlKwV2e9cxJltqQHdyLoybFLK3LMQ4mtsZJt9.",
-				PasswordChanged: store.UnixTime{Unix: 1000},
+				PasswordChanged: time.Unix(1558054459, 0),
 			},
 			expectedStatusCode: http.StatusOK,
 			expectedResponse: map[string]interface{}{
 				"accessToken":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJlZ3JpbmVSb2xlcyI6eyJpc1N1cGVyQWRtaW4iOmZhbHNlLCJpc0FkbWluIjpmYWxzZSwiaXNWZXJpZmllZCI6ZmFsc2V9LCJwZXJlZ3JpbmVSZWFsbSI6MCwiZXhwIjoxNTU4MTM2OTI4LCJzdWIiOiIwIn0.X7O8HOHrhfPXpSwxIHLALZAe_y5TXxkEq7iXvUSQX0I",
-				"refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJlZ3JpbmVQYXNzd29yZENoYW5nZWQiOiIxOTY5LTEyLTMxVDE2OjE2OjQwLTA4OjAwIiwiZXhwIjoxNTYwNDY5NzI4LCJzdWIiOiIwIn0.QM8UQV1NyR2OnyvUnjAGYkgd61y5YpmauCwyQ1RYz98",
+				"refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJlZ3JpbmVQYXNzd29yZENoYW5nZWQiOjE1NTgwNTQ0NTksImV4cCI6MTU2MDQ2OTcyOCwic3ViIjoiMCJ9.vJGdYkRAU8tOaGnuywHSsDpW5UnypmE4BBhaP_MpjE0",
 			},
 		},
 	}
 
-	now := func() time.Time {
+	mockNow := func() time.Time {
 		return time.Unix(1558050528, 0)
 	}
 
@@ -172,7 +172,7 @@ func TestAuthenticateHandler(t *testing.T) {
 				t.FailNow()
 			}
 
-			handler := authenticateHandler(logger, now, mockGetUserByName{testCase.returnedUser, testCase.returnedError}, testCase.secret)
+			handler := authenticateHandler(logger, mockNow, mockGetUserByName{testCase.returnedUser, testCase.returnedError}, testCase.secret)
 
 			handler(rr, req)
 
