@@ -55,7 +55,7 @@ cp template.json config.json
 migrate -database "postgres://postgres@localhost:5432/peregrine?sslmode=disable" -path "$(pwd)/migrations" up
 ```
 
-10. Run the app:
+11. Run the app:
 
 ```
 peregrine config.json
