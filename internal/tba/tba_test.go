@@ -62,11 +62,13 @@ func TestGetEvents(t *testing.T) {
 	s := Service{URL: server.URL, APIKey: APIKey}
 
 	testCases := []struct {
+		name             string
 		getEventsHandler func(w http.ResponseWriter, r *http.Request)
 		events           []store.Event
 		expectErr        bool
 	}{
 		{
+			name: "tba events route gives 500",
 			getEventsHandler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
@@ -74,6 +76,7 @@ func TestGetEvents(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name: "tba gives non-nullable event data only",
 			getEventsHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -92,7 +95,7 @@ func TestGetEvents(t *testing.T) {
 						"webcasts": [
 							{
 								"channel": "nefirst_blue",
-								"type": "twitch"					
+								"type": "twitch"
 							}
 						],
 						"lat": 41.9911025,
@@ -125,6 +128,7 @@ func TestGetEvents(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			name: "tba gives full event data",
 			getEventsHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != "notARealKey" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -173,11 +177,11 @@ func TestGetEvents(t *testing.T) {
 						"webcasts": [
 							{
 								"channel": "fakeIFRAME",
-								"type": "iframe"									
+								"type": "iframe"
 							},
 							{
 								"channel": "gmsHpsSavuc",
-								"type": "youtube"									
+								"type": "youtube"
 							}],
 						"lat": 45.52,
 						"lng": -122.681944,
@@ -248,12 +252,14 @@ func TestGetMatches(t *testing.T) {
 	s := Service{URL: server.URL, APIKey: APIKey}
 
 	testCases := []struct {
+		name              string
 		getMatchesHandler func(w http.ResponseWriter, r *http.Request)
 		eventKey          string
 		matches           []store.Match
 		expectErr         bool
 	}{
 		{
+			name: "tba matches route gives 500",
 			getMatchesHandler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
@@ -262,6 +268,7 @@ func TestGetMatches(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name: "tba gives full matches data",
 			getMatchesHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -337,6 +344,7 @@ func TestGetMatches(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			name: "tba gives partial match time data",
 			getMatchesHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -441,11 +449,13 @@ func TestGetTeamKeys(t *testing.T) {
 	s := Service{URL: server.URL, APIKey: APIKey}
 
 	testCases := []struct {
+		name               string
 		getTeamKeysHandler func(w http.ResponseWriter, r *http.Request)
 		keys               []string
 		expectErr          bool
 	}{
 		{
+			name: "tba team keys route gives 500",
 			getTeamKeysHandler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
@@ -453,6 +463,7 @@ func TestGetTeamKeys(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name: "tba gives several team keys",
 			getTeamKeysHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != "notARealKey" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -503,11 +514,13 @@ func TestGetTeamRankings(t *testing.T) {
 	s := Service{URL: server.URL, APIKey: APIKey}
 
 	testCases := []struct {
+		name                   string
 		getTeamRankingsHandler func(w http.ResponseWriter, r *http.Request)
 		teams                  []store.Team
 		expectErr              bool
 	}{
 		{
+			name: "tba rankings route gives 500",
 			getTeamRankingsHandler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
@@ -515,6 +528,7 @@ func TestGetTeamRankings(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name: "tba gives team ranking and ranking score",
 			getTeamRankingsHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -575,6 +589,7 @@ func TestGetTeamRankings(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			name: "tba gives only team ranking",
 			getTeamRankingsHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != "notARealKey" {
 					w.WriteHeader(http.StatusUnauthorized)
