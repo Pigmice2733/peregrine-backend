@@ -70,14 +70,8 @@ If you notice any inaccuracies please let us know so the documentation can be co
 
 ## Testing
 
-Peregrine has both unit tests and integration tests. Both should be passing for a new feature.
-
-### Unit tests
-
-Run go test:
-
 ```
-go test ./...
+go test -v ./...
 ```
 
 ## Contributing
