@@ -1,8 +1,0 @@
-version: 2
-jobs:
-  build:
-    docker:
-      - image: golang:1.12.5
-    steps:
-      - checkout
-      - run: go test ./... -v
