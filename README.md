@@ -1,7 +1,7 @@
 # Peregrine
 
-[![Docker Cloud](https://img.shields.io/docker/cloud/automated/pigmice2733/peregrine-backend.svg)](https://img.shields.io/docker/cloud/automated/pigmice2733/peregrine-backend.svg)
-[![Docker Cloud Status](https://img.shields.io/docker/cloud/build/pigmice2733/peregrine-backend.svg)](https://img.shields.io/docker/cloud/build/pigmice2733/peregrine-backend.svg)
+[![Docker Cloud](https://img.shields.io/docker/cloud/automated/pigmice2733/peregrine-backend.svg)](https://cloud.docker.com/repository/docker/pigmice2733/peregrine-backend)
+[![Docker Cloud Status](https://img.shields.io/docker/cloud/build/pigmice2733/peregrine-backend.svg)](https://cloud.docker.com/repository/docker/pigmice2733/peregrine-backend)
 [![GoDoc](https://godoc.org/github.com/Pigmice2733/peregrine-backend?status.svg)](https://godoc.org/github.com/Pigmice2733/peregrine-backend)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Pigmice2733/peregrine-backend)](https://goreportcard.com/report/github.com/Pigmice2733/peregrine-backend)
 [![GitHub](https://img.shields.io/github/license/Pigmice2733/peregrine-backend.svg)](https://github.com/Pigmice2733/peregrine-backend/blob/master/LICENSE.md)
