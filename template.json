@@ -1,0 +1,15 @@
+{
+    "server": {
+        "listen": ":8080",
+        "origin": "*",
+        "logLevel": "trace",
+        "logJSON": false,
+        "jwtSecret": "",
+        "year": 2019
+    },
+    "tba": {
+        "url": "https://www.thebluealliance.com/api/v3",
+        "apiKey": ""
+    },
+    "dsn": "user=postgres password=pass database=peregrine sslmode=disable"
+}

@@ -206,8 +206,8 @@ func (s *Service) GetEvents(ctx context.Context, year int, schemaID *int64) ([]s
 			District:     districtAbbreviation,
 			FullDistrict: districtFullName,
 			Week:         tbaEvent.Week,
-			StartDate:    store.NewUnixFromTime(startDate),
-			EndDate:      store.NewUnixFromTime(endDate),
+			StartDate:    startDate,
+			EndDate:      endDate,
 			Webcasts:     webcasts,
 			Lat:          tbaEvent.Lat,
 			Lon:          tbaEvent.Lng,
@@ -239,22 +239,22 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 
 	var matches []store.Match
 	for _, tbaMatch := range tbaMatches {
-		var predictedTime *store.UnixTime
-		var actualTime *store.UnixTime
-		var scheduledTime *store.UnixTime
+		var predictedTime *time.Time
+		var actualTime *time.Time
+		var scheduledTime *time.Time
 
 		if tbaMatch.PredictedTime != 0 {
-			timestamp := store.NewUnixFromInt(tbaMatch.PredictedTime)
+			timestamp := time.Unix(tbaMatch.PredictedTime, 0)
 			predictedTime = &timestamp
 		}
 
 		if tbaMatch.ActualTime != 0 {
-			timestamp := store.NewUnixFromInt(int64(tbaMatch.ActualTime))
+			timestamp := time.Unix(tbaMatch.ActualTime, 0)
 			actualTime = &timestamp
 		}
 
 		if tbaMatch.ScheduledTime != 0 {
-			timestamp := store.NewUnixFromInt(int64(tbaMatch.ScheduledTime))
+			timestamp := time.Unix(tbaMatch.ScheduledTime, 0)
 			scheduledTime = &timestamp
 		}
 

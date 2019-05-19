@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/config"
 	"github.com/Pigmice2733/peregrine-backend/internal/server"
@@ -16,41 +15,48 @@ import (
 )
 
 func main() {
-	var basePath = flag.String("basePath", ".", "Path to the etc directory where the config file is.")
+	flag.Usage = func() {
+		fmt.Printf("Usage: %s [config path]\n", os.Args[0])
+	}
 
 	flag.Parse()
 
-	if err := run(*basePath); err != nil {
+	args := flag.Args()
+	if len(args) != 1 {
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	if err := run(args[0]); err != nil {
 		fmt.Printf("got error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(basePath string) error {
-	c, err := config.Open(basePath)
+func run(configPath string) error {
+	c, err := config.Open(configPath)
 	if err != nil {
-		return errors.Wrap(err, "opening config")
+		return errors.Wrap(err, "unable to open config")
 	}
 
-	tba := tba.Service{
+	tba := &tba.Service{
 		URL:    c.TBA.URL,
 		APIKey: c.TBA.APIKey,
 	}
 
 	logger := logrus.New()
+	logger.SetLevel(c.Server.LogLevel)
 	if c.Server.LogJSON {
 		logger.Formatter = &logrus.JSONFormatter{}
 	}
 
+	logger.Info("connecting to postgres")
 	sto, err := store.New(context.Background(), c.DSN, logger)
 	if err != nil {
 		return errors.Wrap(err, "opening postgres server")
 	}
 	defer sto.Close()
-
-	if c.Server.Year == 0 {
-		c.Server.Year = time.Now().Year()
-	}
+	logger.Info("connected to postgres")
 
 	s := &server.Server{
 		TBA:    tba,
@@ -59,5 +65,5 @@ func run(basePath string) error {
 		Server: c.Server,
 	}
 
-	return errors.Wrap(s.Run(context.Background()), "running server")
+	return errors.Wrap(s.Run(), "running server")
 }
