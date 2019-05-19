@@ -128,7 +128,7 @@ func TestAuthenticateHandler(t *testing.T) {
 				HashedPassword:  "$2a$10$sAG1oh48UCBIx8lNLT/vUu5Ppjbl.XKE92.2Z5jabYSbmJ20lgxUS",
 				PasswordChanged: time.Unix(1558054459, 0),
 			},
-			expectedStatusCode:    http.StatusUnauthorized,
+			expectedStatusCode:    http.StatusAccepted,
 			expectedPlainResponse: http.StatusText(http.StatusUnauthorized) + "\n",
 		},
 		{
