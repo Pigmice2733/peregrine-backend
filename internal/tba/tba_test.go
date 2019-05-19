@@ -4,12 +4,12 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
+	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
 )
 
@@ -35,9 +35,8 @@ func newString(s string) *string {
 	return &s
 }
 
-func newUnixTime(time time.Time) *store.UnixTime {
-	unix := store.NewUnixFromTime(time)
-	return &unix
+func newTime(t time.Time) *time.Time {
+	return &t
 }
 
 func newTBAServer() *tbaServer {
@@ -63,11 +62,13 @@ func TestGetEvents(t *testing.T) {
 	s := Service{URL: server.URL, APIKey: APIKey}
 
 	testCases := []struct {
+		name             string
 		getEventsHandler func(w http.ResponseWriter, r *http.Request)
 		events           []store.Event
 		expectErr        bool
 	}{
 		{
+			name: "tba events route gives 500",
 			getEventsHandler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
@@ -75,6 +76,7 @@ func TestGetEvents(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name: "tba gives non-nullable event data only",
 			getEventsHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -93,7 +95,7 @@ func TestGetEvents(t *testing.T) {
 						"webcasts": [
 							{
 								"channel": "nefirst_blue",
-								"type": "twitch"					
+								"type": "twitch"
 							}
 						],
 						"lat": 41.9911025,
@@ -115,8 +117,8 @@ func TestGetEvents(t *testing.T) {
 					Week:         nil,
 					District:     nil,
 					FullDistrict: nil,
-					StartDate:    store.NewUnixFromTime(time.Date(2018, 4, 2, 7, 0, 0, 0, time.UTC)),
-					EndDate:      store.NewUnixFromTime(time.Date(2018, 4, 4, 7, 0, 0, 0, time.UTC)),
+					StartDate:    time.Date(2018, 4, 2, 7, 0, 0, 0, time.UTC),
+					EndDate:      time.Date(2018, 4, 4, 7, 0, 0, 0, time.UTC),
 					Lat:          41.9911025,
 					Lon:          -70.993044,
 					LocationName: "location1",
@@ -126,6 +128,7 @@ func TestGetEvents(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			name: "tba gives full event data",
 			getEventsHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != "notARealKey" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -174,11 +177,11 @@ func TestGetEvents(t *testing.T) {
 						"webcasts": [
 							{
 								"channel": "fakeIFRAME",
-								"type": "iframe"									
+								"type": "iframe"
 							},
 							{
 								"channel": "gmsHpsSavuc",
-								"type": "youtube"									
+								"type": "youtube"
 							}],
 						"lat": 45.52,
 						"lng": -122.681944,
@@ -198,8 +201,8 @@ func TestGetEvents(t *testing.T) {
 				District:     newString("ABC"),
 				FullDistrict: newString("Full ABC"),
 				Week:         newInt(5),
-				StartDate:    store.NewUnixFromTime(time.Date(2018, 5, 6, 0, 0, 0, 0, time.UTC)),
-				EndDate:      store.NewUnixFromTime(time.Date(2018, 5, 7, 0, 0, 0, 0, time.UTC)),
+				StartDate:    time.Date(2018, 5, 6, 0, 0, 0, 0, time.UTC),
+				EndDate:      time.Date(2018, 5, 7, 0, 0, 0, 0, time.UTC),
 				Lat:          42.0,
 				Lon:          0.0,
 				LocationName: "answer",
@@ -210,8 +213,8 @@ func TestGetEvents(t *testing.T) {
 				District:     newString("PNW"),
 				FullDistrict: newString("Full PNW"),
 				Week:         newInt(2),
-				StartDate:    store.NewUnixFromTime(time.Date(2018, 11, 19, 8, 0, 0, 0, time.UTC)),
-				EndDate:      store.NewUnixFromTime(time.Date(2018, 11, 23, 8, 0, 0, 0, time.UTC)),
+				StartDate:    time.Date(2018, 11, 19, 8, 0, 0, 0, time.UTC),
+				EndDate:      time.Date(2018, 11, 23, 8, 0, 0, 0, time.UTC),
 				Lat:          45.52,
 				Lon:          -122.681944,
 				LocationName: "Portland",
@@ -222,16 +225,21 @@ func TestGetEvents(t *testing.T) {
 	}
 
 	for index, tt := range testCases {
-		server.getEventsHandler = tt.getEventsHandler
+		// TODO(brendan): name these test cases
+		t.Run(strconv.Itoa(index), func(t *testing.T) {
+			server.getEventsHandler = tt.getEventsHandler
 
-		events, err := s.GetEvents(context.TODO(), testingYear, nil)
-		if tt.expectErr != (err != nil) {
-			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
-		}
+			events, err := s.GetEvents(context.TODO(), testingYear, nil)
+			if !tt.expectErr && err != nil {
+				t.Errorf("did not expect an error but got one: %v", err)
+			} else if tt.expectErr && err == nil {
+				t.Errorf("expected error but didnt get one: %v", err)
+			}
 
-		if !reflect.DeepEqual(events, tt.events) {
-			t.Errorf("test #%v - got events: %#v\n    expected: %#v", index+1, events, tt.events)
-		}
+			if !cmp.Equal(events, tt.events) {
+				t.Errorf("expected events do not equal actual events, got dif: %s", cmp.Diff(tt.events, events))
+			}
+		})
 	}
 }
 
@@ -244,12 +252,14 @@ func TestGetMatches(t *testing.T) {
 	s := Service{URL: server.URL, APIKey: APIKey}
 
 	testCases := []struct {
+		name              string
 		getMatchesHandler func(w http.ResponseWriter, r *http.Request)
 		eventKey          string
 		matches           []store.Match
 		expectErr         bool
 	}{
 		{
+			name: "tba matches route gives 500",
 			getMatchesHandler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
@@ -258,6 +268,7 @@ func TestGetMatches(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name: "tba gives full matches data",
 			getMatchesHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -310,9 +321,9 @@ func TestGetMatches(t *testing.T) {
 				{
 					Key:           "key1",
 					EventKey:      "2018alhu",
-					PredictedTime: newUnixTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
-					ScheduledTime: newUnixTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
-					ActualTime:    newUnixTime(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
+					PredictedTime: newTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ScheduledTime: newTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ActualTime:    newTime(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
 					RedScore:      newInt(220),
 					BlueScore:     newInt(500),
 					RedAlliance:   []string{"frc254", "frc1234", "frc00"},
@@ -321,9 +332,9 @@ func TestGetMatches(t *testing.T) {
 				{
 					Key:           "key2",
 					EventKey:      "2018alhu",
-					PredictedTime: newUnixTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
-					ScheduledTime: newUnixTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
-					ActualTime:    newUnixTime(time.Date(2018, 5, 2, 15, 13, 0, 0, time.UTC)),
+					PredictedTime: newTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
+					ScheduledTime: newTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
+					ActualTime:    newTime(time.Date(2018, 5, 2, 15, 13, 0, 0, time.UTC)),
 					RedScore:      newInt(120),
 					BlueScore:     newInt(600),
 					RedAlliance:   []string{"frc0", "frc1", "frc2"},
@@ -333,6 +344,7 @@ func TestGetMatches(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			name: "tba gives partial match time data",
 			getMatchesHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -385,9 +397,9 @@ func TestGetMatches(t *testing.T) {
 				{
 					Key:           "key1",
 					EventKey:      "2018alhu",
-					PredictedTime: newUnixTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
-					ScheduledTime: newUnixTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
-					ActualTime:    newUnixTime(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
+					PredictedTime: newTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ScheduledTime: newTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ActualTime:    newTime(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
 					RedScore:      nil,
 					BlueScore:     nil,
 					RedAlliance:   []string{"frc254", "frc1234", "frc00"},
@@ -397,7 +409,7 @@ func TestGetMatches(t *testing.T) {
 					Key:           "key2",
 					EventKey:      "2018alhu",
 					PredictedTime: nil,
-					ScheduledTime: newUnixTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
+					ScheduledTime: newTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
 					ActualTime:    nil,
 					RedScore:      nil,
 					BlueScore:     nil,
@@ -410,16 +422,21 @@ func TestGetMatches(t *testing.T) {
 	}
 
 	for index, tt := range testCases {
-		server.getMatchesHandler = tt.getMatchesHandler
+		// TODO(brendan): name these test cases
+		t.Run(strconv.Itoa(index), func(t *testing.T) {
+			server.getMatchesHandler = tt.getMatchesHandler
 
-		matches, err := s.GetMatches(context.TODO(), tt.eventKey)
-		if tt.expectErr != (err != nil) {
-			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
-		}
+			matches, err := s.GetMatches(context.TODO(), tt.eventKey)
+			if !tt.expectErr && err != nil {
+				t.Errorf("did not expect an error but got one: %v", err)
+			} else if tt.expectErr && err == nil {
+				t.Errorf("expected error but didnt get one: %v", err)
+			}
 
-		if !reflect.DeepEqual(matches, tt.matches) {
-			t.Errorf("test #%v - got matches: %#v\n    expected: %#v", index+1, matches, tt.matches)
-		}
+			if !cmp.Equal(matches, tt.matches) {
+				t.Errorf("expected matches do not equal actual matches, got dif: %s", cmp.Diff(tt.matches, matches))
+			}
+		})
 	}
 }
 
@@ -432,11 +449,13 @@ func TestGetTeamKeys(t *testing.T) {
 	s := Service{URL: server.URL, APIKey: APIKey}
 
 	testCases := []struct {
+		name               string
 		getTeamKeysHandler func(w http.ResponseWriter, r *http.Request)
 		keys               []string
 		expectErr          bool
 	}{
 		{
+			name: "tba team keys route gives 500",
 			getTeamKeysHandler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
@@ -444,6 +463,7 @@ func TestGetTeamKeys(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name: "tba gives several team keys",
 			getTeamKeysHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != "notARealKey" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -467,16 +487,21 @@ func TestGetTeamKeys(t *testing.T) {
 	}
 
 	for index, tt := range testCases {
-		server.getTeamKeysHandler = tt.getTeamKeysHandler
+		// TODO(brendan): name these test cases
+		t.Run(strconv.Itoa(index), func(t *testing.T) {
+			server.getTeamKeysHandler = tt.getTeamKeysHandler
 
-		teamKeys, err := s.GetTeamKeys(context.TODO(), "2018abca")
-		if tt.expectErr != (err != nil) {
-			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
-		}
+			keys, err := s.GetTeamKeys(context.TODO(), "2018abca")
+			if !tt.expectErr && err != nil {
+				t.Errorf("did not expect an error but got one: %v", err)
+			} else if tt.expectErr && err == nil {
+				t.Errorf("expected error but didnt get one: %v", err)
+			}
 
-		if !reflect.DeepEqual(teamKeys, tt.keys) {
-			t.Errorf("test #%v - got team keys: %#v\n    expected: %#v", index+1, teamKeys, tt.keys)
-		}
+			if !cmp.Equal(keys, tt.keys) {
+				t.Errorf("expected keys do not equal actual keys, got dif: %s", cmp.Diff(tt.keys, keys))
+			}
+		})
 	}
 }
 
@@ -489,11 +514,13 @@ func TestGetTeamRankings(t *testing.T) {
 	s := Service{URL: server.URL, APIKey: APIKey}
 
 	testCases := []struct {
+		name                   string
 		getTeamRankingsHandler func(w http.ResponseWriter, r *http.Request)
 		teams                  []store.Team
 		expectErr              bool
 	}{
 		{
+			name: "tba rankings route gives 500",
 			getTeamRankingsHandler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
@@ -501,6 +528,7 @@ func TestGetTeamRankings(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name: "tba gives team ranking and ranking score",
 			getTeamRankingsHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -561,6 +589,7 @@ func TestGetTeamRankings(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			name: "tba gives only team ranking",
 			getTeamRankingsHandler: func(w http.ResponseWriter, r *http.Request) {
 				if r.Header.Get("X-TBA-Auth-Key") != "notARealKey" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -637,15 +666,20 @@ func TestGetTeamRankings(t *testing.T) {
 	}
 
 	for index, tt := range testCases {
-		server.getTeamRankingsHandler = tt.getTeamRankingsHandler
+		// TODO(brendan): name these test cases
+		t.Run(strconv.Itoa(index), func(t *testing.T) {
+			server.getTeamRankingsHandler = tt.getTeamRankingsHandler
 
-		teams, err := s.GetTeamRankings(context.TODO(), "2018abca")
-		if tt.expectErr != (err != nil) {
-			t.Errorf("test #%v - got error: %v, expected error: %v", index+1, err, tt.expectErr)
-		}
+			teams, err := s.GetTeamRankings(context.TODO(), "2018abca")
+			if !tt.expectErr && err != nil {
+				t.Errorf("did not expect an error but got one: %v", err)
+			} else if tt.expectErr && err == nil {
+				t.Errorf("expected error but didnt get one: %v", err)
+			}
 
-		if !reflect.DeepEqual(teams, tt.teams) {
-			t.Errorf("test #%v - got teams: %#v\n    expected: %#v", index+1, teams, tt.teams)
-		}
+			if !cmp.Equal(teams, tt.teams) {
+				t.Errorf("expected teams do not equal actual teams, got dif: %s", cmp.Diff(tt.teams, teams))
+			}
+		})
 	}
 }

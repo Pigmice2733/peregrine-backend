@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -18,8 +19,8 @@ type Event struct {
 	District     *string        `json:"district,omitempty" db:"district"`
 	FullDistrict *string        `json:"fullDistrict,omitempty" db:"full_district"`
 	Week         *int           `json:"week,omitempty" db:"week"`
-	StartDate    UnixTime       `json:"startDate" db:"start_date"`
-	EndDate      UnixTime       `json:"endDate" db:"end_date"`
+	StartDate    time.Time      `json:"startDate" db:"start_date"`
+	EndDate      time.Time      `json:"endDate" db:"end_date"`
 	Webcasts     pq.StringArray `json:"webcasts" db:"webcasts"`
 	LocationName string         `json:"locationName" db:"location_name"`
 	Lat          float64        `json:"lat" db:"lat"`

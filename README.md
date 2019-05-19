@@ -1,6 +1,8 @@
 # Peregrine
 
-![CircleCI](https://circleci.com/gh/Pigmice2733/peregrine-backend.svg?style=shield&circle-token=:circle-token)
+[![Docker Cloud](https://img.shields.io/docker/cloud/automated/pigmice2733/peregrine-backend.svg)](https://img.shields.io/docker/cloud/automated/pigmice2733/peregrine-backend.svg)
+[![Docker Cloud Status](https://img.shields.io/docker/cloud/build/pigmice2733/peregrine-backend.svg)](https://img.shields.io/docker/cloud/build/pigmice2733/peregrine-backend.svg)
+[![GoDoc](https://godoc.org/github.com/Pigmice2733/peregrine-backend?status.svg)](https://godoc.org/github.com/Pigmice2733/peregrine-backend)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Pigmice2733/peregrine-backend)](https://goreportcard.com/report/github.com/Pigmice2733/peregrine-backend)
 [![GitHub](https://img.shields.io/github/license/Pigmice2733/peregrine-backend.svg)](https://github.com/Pigmice2733/peregrine-backend/blob/master/LICENSE.md)
 
@@ -11,6 +13,7 @@ For a description of what scouting is, please view the [SCOUTING.md](SCOUTING.md
 ## Setup
 
 1. Install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and [Go](https://golang.org/doc/install) (>=1.11)
+
 2. Clone the repo:
 
 ```
@@ -25,7 +28,7 @@ cd peregrine-backend
 
 5. [Install PostgreSQL](https://www.postgresql.org/download/) and start the server.
 
-6. Install the `migrate` and `peregrine` binaries:
+6. Install the `peregrine` binary:
 
 > **NOTE**: If you cloned the repo to somewhere in your GOPATH (e.g. with `go get`) you'll need to `export GO111MODULE=on`.
 
@@ -34,7 +37,7 @@ go generate ./... # neccessary to compile OpenAPI documentation into the binary
 go install ./...
 ```
 
-7. Create the postgres database:
+7. Create the peregrine database:
 
 ```
 createdb -U postgres peregrine
@@ -43,20 +46,21 @@ createdb -U postgres peregrine
 8. Copy the config template:
 
 ```
-cp etc/config.yaml.template etc/config.development.yaml
+cp template.json config.json
 ```
 
-9. Modify `etc/config.development.yaml` as neccesary. You will likely not need to change anything besides the TBA API key if you followed the instructions here. You will need to go to the [TBA account page](https://www.thebluealliance.com/account) and get a read API key and set `apiKey` under the `tba` section to the read API key you register.
-10. Run the database migrations:
+9. Modify `config.json` as neccesary. You will likely not need to change anything besides the TBA API key and the JWT secret if you followed the instructions here. You will need to go to the [TBA account page](https://www.thebluealliance.com/account) and get a read API key and set `apiKey` under the `tba` section to the read API key you register. Set the JWT secret to the output from `uuidgen -r`.
+
+10. Download [golang-migrate](https://github.com/golang-migrate/migrate/tree/master/cli) and run the database migrations:
 
 ```
-migrate -up
+migrate -database "postgres://postgres@localhost:5432/peregrine?sslmode=disable" -path "$(pwd)/migrations" up
 ```
 
-10. Run the app:
+11. Run the app:
 
 ```
-peregrine
+peregrine config.json
 ```
 
 ## API Documentation
@@ -68,42 +72,8 @@ If you notice any inaccuracies please let us know so the documentation can be co
 
 ## Testing
 
-Peregrine has both unit tests and integration tests. Both should be passing for a new feature.
-
-### Unit tests
-
-Run go test:
-
 ```
-go test ./...
-```
-
-### Integration (jest) tests
-
-You must have a server running for integration tests. See the [setup section](#setup).
-
-1. Go to the api-tests folder:
-
-```
-cd api-tests
-```
-
-2. Install dependencies:
-
-```
-npm i
-```
-
-3. Set the `GO_ENV` environment variable if you used Docker to setup the app:
-
-```
-export GO_ENV="docker"
-```
-
-4. Run the tests:
-
-```
-npm test
+go test -v ./...
 ```
 
 ## Contributing

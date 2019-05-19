@@ -1,6 +1,8 @@
 package server
 
 import (
+	"time"
+
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/gorilla/mux"
 )
@@ -8,10 +10,10 @@ import (
 func (s *Server) registerRoutes() *mux.Router {
 	r := mux.NewRouter()
 
-	r.Handle("/", s.healthHandler()).Methods("GET")
-	r.Handle("/openapi.yaml", s.openAPIHandler()).Methods("GET")
+	r.Handle("/", healthHandler(s.uptime, s.TBA, s.Store)).Methods("GET")
+	r.Handle("/openapi.yaml", openAPIHandler(openAPI)).Methods("GET")
 
-	r.Handle("/authenticate", s.authenticateHandler()).Methods("POST")
+	r.Handle("/authenticate", authenticateHandler(s.Logger, time.Now, s.Store, s.JWTSecret)).Methods("POST")
 	r.Handle("/refresh", s.refreshHandler()).Methods("POST")
 
 	r.Handle("/users", s.createUserHandler()).Methods("POST")

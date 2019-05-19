@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -15,14 +16,14 @@ import (
 )
 
 type match struct {
-	Key           string          `json:"key"`
-	Time          *store.UnixTime `json:"time"`
-	ScheduledTime *store.UnixTime `json:"scheduledTime,omitempty"`
-	RedScore      *int            `json:"redScore,omitempty"`
-	BlueScore     *int            `json:"blueScore,omitempty"`
-	RedAlliance   []string        `json:"redAlliance"`
-	BlueAlliance  []string        `json:"blueAlliance"`
-	TBADeleted    bool            `json:"tbaDeleted"`
+	Key           string     `json:"key"`
+	Time          *time.Time `json:"time"`
+	ScheduledTime *time.Time `json:"scheduledTime,omitempty"`
+	RedScore      *int       `json:"redScore,omitempty"`
+	BlueScore     *int       `json:"blueScore,omitempty"`
+	RedAlliance   []string   `json:"redAlliance"`
+	BlueAlliance  []string   `json:"blueAlliance"`
+	TBADeleted    bool       `json:"tbaDeleted"`
 }
 
 // matchesHandler returns a handler to get all matches at a given event.

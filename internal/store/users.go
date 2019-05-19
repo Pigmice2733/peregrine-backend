@@ -41,7 +41,7 @@ type User struct {
 	ID              int64          `json:"id" db:"id"`
 	Username        string         `json:"username" db:"username"`
 	HashedPassword  string         `json:"-" db:"hashed_password"`
-	PasswordChanged UnixTime       `json:"-" db:"password_changed"`
+	PasswordChanged time.Time      `json:"-" db:"password_changed"`
 	RealmID         int64          `json:"realmId" db:"realm_id"`
 	FirstName       string         `json:"firstName" db:"first_name"`
 	LastName        string         `json:"lastName" db:"last_name"`
@@ -54,7 +54,7 @@ type PatchUser struct {
 	ID              int64          `json:"id" db:"id"`
 	Username        *string        `json:"username" db:"username"`
 	HashedPassword  *string        `json:"-" db:"hashed_password"`
-	PasswordChanged *UnixTime      `json:"-" db:"password_changed"`
+	PasswordChanged *time.Time     `json:"-" db:"password_changed"`
 	FirstName       *string        `json:"firstName" db:"first_name"`
 	LastName        *string        `json:"lastName" db:"last_name"`
 	Roles           *Roles         `json:"roles" db:"roles"`
@@ -81,7 +81,7 @@ func (s *Service) CreateUser(ctx context.Context, u User) error {
 		return errors.Wrap(err, "unable to begin transaction")
 	}
 
-	u.PasswordChanged = NewUnixFromTime(time.Now())
+	u.PasswordChanged = time.Now()
 
 	userStmt, err := tx.PrepareNamedContext(ctx, `
 	INSERT
@@ -219,7 +219,7 @@ func (s *Service) PatchUser(ctx context.Context, pu PatchUser) error {
 	}
 
 	if pu.HashedPassword != nil {
-		now := NewUnixFromTime(time.Now())
+		now := time.Now()
 		pu.PasswordChanged = &now
 	}
 
