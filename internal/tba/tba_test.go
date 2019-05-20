@@ -224,9 +224,9 @@ func TestGetEvents(t *testing.T) {
 		},
 	}
 
-	for index, tt := range testCases {
+	for _, tt := range testCases {
 		// TODO(brendan): name these test cases
-		t.Run(strconv.Itoa(index), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			server.getEventsHandler = tt.getEventsHandler
 
 			events, err := s.GetEvents(context.TODO(), testingYear, nil)
@@ -421,9 +421,9 @@ func TestGetMatches(t *testing.T) {
 		},
 	}
 
-	for index, tt := range testCases {
+	for _, tt := range testCases {
 		// TODO(brendan): name these test cases
-		t.Run(strconv.Itoa(index), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			server.getMatchesHandler = tt.getMatchesHandler
 
 			matches, err := s.GetMatches(context.TODO(), tt.eventKey)
@@ -486,9 +486,9 @@ func TestGetTeamKeys(t *testing.T) {
 		},
 	}
 
-	for index, tt := range testCases {
+	for _, tt := range testCases {
 		// TODO(brendan): name these test cases
-		t.Run(strconv.Itoa(index), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			server.getTeamKeysHandler = tt.getTeamKeysHandler
 
 			keys, err := s.GetTeamKeys(context.TODO(), "2018abca")
@@ -665,9 +665,9 @@ func TestGetTeamRankings(t *testing.T) {
 		},
 	}
 
-	for index, tt := range testCases {
+	for _, tt := range testCases {
 		// TODO(brendan): name these test cases
-		t.Run(strconv.Itoa(index), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			server.getTeamRankingsHandler = tt.getTeamRankingsHandler
 
 			teams, err := s.GetTeamRankings(context.TODO(), "2018abca")
