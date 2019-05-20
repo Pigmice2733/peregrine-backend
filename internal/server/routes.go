@@ -14,7 +14,7 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/openapi.yaml", openAPIHandler(openAPI)).Methods("GET")
 
 	r.Handle("/authenticate", authenticateHandler(s.Logger, time.Now, s.Store, s.JWTSecret)).Methods("POST")
-	r.Handle("/refresh", s.refreshHandler()).Methods("POST")
+	r.Handle("/refresh", refreshHandler(s.Logger, time.Now, s.Store, s.JWTSecret)).Methods("POST")
 
 	r.Handle("/users", s.createUserHandler()).Methods("POST")
 	r.Handle("/users", ihttp.ACL(s.getUsersHandler(), true, true, true)).Methods("GET")
