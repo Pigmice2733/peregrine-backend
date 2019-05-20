@@ -16,7 +16,7 @@ func newBool(a bool) *bool {
 	return &a
 }
 
-func TestAnalsyzeReports(t *testing.T) {
+func TestAnalyzeReports(t *testing.T) {
 	reports := []store.Report{
 		{
 			ID:      0,
