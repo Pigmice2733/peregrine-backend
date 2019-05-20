@@ -54,9 +54,10 @@ type authenticateResponse struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
-// UserByNameGetter is used for retrieving users from a store by username.
+// UserByNameGetter is used for retrieving users from a store by username. It should
+// return store.ErrNoResults if there was no associated user.
 type UserByNameGetter interface {
-	GetUserByUsername(context.Context, string) (store.User, error)
+	GetUserByUsername(ctx context.Context, username string) (user store.User, err error)
 }
 
 func authenticateHandler(logger *logrus.Logger, now func() time.Time, userStore UserByNameGetter, secret string) http.HandlerFunc {
@@ -118,15 +119,21 @@ func authenticateHandler(logger *logrus.Logger, now func() time.Time, userStore 
 	}
 }
 
-func (s *Server) refreshHandler() http.HandlerFunc {
-	type refreshRequest struct {
-		RefreshToken string `json:"refreshToken"`
-	}
+// UserByIDGetter is used for retrieving users by ID. It should return store.ErrNoResults
+// if there is no associated user.
+type UserByIDGetter interface {
+	GetUserByID(ctx context.Context, id int64) (user store.User, err error)
+}
 
-	type refreshResponse struct {
-		AccessToken string `json:"accessToken"`
-	}
+type refreshRequest struct {
+	RefreshToken string `json:"refreshToken"`
+}
 
+type refreshResponse struct {
+	AccessToken string `json:"accessToken"`
+}
+
+func refreshHandler(logger *logrus.Logger, now func() time.Time, userStore UserByIDGetter, secret string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var rr refreshRequest
 		if err := json.NewDecoder(r.Body).Decode(&rr); err != nil {
@@ -139,7 +146,7 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 
-			return []byte(s.JWTSecret), nil
+			return []byte(secret), nil
 		})
 		if err != nil || !token.Valid {
 			ihttp.Error(w, http.StatusUnauthorized)
@@ -154,16 +161,16 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 
 		userID, err := strconv.ParseInt(claims.Subject, 10, 64)
 		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
 
-		user, err := s.Store.GetUserByID(r.Context(), userID)
+		user, err := userStore.GetUserByID(r.Context(), userID)
 		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
-			go s.Logger.WithError(err).Error("retrieving user from database")
+			logger.WithError(err).Error("retrieving user from database")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -174,9 +181,9 @@ func (s *Server) refreshHandler() http.HandlerFunc {
 			return
 		}
 
-		accessToken, err := generateAccessToken(user, time.Now().Add(accessTokenDuration), s.JWTSecret)
+		accessToken, err := generateAccessToken(user, now().Add(accessTokenDuration), secret)
 		if err != nil {
-			go s.Logger.WithError(err).Error("generating jwt access token signed string")
+			logger.WithError(err).Error("generating jwt access token signed string")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}

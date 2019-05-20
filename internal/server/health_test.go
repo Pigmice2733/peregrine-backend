@@ -110,8 +110,8 @@ func TestHealthHandler(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
 			req, err := http.NewRequest("GET", "/", nil)
 			if err != nil {
@@ -119,7 +119,7 @@ func TestHealthHandler(t *testing.T) {
 				t.FailNow()
 			}
 
-			handler := healthHandler(testCase.uptime, mockPinger{testCase.tbaHealthy}, mockPinger{testCase.postgresHealthy})
+			handler := healthHandler(tt.uptime, mockPinger{tt.tbaHealthy}, mockPinger{tt.postgresHealthy})
 
 			handler(rr, req)
 
@@ -128,8 +128,8 @@ func TestHealthHandler(t *testing.T) {
 				t.Errorf("did not expect error %v decoding response", err)
 			}
 
-			if !cmp.Equal(actualResponse, testCase.expectedResponse) {
-				t.Errorf("expected actual response to match expected response, but got diff: %s", cmp.Diff(testCase.expectedResponse, actualResponse))
+			if !cmp.Equal(actualResponse, tt.expectedResponse) {
+				t.Errorf("expected actual response to match expected response, but got diff: %s", cmp.Diff(tt.expectedResponse, actualResponse))
 			}
 		})
 	}
