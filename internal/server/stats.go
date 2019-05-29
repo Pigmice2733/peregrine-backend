@@ -7,15 +7,14 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/analysis"
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
-	"github.com/gorilla/mux"
+	"github.com/fharding1/gemux"
 	"github.com/pkg/errors"
 )
 
 // eventStats analyzes the event-wide statistics of every team at an event with submitted reports
 func (s *Server) eventStats() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		eventKey := vars["eventKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
 		if _, ok := err.(store.ErrNoResults); ok {

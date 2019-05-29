@@ -6,17 +6,16 @@ import (
 	"net/http"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
+	"github.com/fharding1/gemux"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
-	"github.com/gorilla/mux"
 )
 
 func (s *Server) getReports() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		eventKey := vars["eventKey"]
-		partialMatchKey := vars["matchKey"]
-		teamKey := vars["teamKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
+		partialMatchKey := gemux.PathParameter(r.Context(), 1)
+		teamKey := gemux.PathParameter(r.Context(), 2)
 
 		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
 			ihttp.Error(w, http.StatusNotFound)
@@ -51,10 +50,9 @@ func (s *Server) getReports() http.HandlerFunc {
 
 func (s *Server) putReport() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		eventKey := vars["eventKey"]
-		partialMatchKey := vars["matchKey"]
-		teamKey := vars["teamKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
+		partialMatchKey := gemux.PathParameter(r.Context(), 1)
+		teamKey := gemux.PathParameter(r.Context(), 2)
 
 		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
 			ihttp.Error(w, http.StatusNotFound)

@@ -9,7 +9,7 @@ import (
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
-	"github.com/gorilla/mux"
+	"github.com/fharding1/gemux"
 	"github.com/pkg/errors"
 )
 
@@ -59,7 +59,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 			return
 		}
 
-		eventKey := mux.Vars(r)["eventKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
 		if err != nil {
@@ -83,7 +83,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 
 func (s *Server) upsertEventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		eventKey := mux.Vars(r)["eventKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
 
 		var e store.Event
 		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {

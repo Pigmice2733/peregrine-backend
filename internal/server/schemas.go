@@ -8,7 +8,7 @@ import (
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
-	"github.com/gorilla/mux"
+	"github.com/fharding1/gemux"
 )
 
 func (s *Server) createSchemaHandler() http.HandlerFunc {
@@ -113,7 +113,8 @@ func (s *Server) getSchemasHandler() http.HandlerFunc {
 
 func (s *Server) getSchemaByIDHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		rawID := gemux.PathParameter(r.Context(), 0)
+		id, err := strconv.ParseInt(rawID, 10, 64)
 		if err != nil {
 			ihttp.Error(w, http.StatusBadRequest)
 			return

@@ -7,7 +7,7 @@ import (
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
-	"github.com/gorilla/mux"
+	"github.com/fharding1/gemux"
 	"github.com/pkg/errors"
 	validator "gopkg.in/go-playground/validator.v9"
 )
@@ -63,7 +63,8 @@ func (s *Server) realmsHandler() http.HandlerFunc {
 // realmHandler returns a handler to get a specific realm.
 func (s *Server) realmHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		rawID := gemux.PathParameter(r.Context(), 0)
+		id, err := strconv.ParseInt(rawID, 10, 64)
 		if err != nil {
 			ihttp.Error(w, http.StatusBadRequest)
 			return
@@ -99,7 +100,8 @@ func (s *Server) realmHandler() http.HandlerFunc {
 // updateRealmHandler returns a handler to update a specific realm.
 func (s *Server) updateRealmHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		rawID := gemux.PathParameter(r.Context(), 0)
+		id, err := strconv.ParseInt(rawID, 10, 64)
 		if err != nil {
 			ihttp.Error(w, http.StatusBadRequest)
 			return
@@ -151,7 +153,8 @@ func (s *Server) updateRealmHandler() http.HandlerFunc {
 // deleteRealmHandler returns a handler to delete a specific realm.
 func (s *Server) deleteRealmHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		rawID := gemux.PathParameter(r.Context(), 0)
+		id, err := strconv.ParseInt(rawID, 10, 64)
 		if err != nil {
 			ihttp.Error(w, http.StatusBadRequest)
 			return

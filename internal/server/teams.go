@@ -7,7 +7,7 @@ import (
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
-	"github.com/gorilla/mux"
+	"github.com/fharding1/gemux"
 	"github.com/pkg/errors"
 )
 
@@ -19,7 +19,7 @@ type team struct {
 // teamsHandler returns a handler to get all teams at a given event.
 func (s *Server) teamsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		eventKey := mux.Vars(r)["eventKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
 		if err != nil {
@@ -59,8 +59,8 @@ func (s *Server) teamsHandler() http.HandlerFunc {
 // teamInfoHandler returns a handler to get info about a specific team at a specific event.
 func (s *Server) teamInfoHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		eventKey, teamKey := vars["eventKey"], vars["teamKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
+		teamKey := gemux.PathParameter(r.Context(), 1)
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
 		if err != nil {

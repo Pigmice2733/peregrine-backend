@@ -33,9 +33,7 @@ func (s *Server) uptime() time.Duration {
 
 // Run starts the server, and returns if it runs into an error
 func (s *Server) Run() error {
-	router := s.registerRoutes()
-
-	var handler http.Handler = router
+	var handler http.Handler = s.mux()
 	handler = ihttp.LimitBody(handler)
 	handler = gziphandler.GzipHandler(handler)
 	handler = ihttp.Log(handler, s.Logger)

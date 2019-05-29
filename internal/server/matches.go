@@ -11,7 +11,7 @@ import (
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
-	"github.com/gorilla/mux"
+	"github.com/fharding1/gemux"
 	"github.com/pkg/errors"
 )
 
@@ -29,7 +29,7 @@ type match struct {
 // matchesHandler returns a handler to get all matches at a given event.
 func (s *Server) matchesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		eventKey := mux.Vars(r)["eventKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
 		teams := r.URL.Query()["team"]
 		tbaDeleted := r.URL.Query().Get("tbaDeleted") == "true"
 
@@ -90,8 +90,8 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 // matchHandler returns a handler to get a specific match.
 func (s *Server) matchHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		eventKey, matchKey := vars["eventKey"], vars["matchKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
+		matchKey := gemux.PathParameter(r.Context(), 1)
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
 		if _, ok := err.(store.ErrNoResults); ok {
@@ -159,7 +159,7 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 			return
 		}
 
-		eventKey := mux.Vars(r)["eventKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
 		if _, ok := err.(store.ErrNoResults); ok {

@@ -1,58 +1,60 @@
 package server
 
 import (
+	"net/http"
 	"time"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
-	"github.com/gorilla/mux"
+
+	"github.com/fharding1/gemux"
 )
 
-func (s *Server) registerRoutes() *mux.Router {
-	r := mux.NewRouter()
+func (s *Server) mux() http.Handler {
+	mux := new(gemux.ServeMux)
 
-	r.Handle("/", healthHandler(s.uptime, s.TBA, s.Store)).Methods("GET")
-	r.Handle("/openapi.yaml", openAPIHandler(openAPI)).Methods("GET")
+	mux.Handle("/", http.MethodGet, healthHandler(s.uptime, s.TBA, s.Store))
+	mux.Handle("/openapi.yaml", http.MethodGet, openAPIHandler(openAPI))
 
-	r.Handle("/authenticate", authenticateHandler(s.Logger, time.Now, s.Store, s.JWTSecret)).Methods("POST")
-	r.Handle("/refresh", refreshHandler(s.Logger, time.Now, s.Store, s.JWTSecret)).Methods("POST")
+	mux.Handle("/authenticate", http.MethodPost, authenticateHandler(s.Logger, time.Now, s.Store, s.JWTSecret))
+	mux.Handle("/refresh", http.MethodPost, refreshHandler(s.Logger, time.Now, s.Store, s.JWTSecret))
 
-	r.Handle("/users", s.createUserHandler()).Methods("POST")
-	r.Handle("/users", ihttp.ACL(s.getUsersHandler(), true, true, true)).Methods("GET")
-	r.Handle("/users/{id}", ihttp.ACL(s.getUserByIDHandler(), false, false, true)).Methods("GET")
-	r.Handle("/users/{id}", ihttp.ACL(s.patchUserHandler(), false, false, true)).Methods("PATCH")
-	r.Handle("/users/{id}", ihttp.ACL(s.deleteUserHandler(), false, false, true)).Methods("DELETE")
+	mux.Handle("/users", http.MethodPost, s.createUserHandler())
+	mux.Handle("/users", http.MethodGet, ihttp.ACL(s.getUsersHandler(), true, true, true))
+	mux.Handle("/users/*", http.MethodGet, ihttp.ACL(s.getUserByIDHandler(), false, false, true))
+	mux.Handle("/users/*", http.MethodPatch, ihttp.ACL(s.patchUserHandler(), false, false, true))
+	mux.Handle("/users/*", http.MethodDelete, ihttp.ACL(s.deleteUserHandler(), false, false, true))
 
-	r.Handle("/schemas", ihttp.ACL(s.getSchemasHandler(), false, false, false)).Methods("GET")
-	r.Handle("/schemas", ihttp.ACL(s.createSchemaHandler(), true, true, true)).Methods("POST")
-	r.Handle("/schemas/{id}", ihttp.ACL(s.getSchemaByIDHandler(), false, false, false)).Methods("GET")
+	mux.Handle("/schemas", http.MethodGet, ihttp.ACL(s.getSchemasHandler(), false, false, false))
+	mux.Handle("/schemas", http.MethodPost, ihttp.ACL(s.createSchemaHandler(), true, true, true))
+	mux.Handle("/schemas/*", http.MethodGet, ihttp.ACL(s.getSchemaByIDHandler(), false, false, false))
 
-	r.Handle("/events", s.eventsHandler()).Methods("GET")
-	r.Handle("/events/{eventKey}", ihttp.ACL(s.upsertEventHandler(), true, true, true)).Methods("PUT")
-	r.Handle("/events/{eventKey}", s.eventHandler()).Methods("GET")
+	mux.Handle("/events", http.MethodGet, s.eventsHandler())
+	mux.Handle("/events/*", http.MethodPut, ihttp.ACL(s.upsertEventHandler(), true, true, true))
+	mux.Handle("/events/*", http.MethodGet, s.eventHandler())
 
-	r.Handle("/events/{eventKey}/stats", s.eventStats()).Methods("GET")
+	mux.Handle("/events/*/stats", http.MethodGet, s.eventStats())
 
-	r.Handle("/events/{eventKey}/matches", s.matchesHandler()).Methods("GET")
-	r.Handle("/events/{eventKey}/matches", ihttp.ACL(s.createMatchHandler(), true, true, true)).Methods("POST")
-	r.Handle("/events/{eventKey}/matches/{matchKey}", s.matchHandler()).Methods("GET")
+	mux.Handle("/events/*/matches", http.MethodGet, s.matchesHandler())
+	mux.Handle("/events/*/matches", http.MethodPost, ihttp.ACL(s.createMatchHandler(), true, true, true))
+	mux.Handle("/events/*/matches/*", http.MethodGet, s.matchHandler())
 
-	r.Handle("/events/{eventKey}/teams", s.teamsHandler()).Methods("GET")
-	r.Handle("/events/{eventKey}/teams/{teamKey}", s.teamInfoHandler()).Methods("GET")
-	r.Handle("/events/{eventKey}/teams/{teamKey}/comments", ihttp.ACL(s.getEventComments(), false, false, false)).Methods("GET")
+	mux.Handle("/events/*/teams", http.MethodGet, s.teamsHandler())
+	mux.Handle("/events/*/teams/*", http.MethodGet, s.teamInfoHandler())
+	mux.Handle("/events/*/teams/*/comments", http.MethodGet, ihttp.ACL(s.getEventComments(), false, false, false))
 
-	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.getReports(), false, false, false)).Methods("GET")
-	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.putReport(), false, true, true)).Methods("PUT")
+	mux.Handle("/events/*/matches/*/reports/*", http.MethodGet, ihttp.ACL(s.getReports(), false, false, false))
+	mux.Handle("/events/*/matches/*/reports/*", http.MethodPut, ihttp.ACL(s.putReport(), false, true, true))
 
-	r.Handle("/events/{eventKey}/matches/{matchKey}/comments/{teamKey}", ihttp.ACL(s.getMatchTeamComments(), false, false, false)).Methods("GET")
-	r.Handle("/events/{eventKey}/matches/{matchKey}/comments/{teamKey}", ihttp.ACL(s.putMatchTeamComment(), false, true, true)).Methods("PUT")
+	mux.Handle("/events/*/matches/*/comments/*", http.MethodGet, ihttp.ACL(s.getMatchTeamComments(), false, false, false))
+	mux.Handle("/events/*/matches/*/comments/*", http.MethodPut, ihttp.ACL(s.putMatchTeamComment(), false, true, true))
 
-	r.Handle("/leaderboard", s.leaderboardHandler()).Methods("GET")
+	mux.Handle("/leaderboard", http.MethodGet, s.leaderboardHandler())
 
-	r.Handle("/realms", s.realmsHandler()).Methods("GET")
-	r.Handle("/realms", ihttp.ACL(s.createRealmHandler(), true, true, true)).Methods("POST")
-	r.Handle("/realms/{id}", s.realmHandler()).Methods("GET")
-	r.Handle("/realms/{id}", ihttp.ACL(s.updateRealmHandler(), true, true, true)).Methods("POST")
-	r.Handle("/realms/{id}", ihttp.ACL(s.deleteRealmHandler(), true, true, true)).Methods("DELETE")
+	mux.Handle("/realms", http.MethodGet, s.realmsHandler())
+	mux.Handle("/realms", http.MethodPost, ihttp.ACL(s.createRealmHandler(), true, true, true))
+	mux.Handle("/realms/*", http.MethodGet, s.realmHandler())
+	mux.Handle("/realms/*", http.MethodPost, ihttp.ACL(s.updateRealmHandler(), true, true, true))
+	mux.Handle("/realms/*", http.MethodDelete, ihttp.ACL(s.deleteRealmHandler(), true, true, true))
 
-	return r
+	return mux
 }

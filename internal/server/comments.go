@@ -8,7 +8,7 @@ import (
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
-	"github.com/gorilla/mux"
+	"github.com/fharding1/gemux"
 )
 
 // this is a hack because match keys are stored weirdly right now
@@ -23,10 +23,9 @@ func trimMatchKey(key string) string {
 
 func (s *Server) getMatchTeamComments() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		eventKey := vars["eventKey"]
-		partialMatchKey := vars["matchKey"]
-		teamKey := vars["teamKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
+		partialMatchKey := gemux.PathParameter(r.Context(), 1)
+		teamKey := gemux.PathParameter(r.Context(), 2)
 
 		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
 			ihttp.Error(w, http.StatusNotFound)
@@ -66,9 +65,8 @@ func (s *Server) getMatchTeamComments() http.HandlerFunc {
 
 func (s *Server) getEventComments() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		eventKey := vars["eventKey"]
-		teamKey := vars["teamKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
+		teamKey := gemux.PathParameter(r.Context(), 1)
 
 		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
 			ihttp.Error(w, http.StatusNotFound)
@@ -93,10 +91,9 @@ func (s *Server) getEventComments() http.HandlerFunc {
 
 func (s *Server) putMatchTeamComment() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		eventKey := vars["eventKey"]
-		partialMatchKey := vars["matchKey"]
-		teamKey := vars["teamKey"]
+		eventKey := gemux.PathParameter(r.Context(), 0)
+		partialMatchKey := gemux.PathParameter(r.Context(), 1)
+		teamKey := gemux.PathParameter(r.Context(), 2)
 
 		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
 			ihttp.Error(w, http.StatusNotFound)

@@ -11,7 +11,7 @@ import (
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/mux"
+	"github.com/fharding1/gemux"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -296,7 +296,8 @@ func (s *Server) getUsersHandler() http.HandlerFunc {
 
 func (s *Server) getUserByIDHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		rawID := gemux.PathParameter(r.Context(), 0)
+		id, err := strconv.ParseInt(rawID, 10, 64)
 		if err != nil {
 			ihttp.Error(w, http.StatusBadRequest)
 			return
@@ -348,7 +349,8 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		targetID, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		rawTargetID := gemux.PathParameter(r.Context(), 0)
+		targetID, err := strconv.ParseInt(rawTargetID, 10, 64)
 		if err != nil {
 			ihttp.Error(w, http.StatusBadRequest)
 			return
@@ -449,7 +451,8 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 
 func (s *Server) deleteUserHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		rawID := gemux.PathParameter(r.Context(), 0)
+		id, err := strconv.ParseInt(rawID, 10, 64)
 		if err != nil {
 			ihttp.Error(w, http.StatusBadRequest)
 			return
