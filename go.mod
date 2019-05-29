@@ -18,5 +18,5 @@ require (
 	golang.org/x/crypto v0.0.0-20190506204251-e1dfcc566284
 	google.golang.org/appengine v1.6.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
-	gopkg.in/go-playground/validator.v9 v9.28.0
+	gopkg.in/go-playground/validator.v9 v9.29.0
 )
