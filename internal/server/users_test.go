@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/google/go-cmp/cmp"
 	"github.com/sirupsen/logrus"
 )
@@ -161,6 +162,8 @@ func TestAuthenticateHandler(t *testing.T) {
 	mockNow := func() time.Time {
 		return time.Unix(1558050528, 0)
 	}
+
+	jwt.TimeFunc = mockNow // hate this
 
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
@@ -312,6 +315,8 @@ func TestRefreshHandler(t *testing.T) {
 	mockNow := func() time.Time {
 		return time.Unix(1558315410, 0)
 	}
+
+	jwt.TimeFunc = mockNow // hate this
 
 	logger := logrus.New()
 	logger.SetOutput(ioutil.Discard)
