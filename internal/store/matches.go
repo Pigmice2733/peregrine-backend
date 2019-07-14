@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
+	"encoding/json"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -12,16 +14,39 @@ import (
 
 // Match holds information about an FRC match at a specific event
 type Match struct {
-	Key           string         `json:"key" db:"key"`
-	EventKey      string         `json:"eventKey" db:"event_key"`
-	PredictedTime *time.Time     `json:"predictedTime" db:"predicted_time"`
-	ActualTime    *time.Time     `json:"actualTime" db:"actual_time"`
-	ScheduledTime *time.Time     `json:"scheduledTime" db:"scheduled_time"`
-	RedScore      *int           `json:"redScore" db:"red_score"`
-	BlueScore     *int           `json:"blueScore" db:"blue_score"`
-	RedAlliance   pq.StringArray `json:"redAlliance" db:"red_alliance"`
-	BlueAlliance  pq.StringArray `json:"blueAlliance" db:"blue_alliance"`
-	TBADeleted    bool           `json:"tba_deleted" db:"tba_deleted"`
+	Key                string         `json:"key" db:"key"`
+	EventKey           string         `json:"eventKey" db:"event_key"`
+	PredictedTime      *time.Time     `json:"predictedTime" db:"predicted_time"`
+	ActualTime         *time.Time     `json:"actualTime" db:"actual_time"`
+	ScheduledTime      *time.Time     `json:"scheduledTime" db:"scheduled_time"`
+	RedScore           *int           `json:"redScore" db:"red_score"`
+	BlueScore          *int           `json:"blueScore" db:"blue_score"`
+	RedAlliance        pq.StringArray `json:"redAlliance" db:"red_alliance"`
+	BlueAlliance       pq.StringArray `json:"blueAlliance" db:"blue_alliance"`
+	TBADeleted         bool           `json:"tbaDeleted" db:"tba_deleted"`
+	RedScoreBreakdown  ScoreBreakdown `json:"redScoreBreakdown" db:"red_score_breakdown"`
+	BlueScoreBreakdown ScoreBreakdown `json:"blueScoreBreakdown" db:"blue_score_breakdown"`
+}
+
+// ScoreBreakdown changes year to year, but it's generally a map of strings
+// to strings, integers, or booleans.
+type ScoreBreakdown map[string]interface{}
+
+// Value returns the JSON representation of the score breakdown. Since this
+// changes year to year we just store it as arbitrary JSON.
+func (sb ScoreBreakdown) Value() (driver.Value, error) {
+	return json.Marshal(sb)
+}
+
+// Scan unmarshals the JSON representation of the score breakdown stored in
+// the database into the score breakdown.
+func (sb ScoreBreakdown) Scan(src interface{}) error {
+	j, ok := src.([]byte)
+	if !ok {
+		return errors.New("got invalid type for ScoreBreakdown")
+	}
+
+	return json.Unmarshal(j, &sb)
 }
 
 // GetTime returns the actual match time if available, and if not, predicted time
@@ -51,7 +76,9 @@ SELECT
 	red_score,
 	tba_deleted,
 	r.team_keys AS red_alliance,
-	b.team_keys AS blue_alliance
+	b.team_keys AS blue_alliance,
+	red_score_breakdown,
+	blue_score_breakdown
 FROM
 	matches
 INNER JOIN
@@ -103,7 +130,9 @@ func (s *Service) GetMatch(ctx context.Context, matchKey string) (Match, error) 
 		red_score,
 		tba_deleted,
 		r.team_keys AS red_alliance,
-		b.team_keys AS blue_alliance
+		b.team_keys AS blue_alliance,
+		red_score_breakdown,
+		blue_score_breakdown
 	FROM
 		matches
 	INNER JOIN
@@ -131,8 +160,8 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 	}
 
 	_, err = tx.NamedExecContext(ctx, `
-		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted)
-		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted)
+		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown)
+		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -143,7 +172,9 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 					actual_time = :actual_time,
 					red_score = :red_score,
 					blue_score = :blue_score,
-					tba_deleted = :tba_deleted
+					tba_deleted = :tba_deleted,
+					red_score_breakdown = :red_score_breakdown,
+					blue_score_breakdown = :blue_score_breakdown
 	`, match)
 	if err != nil {
 		s.logErr(tx.Rollback())
@@ -191,8 +222,8 @@ func (s *Service) MarkMatchesDeleted(ctx context.Context, eventKey string, match
 func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches []Match) error {
 	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
 		upsert, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted)
-		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted)
+		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown)
+		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -203,7 +234,9 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches
 					actual_time = :actual_time,
 					red_score = :red_score,
 					blue_score = :blue_score,
-					tba_deleted = false
+					tba_deleted = false,
+					red_score_breakdown = :red_score_breakdown,
+					blue_score_breakdown = :blue_score_breakdown
 	`)
 		if err != nil {
 			return errors.Wrap(err, "unable to prepare query to upsert matches")
@@ -220,4 +253,31 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches
 
 		return nil
 	})
+}
+
+// GetAnalysisInfo returns match information that's pertinent to doing analysis.
+func (s *Service) GetAnalysisInfo(ctx context.Context, eventKey string) ([]Match, error) {
+	matches := make([]Match, 0)
+
+	err := s.db.SelectContext(ctx, &matches, `
+	SELECT
+		r.team_keys AS red_alliance,
+		b.team_keys AS blue_alliance,
+		red_score_breakdown,
+		blue_score_breakdown
+	FROM
+		matches
+	INNER JOIN
+		alliances r
+	ON
+		matches.key = r.match_key AND r.is_blue = false
+	INNER JOIN
+		alliances b
+	ON
+		matches.key = b.match_key AND b.is_blue = true
+	WHERE
+		matches.event_key = $1
+	`, eventKey)
+
+	return matches, errors.Wrap(err, "unable to get analysis info")
 }

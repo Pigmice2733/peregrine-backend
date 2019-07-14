@@ -45,7 +45,7 @@ func newTBAServer() *tbaServer {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/events/"+strconv.Itoa(testingYear), func(w http.ResponseWriter, r *http.Request) { ts.getEventsHandler(w, r) })
-	r.HandleFunc("/event/{eventKey}/matches/simple", func(w http.ResponseWriter, r *http.Request) { ts.getMatchesHandler(w, r) })
+	r.HandleFunc("/event/{eventKey}/matches", func(w http.ResponseWriter, r *http.Request) { ts.getMatchesHandler(w, r) })
 	r.HandleFunc("/event/{eventKey}/teams/keys", func(w http.ResponseWriter, r *http.Request) { ts.getTeamKeysHandler(w, r) })
 	r.HandleFunc("/event/{eventKey}/rankings", func(w http.ResponseWriter, r *http.Request) { ts.getTeamRankingsHandler(w, r) })
 	r.HandleFunc("/teams/{page}", func(w http.ResponseWriter, r *http.Request) { ts.getTeamsHandler(w, r) })
@@ -297,6 +297,16 @@ func TestGetMatches(t *testing.T) {
 								"team_keys": ["frc2733", "frc9876", "frc1"]
 							}
 						},
+						"score_breakdown": {
+							"red": {
+								"foobar": 3,
+								"barbaz": true
+							},
+							"blue": {
+								"foobar": 1,
+								"blabla": 3.212
+							}
+						},
 						"predicted_time": 1520272800,
 						"time": 1520272800,
 						"actual_time": 1520274000
@@ -315,7 +325,17 @@ func TestGetMatches(t *testing.T) {
 						},
 						"predicted_time": 1525272780,
 						"time": 1525272780,
-						"actual_time": 1525273980
+						"actual_time": 1525273980,
+						"score_breakdown": {
+							"red": {
+								"foobar": 90.2,
+								"barbaz": false
+							},
+							"blue": {
+								"foobar": 4.2321,
+								"blabla": 9
+							}
+						}
 					}
 				]
 				`))
@@ -326,26 +346,30 @@ func TestGetMatches(t *testing.T) {
 			},
 			matches: []store.Match{
 				{
-					Key:           "key1",
-					EventKey:      "2018alhu",
-					PredictedTime: newTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
-					ScheduledTime: newTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
-					ActualTime:    newTime(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
-					RedScore:      newInt(220),
-					BlueScore:     newInt(500),
-					RedAlliance:   []string{"frc254", "frc1234", "frc00"},
-					BlueAlliance:  []string{"frc2733", "frc9876", "frc1"},
+					Key:                "key1",
+					EventKey:           "2018alhu",
+					PredictedTime:      newTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ScheduledTime:      newTime(time.Date(2018, 3, 5, 18, 0, 0, 0, time.UTC)),
+					ActualTime:         newTime(time.Date(2018, 3, 5, 18, 20, 0, 0, time.UTC)),
+					RedScore:           newInt(220),
+					BlueScore:          newInt(500),
+					RedAlliance:        []string{"frc254", "frc1234", "frc00"},
+					BlueAlliance:       []string{"frc2733", "frc9876", "frc1"},
+					RedScoreBreakdown:  map[string]interface{}{"foobar": 3.0, "barbaz": true},
+					BlueScoreBreakdown: map[string]interface{}{"foobar": 1.0, "blabla": 3.212},
 				},
 				{
-					Key:           "key2",
-					EventKey:      "2018alhu",
-					PredictedTime: newTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
-					ScheduledTime: newTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
-					ActualTime:    newTime(time.Date(2018, 5, 2, 15, 13, 0, 0, time.UTC)),
-					RedScore:      newInt(120),
-					BlueScore:     newInt(600),
-					RedAlliance:   []string{"frc0", "frc1", "frc2"},
-					BlueAlliance:  []string{"frc2", "frc7", "frc3"},
+					Key:                "key2",
+					EventKey:           "2018alhu",
+					PredictedTime:      newTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
+					ScheduledTime:      newTime(time.Date(2018, 5, 2, 14, 53, 0, 0, time.UTC)),
+					ActualTime:         newTime(time.Date(2018, 5, 2, 15, 13, 0, 0, time.UTC)),
+					RedScore:           newInt(120),
+					BlueScore:          newInt(600),
+					RedAlliance:        []string{"frc0", "frc1", "frc2"},
+					BlueAlliance:       []string{"frc2", "frc7", "frc3"},
+					RedScoreBreakdown:  map[string]interface{}{"foobar": 90.2, "barbaz": false},
+					BlueScoreBreakdown: map[string]interface{}{"foobar": 4.2321, "blabla": 9.0},
 				},
 			},
 			expectErr: false,

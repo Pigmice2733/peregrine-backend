@@ -60,6 +60,12 @@ type match struct {
 		Red  alliance `json:"red"`
 		Blue alliance `json:"blue"`
 	} `json:"alliances"`
+	ScoreBreakdown scoreBreakdown `json:"score_breakdown"`
+}
+
+type scoreBreakdown struct {
+	Red  map[string]interface{} `json:"red"`
+	Blue map[string]interface{} `json:"blue"`
 }
 
 type rankings struct {
@@ -221,7 +227,7 @@ func (s *Service) GetEvents(ctx context.Context, year int, schemaID *int64) ([]s
 
 // GetMatches retrieves all matches from a specific event.
 func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Match, error) {
-	path := fmt.Sprintf("/event/%s/matches/simple", eventKey)
+	path := fmt.Sprintf("/event/%s/matches", eventKey)
 
 	response, err := s.makeRequest(ctx, path)
 	if err != nil {
@@ -267,15 +273,17 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 		}
 
 		match := store.Match{
-			Key:           tbaMatch.Key,
-			EventKey:      eventKey,
-			PredictedTime: predictedTime,
-			ActualTime:    actualTime,
-			ScheduledTime: scheduledTime,
-			RedScore:      redScore,
-			BlueScore:     blueScore,
-			RedAlliance:   tbaMatch.Alliances.Red.TeamKeys,
-			BlueAlliance:  tbaMatch.Alliances.Blue.TeamKeys,
+			Key:                tbaMatch.Key,
+			EventKey:           eventKey,
+			PredictedTime:      predictedTime,
+			ActualTime:         actualTime,
+			ScheduledTime:      scheduledTime,
+			RedScore:           redScore,
+			BlueScore:          blueScore,
+			RedAlliance:        tbaMatch.Alliances.Red.TeamKeys,
+			BlueAlliance:       tbaMatch.Alliances.Blue.TeamKeys,
+			RedScoreBreakdown:  tbaMatch.ScoreBreakdown.Red,
+			BlueScoreBreakdown: tbaMatch.ScoreBreakdown.Blue,
 		}
 		matches = append(matches, match)
 	}

@@ -11,9 +11,8 @@ import (
 // A Stat holds a single statistic from a single match, and could be either a
 // boolean or numeric statistic
 type Stat struct {
-	Attempts  *int   `json:"attempts,omitempty"`
-	Successes *int   `json:"successes,omitempty"`
-	Name      string `json:"name"`
+	Value float64 `json:"value"`
+	Name  string  `json:"name"`
 }
 
 // ReportData holds all the data in a report
