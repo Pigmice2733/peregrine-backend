@@ -583,7 +583,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/eventKey"
     get:
-      summary: Get a list of teams at an event
+      summary: Get ranking information for all teams at an event
       operationId: getEventTeams
       tags:
         - teams
@@ -596,8 +596,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: string
-                  example: frc2733
+                  $ref: "#/components/schemas/team"
         "401":
           $ref: "#/components/responses/unauthorizedError"
         "403":
@@ -622,14 +621,7 @@ paths:
           content:
             application/json:
               schema:
-                properties:
-                  rank:
-                    type: integer
-                    example: 37
-                  rankingScore:
-                    type: number
-                    format: double
-                    example: 1.909999966621399
+                $ref: "#/components/schemas/team"
         "401":
           $ref: "#/components/responses/unauthorizedError"
         "403":
@@ -1179,6 +1171,21 @@ components:
           type: number
           format: double
           example: -87.9168724
+    team:
+      required:
+        - team
+      properties:
+        team:
+          type: string
+          example: frc2733
+        rank:
+          type: integer
+          format: int32
+          example: 12
+        rankingScore:
+          type: number
+          format: double
+          example: 3.6
     id:
       description: Auto-increment 64-bit integer that identifies a resource
       type: integer

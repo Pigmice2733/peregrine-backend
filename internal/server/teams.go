@@ -11,59 +11,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-type team struct {
-	Rank         *int     `json:"rank,omitempty"`
-	RankingScore *float64 `json:"rankingScore,omitempty"`
-}
-
-// teamsHandler returns a handler to get all teams at a given event.
-func (s *Server) teamsHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		eventKey := mux.Vars(r)["eventKey"]
-
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
-
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
-		// Get new team data from TBA
-		if err := s.updateTeamKeys(r.Context(), eventKey); err != nil {
-			// 404 if eventKey isn't a real event
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
-			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("updating team key data")
-			return
-		}
-
-		teamKeys, err := s.Store.GetTeamKeys(r.Context(), eventKey)
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving team key data")
-			return
-		}
-
-		ihttp.Respond(w, teamKeys, http.StatusOK)
-	}
-}
-
-// teamInfoHandler returns a handler to get info about a specific team at a specific event.
-func (s *Server) teamInfoHandler() http.HandlerFunc {
+// teamHandler returns a handler to get a specific team at a specific event.
+func (s *Server) teamHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		eventKey, teamKey := vars["eventKey"], vars["teamKey"]
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
 		if err != nil {
+			// 404 if eventKey isn't a real event
+			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+				ihttp.Error(w, http.StatusNotFound)
+				return
+			}
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving event")
 			return
@@ -86,7 +46,7 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 			return
 		}
 
-		fullTeam, err := s.Store.GetTeam(r.Context(), teamKey, eventKey)
+		team, err := s.Store.GetTeam(r.Context(), teamKey, eventKey)
 		if err != nil {
 			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
@@ -97,12 +57,52 @@ func (s *Server) teamInfoHandler() http.HandlerFunc {
 			return
 		}
 
-		team := team{
-			Rank:         fullTeam.Rank,
-			RankingScore: fullTeam.RankingScore,
+		ihttp.Respond(w, team, http.StatusOK)
+	}
+}
+
+// teamsHandler returns a handler to get all teams at a given event.
+func (s *Server) teamsHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		eventKey := mux.Vars(r)["eventKey"]
+
+		event, err := s.Store.GetEvent(r.Context(), eventKey)
+		if err != nil {
+			// 404 if eventKey isn't a real event
+			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+				ihttp.Error(w, http.StatusNotFound)
+				return
+			}
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("retrieving event")
+			return
 		}
 
-		ihttp.Respond(w, team, http.StatusOK)
+		if !s.checkEventAccess(event.RealmID, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
+		// Get new team rankings data from TBA
+		if err := s.updateTeamRankings(r.Context(), eventKey); err != nil {
+			// 404 if eventKey isn't a real event
+			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+				ihttp.Error(w, http.StatusNotFound)
+				return
+			}
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("updating team rankings data")
+			return
+		}
+
+		teams, err := s.Store.GetTeams(r.Context(), eventKey)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			go s.Logger.WithError(err).Error("retrieving teams data")
+			return
+		}
+
+		ihttp.Respond(w, teams, http.StatusOK)
 	}
 }
 

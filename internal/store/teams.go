@@ -1,13 +1,18 @@
 package store
 
-import "context"
+import (
+	"context"
+	"database/sql"
+
+	"github.com/pkg/errors"
+)
 
 // Team holds data about a single FRC team at a specific event.
 type Team struct {
-	Key          string   `db:"key"`
-	EventKey     string   `db:"event_key"`
-	Rank         *int     `db:"rank"`
-	RankingScore *float64 `db:"ranking_score"`
+	Key          string   `json:"team" db:"key"`
+	EventKey     string   `json:"-" db:"event_key"`
+	Rank         *int     `json:"rank,omitempty" db:"rank"`
+	RankingScore *float64 `json:"rankingScore,omitempty" db:"ranking_score"`
 }
 
 // GetTeamKeys retrieves all team keys from an event specified by eventKey.
@@ -16,10 +21,20 @@ func (s *Service) GetTeamKeys(ctx context.Context, eventKey string) ([]string, e
 	return teamKeys, s.db.SelectContext(ctx, &teamKeys, "SELECT key FROM teams WHERE event_key = $1", eventKey)
 }
 
-// GetTeam retrieves a team specified by teamKey from a event specified by eventKey.
+// GetTeam retrieves a team specified by teamKey from an event specified by eventKey.
 func (s *Service) GetTeam(ctx context.Context, teamKey string, eventKey string) (Team, error) {
 	var t Team
-	return t, s.db.GetContext(ctx, &t, "SELECT * FROM teams WHERE key = $1 AND event_key = $2", teamKey, eventKey)
+	err := s.db.GetContext(ctx, &t, "SELECT * FROM teams WHERE key = $1 AND event_key = $2", teamKey, eventKey)
+	if err == sql.ErrNoRows {
+		return t, ErrNoResults{errors.Wrapf(err, "team %s at event %s does not exist", teamKey, eventKey)}
+	}
+	return t, err
+}
+
+// GetTeams retrieves all teams from an event specified by eventKey.
+func (s *Service) GetTeams(ctx context.Context, eventKey string) ([]Team, error) {
+	teams := []Team{}
+	return teams, s.db.SelectContext(ctx, &teams, "SELECT * FROM teams WHERE event_key = $1", eventKey)
 }
 
 // TeamKeysUpsert upserts multiple team keys from a single event into the database.
