@@ -19,6 +19,7 @@ type tbaServer struct {
 	getMatchesHandler      func(w http.ResponseWriter, r *http.Request)
 	getTeamKeysHandler     func(w http.ResponseWriter, r *http.Request)
 	getTeamRankingsHandler func(w http.ResponseWriter, r *http.Request)
+	getTeamsHandler        func(w http.ResponseWriter, r *http.Request)
 }
 
 const testingYear = 2018
@@ -47,6 +48,7 @@ func newTBAServer() *tbaServer {
 	r.HandleFunc("/event/{eventKey}/matches/simple", func(w http.ResponseWriter, r *http.Request) { ts.getMatchesHandler(w, r) })
 	r.HandleFunc("/event/{eventKey}/teams/keys", func(w http.ResponseWriter, r *http.Request) { ts.getTeamKeysHandler(w, r) })
 	r.HandleFunc("/event/{eventKey}/rankings", func(w http.ResponseWriter, r *http.Request) { ts.getTeamRankingsHandler(w, r) })
+	r.HandleFunc("/teams/{page}", func(w http.ResponseWriter, r *http.Request) { ts.getTeamsHandler(w, r) })
 
 	ts.Server = httptest.NewServer(r)
 
@@ -225,7 +227,6 @@ func TestGetEvents(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		// TODO(brendan): name these test cases
 		t.Run(tt.name, func(t *testing.T) {
 			server.getEventsHandler = tt.getEventsHandler
 
@@ -251,10 +252,11 @@ func TestGetMatches(t *testing.T) {
 
 	s := Service{URL: server.URL, APIKey: APIKey}
 
+	eventKey := "2018alhu"
+
 	testCases := []struct {
 		name              string
 		getMatchesHandler func(w http.ResponseWriter, r *http.Request)
-		eventKey          string
 		matches           []store.Match
 		expectErr         bool
 	}{
@@ -263,7 +265,6 @@ func TestGetMatches(t *testing.T) {
 			getMatchesHandler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
-			eventKey:  "none",
 			matches:   nil,
 			expectErr: true,
 		},
@@ -274,6 +275,13 @@ func TestGetMatches(t *testing.T) {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				vars := mux.Vars(r)
+				if key, ok := vars["eventKey"]; !ok || key != eventKey {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(`
 				[
@@ -316,7 +324,6 @@ func TestGetMatches(t *testing.T) {
 					t.Errorf("failed to write test data")
 				}
 			},
-			eventKey: "2018alhu",
 			matches: []store.Match{
 				{
 					Key:           "key1",
@@ -350,6 +357,13 @@ func TestGetMatches(t *testing.T) {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				vars := mux.Vars(r)
+				if key, ok := vars["eventKey"]; !ok || key != eventKey {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(`
 				[
@@ -392,7 +406,6 @@ func TestGetMatches(t *testing.T) {
 					t.Errorf("failed to write test data")
 				}
 			},
-			eventKey: "2018alhu",
 			matches: []store.Match{
 				{
 					Key:           "key1",
@@ -422,11 +435,10 @@ func TestGetMatches(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		// TODO(brendan): name these test cases
 		t.Run(tt.name, func(t *testing.T) {
 			server.getMatchesHandler = tt.getMatchesHandler
 
-			matches, err := s.GetMatches(context.TODO(), tt.eventKey)
+			matches, err := s.GetMatches(context.TODO(), eventKey)
 			if !tt.expectErr && err != nil {
 				t.Errorf("did not expect an error but got one: %v", err)
 			} else if tt.expectErr && err == nil {
@@ -447,6 +459,8 @@ func TestGetTeamKeys(t *testing.T) {
 	APIKey := "notARealKey"
 
 	s := Service{URL: server.URL, APIKey: APIKey}
+
+	eventKey := "2018abca"
 
 	testCases := []struct {
 		name               string
@@ -469,6 +483,13 @@ func TestGetTeamKeys(t *testing.T) {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				vars := mux.Vars(r)
+				if key, ok := vars["eventKey"]; !ok || key != eventKey {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(`
 				[
@@ -487,11 +508,10 @@ func TestGetTeamKeys(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		// TODO(brendan): name these test cases
 		t.Run(tt.name, func(t *testing.T) {
 			server.getTeamKeysHandler = tt.getTeamKeysHandler
 
-			keys, err := s.GetTeamKeys(context.TODO(), "2018abca")
+			keys, err := s.GetTeamKeys(context.TODO(), eventKey)
 			if !tt.expectErr && err != nil {
 				t.Errorf("did not expect an error but got one: %v", err)
 			} else if tt.expectErr && err == nil {
@@ -505,7 +525,7 @@ func TestGetTeamKeys(t *testing.T) {
 	}
 }
 
-func TestGetTeamRankings(t *testing.T) {
+func TestGetTeams(t *testing.T) {
 	server := newTBAServer()
 	defer server.Close()
 
@@ -514,9 +534,183 @@ func TestGetTeamRankings(t *testing.T) {
 	s := Service{URL: server.URL, APIKey: APIKey}
 
 	testCases := []struct {
+		name            string
+		getTeamsHandler func(w http.ResponseWriter, r *http.Request)
+		teams           []store.Team
+		expectErr       bool
+	}{
+		{
+			name: "tba teams route gives 500",
+			getTeamsHandler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			},
+			teams:     nil,
+			expectErr: true,
+		},
+		{
+			name: "tba gives page of teams",
+			getTeamsHandler: func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				vars := mux.Vars(r)
+				page, ok := vars["page"]
+				if !ok {
+					w.WriteHeader(http.StatusNotFound)
+				}
+
+				pageNum, err := strconv.Atoi(page)
+				if err != nil || pageNum < 0 {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+
+				w.WriteHeader(http.StatusOK)
+
+				switch pageNum {
+				case 0:
+					_, err = w.Write([]byte(`
+				[
+					{
+						"address": null,
+						"city": "Fort Lauderdale",
+						"country": "USA",
+						"gmaps_place_id": null,
+						"gmaps_url": null,
+						"home_championship": {
+							"2017": "Houston",
+							"2018": "Houston"
+						},
+						"key": "frc7500",
+						"lat": null,
+						"lng": null,
+						"location_name": null,
+						"motto": null,
+						"name": "NASA/Florida Power and Light/State of Florida&St Thomas Aquinas High School",
+						"nickname": "MARAUDERS",
+						"postal_code": "33312",
+						"rookie_year": 2019,
+						"state_prov": "Florida",
+						"team_number": 7500,
+						"website": null
+						},
+						{
+						"address": null,
+						"city": "Middlebury",
+						"country": "USA",
+						"gmaps_place_id": null,
+						"gmaps_url": null,
+						"home_championship": {
+							"2017": "St. Louis",
+							"2018": "Detroit"
+						},
+						"key": "frc7502",
+						"lat": null,
+						"lng": null,
+						"location_name": null,
+						"motto": null,
+						"name": "NASA/Middlebury Community Schools&Northridge High School",
+						"postal_code": "46540",
+						"rookie_year": 2019,
+						"state_prov": "Indiana",
+						"team_number": 7502,
+						"website": null
+					}
+				]
+				`))
+					break
+				case 1:
+					_, err = w.Write([]byte(`
+				[
+					{
+						"address": null,
+						"city": "Portland",
+						"country": "USA",
+						"gmaps_place_id": null,
+						"gmaps_url": null,
+						"home_championship": {
+							"2017": "Houston",
+							"2018": "Houston"
+						},
+						"key": "frc2733",
+						"lat": null,
+						"lng": null,
+						"location_name": null,
+						"motto": null,
+						"name": "Daimler/TE Connectivity/Boeing/Oregon Dept of Education/FLIR/Autodesk/DW Fritz Automation/Marathon Oil/SolidWorks/Hankins Hardware&Cleveland High School&Family/Community",
+						"nickname": "Pigmice",
+						"postal_code": "97202",
+						"rookie_year": 2009,
+						"state_prov": "Oregon",
+						"team_number": 2733,
+						"website": "https://www.pigmice.com"
+					}
+				]
+				`))
+					break
+				default:
+					_, err = w.Write([]byte(`
+				[
+				]
+				`))
+				}
+
+				if err != nil {
+					t.Errorf("failed to write test data")
+				}
+			},
+			teams: []store.Team{
+				{
+					Key:      "frc7500",
+					Nickname: "MARAUDERS",
+				},
+				{
+					Key:      "frc7502",
+					Nickname: "",
+				},
+				{
+					Key:      "frc2733",
+					Nickname: "Pigmice",
+				},
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			server.getTeamsHandler = tt.getTeamsHandler
+
+			teams, err := s.GetTeams(context.TODO())
+			if !tt.expectErr && err != nil {
+				t.Errorf("did not expect an error but got one: %v", err)
+			} else if tt.expectErr && err == nil {
+				t.Errorf("expected error but didnt get one: %v", err)
+			}
+
+			if !cmp.Equal(teams, tt.teams) {
+				t.Errorf("expected teams do not equal actual teams, got dif: %s", cmp.Diff(tt.teams, teams))
+			}
+		})
+	}
+}
+
+func TestGetTeamRankings(t *testing.T) {
+	server := newTBAServer()
+	defer server.Close()
+
+	APIKey := "notARealKey"
+
+	s := Service{URL: server.URL, APIKey: APIKey}
+
+	eventKey := "2018abca"
+
+	testCases := []struct {
 		name                   string
 		getTeamRankingsHandler func(w http.ResponseWriter, r *http.Request)
-		teams                  []store.Team
+		teams                  []store.EventTeam
 		expectErr              bool
 	}{
 		{
@@ -534,6 +728,13 @@ func TestGetTeamRankings(t *testing.T) {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				vars := mux.Vars(r)
+				if key, ok := vars["eventKey"]; !ok || key != eventKey {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(`
 				{
@@ -572,7 +773,7 @@ func TestGetTeamRankings(t *testing.T) {
 					t.Errorf("failed to write test data")
 				}
 			},
-			teams: []store.Team{
+			teams: []store.EventTeam{
 				{
 					Key:          "frc2733",
 					EventKey:     "2018abca",
@@ -595,6 +796,13 @@ func TestGetTeamRankings(t *testing.T) {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				vars := mux.Vars(r)
+				if key, ok := vars["eventKey"]; !ok || key != eventKey {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(`
 				{
@@ -641,7 +849,7 @@ func TestGetTeamRankings(t *testing.T) {
 					t.Errorf("failed to write test data")
 				}
 			},
-			teams: []store.Team{
+			teams: []store.EventTeam{
 				{
 					Key:          "frc2733",
 					EventKey:     "2018abca",
@@ -666,7 +874,6 @@ func TestGetTeamRankings(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		// TODO(brendan): name these test cases
 		t.Run(tt.name, func(t *testing.T) {
 			server.getTeamRankingsHandler = tt.getTeamRankingsHandler
 

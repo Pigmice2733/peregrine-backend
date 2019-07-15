@@ -52,7 +52,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 // eventHandler returns a handler to get a specific event.
 func (s *Server) eventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Get new event data from TBA if event data is over 24 hours old
+		// Get new event data from TBA
 		if err := s.updateEvents(r.Context()); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("unable to update event data")
@@ -121,14 +121,14 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 	}
 }
 
-const expiry = 3.0
+const eventsExpiry = 3.0
 
 // Get new event data from TBA only if event data is over 3 hours old.
 // Upsert event data into database.
 func (s *Server) updateEvents(ctx context.Context) error {
 	now := time.Now()
 
-	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > expiry {
+	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > eventsExpiry {
 		schema, err := s.Store.GetSchemaByYear(ctx, s.Year)
 		var schemaID *int64
 		if err != nil {

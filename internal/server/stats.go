@@ -38,7 +38,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 		}
 
 		// Get new team data from TBA
-		if err := s.updateTeamKeys(r.Context(), eventKey); err != nil {
+		if err := s.updateEventTeamKeys(r.Context(), eventKey); err != nil {
 			// 404 if eventKey isn't a real event
 			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
@@ -74,7 +74,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		teamKeys, err := s.Store.GetTeamKeys(r.Context(), eventKey)
+		teamKeys, err := s.Store.GetEventTeamKeys(r.Context(), eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving team key data")

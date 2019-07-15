@@ -596,7 +596,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/team"
+                  $ref: "#/components/schemas/eventTeam"
         "401":
           $ref: "#/components/responses/unauthorizedError"
         "403":
@@ -621,7 +621,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/team"
+                $ref: "#/components/schemas/eventTeam"
         "401":
           $ref: "#/components/responses/unauthorizedError"
         "403":
@@ -759,6 +759,24 @@ paths:
           $ref: "#/components/responses/notFoundError"
         "422":
           $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
+  /teams/{teamKey}:
+    parameters:
+      - $ref: "#/components/parameters/teamKey"
+    get:
+      summary: Get general info for a specific team
+      operationId: getTeam
+      tags:
+       - teams
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/team"
+        "404":
+          $ref: "#/components/responses/notFoundError"
         "500":
           $ref: "#/components/responses/internalServerError"
   /leaderboard:
@@ -1171,7 +1189,7 @@ components:
           type: number
           format: double
           example: -87.9168724
-    team:
+    eventTeam:
       required:
         - team
       properties:
@@ -1186,6 +1204,16 @@ components:
           type: number
           format: double
           example: 3.6
+    team:
+      required:
+        - key
+      properties:
+        key:
+          type: string
+          example: frc2733
+        nickname:
+          type: string
+          example: RAGE Robotics ⚙️
     id:
       description: Auto-increment 64-bit integer that identifies a resource
       type: integer

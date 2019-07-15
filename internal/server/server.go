@@ -24,6 +24,7 @@ type Server struct {
 	Store            *store.Service
 	Logger           *logrus.Logger
 	eventsLastUpdate *time.Time
+	teamsLastUpdate  *time.Time
 	start            time.Time
 }
 

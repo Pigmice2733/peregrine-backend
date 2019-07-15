@@ -50,7 +50,7 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 		// If a new schema is created for a specific year, invalidate the events
 		// route so events (and their schemas) will be updated.
 		if schema.Year != nil {
-			expiredUpdate := time.Now().Add(-(expiry + 1) * time.Hour)
+			expiredUpdate := time.Now().Add(-(eventsExpiry + 1) * time.Hour)
 			s.eventsLastUpdate = &expiredUpdate
 		}
 
