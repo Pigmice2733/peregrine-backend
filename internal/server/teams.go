@@ -25,12 +25,10 @@ func (s *Server) teamHandler() http.HandlerFunc {
 		teamKey := vars["teamKey"]
 
 		team, err := s.Store.GetTeam(r.Context(), teamKey)
-		if err != nil {
-			// 404 if teamKey isn't a real team
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving team info")
 			return
@@ -47,12 +45,10 @@ func (s *Server) eventTeamHandler() http.HandlerFunc {
 		eventKey, teamKey := vars["eventKey"], vars["teamKey"]
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if err != nil {
-			// 404 if eventKey isn't a real event
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving event")
 			return
@@ -64,23 +60,21 @@ func (s *Server) eventTeamHandler() http.HandlerFunc {
 		}
 
 		// Get new team rankings data from TBA
-		if err := s.updateEventTeamRankings(r.Context(), eventKey); err != nil {
-			// 404 if eventKey isn't a real event
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
+		err = s.updateEventTeamRankings(r.Context(), eventKey)
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("updating team rankings data")
 			return
 		}
 
 		team, err := s.Store.GetEventTeam(r.Context(), teamKey, eventKey)
-		if err != nil {
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving team rankings data")
 			return
@@ -96,12 +90,11 @@ func (s *Server) eventTeamsHandler() http.HandlerFunc {
 		eventKey := mux.Vars(r)["eventKey"]
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if err != nil {
-			// 404 if eventKey isn't a real event
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
+
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("retrieving event")
 			return
@@ -113,12 +106,11 @@ func (s *Server) eventTeamsHandler() http.HandlerFunc {
 		}
 
 		// Get new team rankings data from TBA
-		if err := s.updateEventTeamRankings(r.Context(), eventKey); err != nil {
-			// 404 if eventKey isn't a real event
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
+		err = s.updateEventTeamRankings(r.Context(), eventKey)
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			go s.Logger.WithError(err).Error("updating team rankings data")
 			return
@@ -177,6 +169,7 @@ func (s *Server) updateEventTeamRankings(ctx context.Context, eventKey string) e
 	return s.Store.EventTeamsUpsert(ctx, teams)
 }
 
+// Hours to cache teams data from TBA for
 const teamsExpiry = 6.0
 
 // Get new teams data from TBA only if data are over 3 hours old.

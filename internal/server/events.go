@@ -121,6 +121,7 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 	}
 }
 
+// Hours to cache teams data from TBA for
 const eventsExpiry = 3.0
 
 // Get new event data from TBA only if event data is over 3 hours old.
