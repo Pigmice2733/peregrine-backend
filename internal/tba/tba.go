@@ -304,7 +304,7 @@ func (s *Service) GetTeamKeys(ctx context.Context, eventKey string) ([]string, e
 // GetTeams retrieves all teams
 func (s *Service) GetTeams(ctx context.Context) ([]store.Team, error) {
 	allTeams := []store.Team{}
-	for page := 0; ; page++ {
+	for page := 0; page < 50; page++ {
 		path := fmt.Sprintf("/teams/%d", page)
 
 		response, err := s.makeRequest(ctx, path)
@@ -328,7 +328,7 @@ func (s *Service) GetTeams(ctx context.Context) ([]store.Team, error) {
 
 		allTeams = append(allTeams, teams...)
 	}
-
+	return allTeams, errors.New("TBA teams route gave >50 pages, either number of FRC teams exceeds 25,000 or TBA is broken")
 }
 
 // GetTeamRankings retrieves all team rankings from a specific event.
