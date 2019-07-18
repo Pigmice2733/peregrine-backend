@@ -252,7 +252,7 @@ func TestGetMatches(t *testing.T) {
 
 	s := Service{URL: server.URL, APIKey: APIKey}
 
-	eventKey := "2018alhu"
+	const eventKey = "2018alhu"
 
 	testCases := []struct {
 		name              string
@@ -460,7 +460,7 @@ func TestGetTeamKeys(t *testing.T) {
 
 	s := Service{URL: server.URL, APIKey: APIKey}
 
-	eventKey := "2018abca"
+	const eventKey = "2018abca"
 
 	testCases := []struct {
 		name               string
@@ -529,9 +529,9 @@ func TestGetTeams(t *testing.T) {
 	server := newTBAServer()
 	defer server.Close()
 
-	APIKey := "notARealKey"
+	const apiKey = "notARealKey"
 
-	s := Service{URL: server.URL, APIKey: APIKey}
+	s := Service{URL: server.URL, APIKey: apiKey}
 
 	testCases := []struct {
 		name            string
@@ -705,7 +705,7 @@ func TestGetTeamRankings(t *testing.T) {
 
 	s := Service{URL: server.URL, APIKey: APIKey}
 
-	eventKey := "2018abca"
+	const eventKey = "2018abca"
 
 	testCases := []struct {
 		name                   string
