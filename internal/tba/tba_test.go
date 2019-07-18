@@ -550,7 +550,7 @@ func TestGetTeams(t *testing.T) {
 		{
 			name: "tba gives page of teams",
 			getTeamsHandler: func(w http.ResponseWriter, r *http.Request) {
-				if r.Header.Get("X-TBA-Auth-Key") != APIKey {
+				if r.Header.Get("X-TBA-Auth-Key") != apiKey {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
