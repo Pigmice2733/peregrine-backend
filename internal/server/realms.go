@@ -37,7 +37,7 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("inserting realms")
+			s.Logger.WithError(err).Error("inserting realms")
 			return
 		}
 
@@ -52,7 +52,7 @@ func (s *Server) realmsHandler() http.HandlerFunc {
 		realms, err := s.Store.GetRealms(r.Context())
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving realms")
+			s.Logger.WithError(err).Error("retrieving realms")
 			return
 		}
 
@@ -75,7 +75,7 @@ func (s *Server) realmHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving realms")
+			s.Logger.WithError(err).Error("retrieving realms")
 			return
 		}
 
@@ -140,7 +140,7 @@ func (s *Server) updateRealmHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("updating realms")
+			s.Logger.WithError(err).Error("updating realms")
 			return
 		}
 
@@ -178,7 +178,7 @@ func (s *Server) deleteRealmHandler() http.HandlerFunc {
 		err = s.Store.DeleteRealm(r.Context(), id)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("deleting realms")
+			s.Logger.WithError(err).Error("deleting realms")
 			return
 		}
 

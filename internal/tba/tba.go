@@ -301,8 +301,38 @@ func (s *Service) GetTeamKeys(ctx context.Context, eventKey string) ([]string, e
 	return teamKeys, err
 }
 
+// GetTeams retrieves all teams
+func (s *Service) GetTeams(ctx context.Context) ([]store.Team, error) {
+	allTeams := []store.Team{}
+	for page := 0; page < 50; page++ {
+		path := fmt.Sprintf("/teams/%d", page)
+
+		response, err := s.makeRequest(ctx, path)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to make request")
+		}
+
+		if response.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("got unexpected status: %d", response.StatusCode)
+		}
+
+		teams := []store.Team{}
+
+		if err := json.NewDecoder(io.LimitReader(response.Body, maxResponseSize)).Decode(&teams); err != nil {
+			return nil, err
+		}
+
+		if len(teams) == 0 {
+			return allTeams, nil
+		}
+
+		allTeams = append(allTeams, teams...)
+	}
+	return allTeams, errors.New("TBA teams route gave >50 pages, either number of FRC teams exceeds 25,000 or TBA is broken")
+}
+
 // GetTeamRankings retrieves all team rankings from a specific event.
-func (s *Service) GetTeamRankings(ctx context.Context, eventKey string) ([]store.Team, error) {
+func (s *Service) GetTeamRankings(ctx context.Context, eventKey string) ([]store.EventTeam, error) {
 	path := fmt.Sprintf("/event/%s/rankings", eventKey)
 
 	response, err := s.makeRequest(ctx, path)
@@ -330,7 +360,7 @@ func (s *Service) GetTeamRankings(ctx context.Context, eventKey string) ([]store
 		}
 	}
 
-	var teams []store.Team
+	var teams []store.EventTeam
 	for _, teamRank := range teamRankings.Rankings {
 		var rankingScore *float64
 		if rankingScoreIndex != -1 {
@@ -338,7 +368,7 @@ func (s *Service) GetTeamRankings(ctx context.Context, eventKey string) ([]store
 		}
 
 		rank := teamRank.Rank
-		team := store.Team{
+		team := store.EventTeam{
 			Key:          teamRank.TeamKey,
 			EventKey:     eventKey,
 			Rank:         &rank,

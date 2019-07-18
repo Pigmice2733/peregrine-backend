@@ -18,7 +18,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := s.updateEvents(r.Context()); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("unable to update event data")
+			s.Logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
@@ -41,7 +41,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving event data")
+			s.Logger.WithError(err).Error("retrieving event data")
 			return
 		}
 
@@ -52,10 +52,10 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 // eventHandler returns a handler to get a specific event.
 func (s *Server) eventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Get new event data from TBA if event data is over 24 hours old
+		// Get new event data from TBA
 		if err := s.updateEvents(r.Context()); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("unable to update event data")
+			s.Logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
@@ -68,7 +68,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("unable to retrieve event data")
+			s.Logger.WithError(err).Error("unable to retrieve event data")
 			return
 		}
 
@@ -106,7 +106,7 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 			case store.ErrFKeyViolation:
 				ihttp.Error(w, http.StatusUnprocessableEntity)
 			default:
-				go s.Logger.WithError(err).Error("unable to upsert event data")
+				s.Logger.WithError(err).Error("unable to upsert event data")
 				ihttp.Error(w, http.StatusInternalServerError)
 			}
 
@@ -121,14 +121,15 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 	}
 }
 
-const expiry = 3.0
+// Hours to cache teams data from TBA for
+const eventsExpiry = 3.0
 
 // Get new event data from TBA only if event data is over 3 hours old.
 // Upsert event data into database.
 func (s *Server) updateEvents(ctx context.Context) error {
 	now := time.Now()
 
-	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > expiry {
+	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > eventsExpiry {
 		schema, err := s.Store.GetSchemaByYear(ctx, s.Year)
 		var schemaID *int64
 		if err != nil {

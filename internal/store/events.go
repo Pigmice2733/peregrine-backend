@@ -104,7 +104,7 @@ func (s *Service) GetEvent(ctx context.Context, eventKey string) (Event, error) 
 	err := s.db.GetContext(ctx, &event, eventsQuery+" WHERE key = $1", eventKey)
 
 	if err == sql.ErrNoRows {
-		return event, ErrNoResults{errors.Wrapf(err, "event %s does not exist", event.Key)}
+		return event, ErrNoResults{errors.Wrapf(err, "event %s does not exist", eventKey)}
 	}
 	return event, err
 }

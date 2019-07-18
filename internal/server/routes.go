@@ -36,8 +36,8 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/events/{eventKey}/matches", ihttp.ACL(s.createMatchHandler(), true, true, true)).Methods("POST")
 	r.Handle("/events/{eventKey}/matches/{matchKey}", s.matchHandler()).Methods("GET")
 
-	r.Handle("/events/{eventKey}/teams", s.teamsHandler()).Methods("GET")
-	r.Handle("/events/{eventKey}/teams/{teamKey}", s.teamInfoHandler()).Methods("GET")
+	r.Handle("/events/{eventKey}/teams", s.eventTeamsHandler()).Methods("GET")
+	r.Handle("/events/{eventKey}/teams/{teamKey}", s.eventTeamHandler()).Methods("GET")
 	r.Handle("/events/{eventKey}/teams/{teamKey}/comments", ihttp.ACL(s.getEventComments(), false, false, false)).Methods("GET")
 
 	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.getReports(), false, false, false)).Methods("GET")
@@ -53,6 +53,8 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/realms/{id}", s.realmHandler()).Methods("GET")
 	r.Handle("/realms/{id}", ihttp.ACL(s.updateRealmHandler(), true, true, true)).Methods("POST")
 	r.Handle("/realms/{id}", ihttp.ACL(s.deleteRealmHandler(), true, true, true)).Methods("DELETE")
+
+	r.Handle("/teams/{teamKey}", s.teamHandler()).Methods("GET")
 
 	return r
 }

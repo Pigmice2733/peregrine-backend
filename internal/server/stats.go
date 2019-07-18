@@ -23,7 +23,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving event")
+			s.Logger.WithError(err).Error("retrieving event")
 			return
 		}
 
@@ -38,14 +38,14 @@ func (s *Server) eventStats() http.HandlerFunc {
 		}
 
 		// Get new team data from TBA
-		if err := s.updateTeamKeys(r.Context(), eventKey); err != nil {
+		if err := s.updateEventTeamKeys(r.Context(), eventKey); err != nil {
 			// 404 if eventKey isn't a real event
 			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("updating team key data")
+			s.Logger.WithError(err).Error("updating team key data")
 			return
 		}
 
@@ -70,21 +70,21 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving event schema")
+			s.Logger.WithError(err).Error("retrieving event schema")
 			return
 		}
 
-		teamKeys, err := s.Store.GetTeamKeys(r.Context(), eventKey)
+		teamKeys, err := s.Store.GetEventTeamKeys(r.Context(), eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving team key data")
+			s.Logger.WithError(err).Error("retrieving team key data")
 			return
 		}
 
 		analyzedStats, err := analysis.AnalyzeReports(schema, reports, teamKeys)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("analyzing event data")
+			s.Logger.WithError(err).Error("analyzing event data")
 			return
 		}
 
