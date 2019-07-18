@@ -229,7 +229,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusConflict)
 			return
 		} else if err != nil {
-			go s.Logger.WithError(err).Error("checking whether similar user exists")
+			s.Logger.WithError(err).Error("checking whether similar user exists")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -238,7 +238,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(ru.Password), bcryptCost)
 		if err != nil {
-			go s.Logger.WithError(err).Error("hashing user password")
+			s.Logger.WithError(err).Error("hashing user password")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -254,7 +254,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 			case store.ErrFKeyViolation:
 				ihttp.Error(w, http.StatusUnprocessableEntity)
 			default:
-				go s.Logger.WithError(err).Error("creating new user")
+				s.Logger.WithError(err).Error("creating new user")
 				ihttp.Error(w, http.StatusInternalServerError)
 			}
 
@@ -285,7 +285,7 @@ func (s *Server) getUsersHandler() http.HandlerFunc {
 		}
 
 		if err != nil {
-			go s.Logger.WithError(err).Error("getting users")
+			s.Logger.Error("getting users")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -321,7 +321,7 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
-			go s.Logger.WithError(err).Error("getting user by id")
+			s.Logger.WithError(err).Error("getting user by id")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -376,7 +376,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		if targetID != subjectID && !roles.IsSuperAdmin {
 			targetUser, err := s.Store.GetUserByID(r.Context(), targetID)
 			if err != nil {
-				go s.Logger.WithError(err).Error("getting user")
+				s.Logger.WithError(err).Error("getting user")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -407,7 +407,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 				ihttp.Respond(w, err, http.StatusConflict)
 				return
 			} else if err != nil {
-				go s.Logger.WithError(err).Error("checking whether similar user exists")
+				s.Logger.WithError(err).Error("checking whether similar user exists")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -418,7 +418,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		if ru.Password != nil {
 			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*ru.Password), bcryptCost)
 			if err != nil {
-				go s.Logger.WithError(err).Error("hashing user password")
+				s.Logger.WithError(err).Error("hashing user password")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -436,7 +436,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 			case store.ErrFKeyViolation:
 				ihttp.Error(w, http.StatusUnprocessableEntity)
 			default:
-				go s.Logger.WithError(err).Error("patching user")
+				s.Logger.WithError(err).Error("patching user")
 				ihttp.Error(w, http.StatusInternalServerError)
 			}
 
@@ -471,7 +471,7 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 		if id != requestID && !roles.IsSuperAdmin {
 			targetUser, err := s.Store.GetUserByID(r.Context(), id)
 			if err != nil {
-				go s.Logger.WithError(err).Error("getting user")
+				s.Logger.WithError(err).Error("getting user")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -483,7 +483,7 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 
 		err = s.Store.DeleteUser(r.Context(), id)
 		if err != nil {
-			go s.Logger.WithError(err).Error("deleting user")
+			s.Logger.WithError(err).Error("deleting user")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}

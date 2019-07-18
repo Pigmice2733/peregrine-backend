@@ -40,7 +40,7 @@ func (s *Server) getMatchTeamComments() http.HandlerFunc {
 		exists, err := s.Store.CheckMatchKeyExists(matchKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("checking that match exists")
+			s.Logger.WithError(err).Error("checking that match exists")
 			return
 		}
 		if !exists {
@@ -51,7 +51,7 @@ func (s *Server) getMatchTeamComments() http.HandlerFunc {
 		comments, err := s.Store.GetMatchTeamComments(r.Context(), matchKey, teamKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("getting comments")
+			s.Logger.WithError(err).Error("getting comments")
 			return
 		}
 
@@ -78,7 +78,7 @@ func (s *Server) getEventComments() http.HandlerFunc {
 		comments, err := s.Store.GetEventComments(r.Context(), eventKey, teamKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("getting comments")
+			s.Logger.WithError(err).Error("getting comments")
 			return
 		}
 
@@ -110,7 +110,7 @@ func (s *Server) putMatchTeamComment() http.HandlerFunc {
 		exists, err := s.Store.CheckMatchKeyExists(matchKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("checking that match exists")
+			s.Logger.WithError(err).Error("checking that match exists")
 			return
 		} else if !exists {
 			ihttp.Error(w, http.StatusNotFound)
@@ -145,7 +145,7 @@ func (s *Server) putMatchTeamComment() http.HandlerFunc {
 		created, err := s.Store.UpsertMatchTeamComment(r.Context(), comment)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("upserting comment")
+			s.Logger.WithError(err).Error("upserting comment")
 			return
 		}
 

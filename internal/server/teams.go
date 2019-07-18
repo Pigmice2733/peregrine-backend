@@ -17,7 +17,7 @@ func (s *Server) teamHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := s.updateTeams(r.Context()); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("unable to update teams data")
+			s.Logger.WithError(err).Error("unable to update teams data")
 			return
 		}
 
@@ -30,7 +30,7 @@ func (s *Server) teamHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving team info")
+			s.Logger.WithError(err).Error("retrieving team info")
 			return
 		}
 
@@ -50,7 +50,7 @@ func (s *Server) eventTeamHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving event")
+			s.Logger.WithError(err).Error("retrieving event")
 			return
 		}
 
@@ -66,7 +66,7 @@ func (s *Server) eventTeamHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("updating team rankings data")
+			s.Logger.WithError(err).Error("updating team rankings data")
 			return
 		}
 
@@ -76,7 +76,7 @@ func (s *Server) eventTeamHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving team rankings data")
+			s.Logger.WithError(err).Error("retrieving team rankings data")
 			return
 		}
 
@@ -96,7 +96,7 @@ func (s *Server) eventTeamsHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving event")
+			s.Logger.WithError(err).Error("retrieving event")
 			return
 		}
 
@@ -112,14 +112,14 @@ func (s *Server) eventTeamsHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("updating team rankings data")
+			s.Logger.WithError(err).Error("updating team rankings data")
 			return
 		}
 
 		teams, err := s.Store.GetEventTeams(r.Context(), eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving teams data")
+			s.Logger.WithError(err).Error("retrieving teams data")
 			return
 		}
 

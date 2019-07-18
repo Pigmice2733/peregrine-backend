@@ -28,7 +28,7 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 		if schema.Year == nil {
 			realmID, err := ihttp.GetRealmID(r)
 			if err != nil {
-				go s.Logger.WithError(err).Error("getting realmID")
+				s.Logger.WithError(err).Error("getting realmID")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -42,7 +42,7 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
 		} else if err != nil {
-			go s.Logger.WithError(err).Error("creating schema")
+			s.Logger.WithError(err).Error("creating schema")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
@@ -72,7 +72,7 @@ func (s *Server) getSchemasHandler() http.HandlerFunc {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			} else if err != nil {
-				go s.Logger.WithError(err).Error("getting schema by year")
+				s.Logger.WithError(err).Error("getting schema by year")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -87,7 +87,7 @@ func (s *Server) getSchemasHandler() http.HandlerFunc {
 		if roles.IsSuperAdmin {
 			schemas, err = s.Store.GetSchemas(r.Context())
 			if err != nil {
-				go s.Logger.WithError(err).Error("getting schemas")
+				s.Logger.WithError(err).Error("getting schemas")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -101,7 +101,7 @@ func (s *Server) getSchemasHandler() http.HandlerFunc {
 			}
 			schemas, err = s.Store.GetVisibleSchemas(r.Context(), realmID)
 			if err != nil {
-				go s.Logger.WithError(err).Error("getting schemas")
+				s.Logger.WithError(err).Error("getting schemas")
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
@@ -124,7 +124,7 @@ func (s *Server) getSchemaByIDHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
-			go s.Logger.WithError(err).Error("getting schema by id")
+			s.Logger.WithError(err).Error("getting schema by id")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}

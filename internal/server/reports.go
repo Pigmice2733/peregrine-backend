@@ -30,7 +30,7 @@ func (s *Server) getReports() http.HandlerFunc {
 		exists, err := s.Store.CheckMatchKeyExists(matchKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("checking that match exists")
+			s.Logger.WithError(err).Error("checking that match exists")
 			return
 		}
 		if !exists {
@@ -41,7 +41,7 @@ func (s *Server) getReports() http.HandlerFunc {
 		reports, err := s.Store.GetTeamMatchReports(r.Context(), matchKey, teamKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("getting reports")
+			s.Logger.WithError(err).Error("getting reports")
 			return
 		}
 
@@ -68,7 +68,7 @@ func (s *Server) putReport() http.HandlerFunc {
 		exists, err := s.Store.CheckMatchKeyExists(matchKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("checking that match exists")
+			s.Logger.WithError(err).Error("checking that match exists")
 			return
 		} else if !exists {
 			ihttp.Error(w, http.StatusNotFound)
@@ -102,7 +102,7 @@ func (s *Server) putReport() http.HandlerFunc {
 		created, err := s.Store.UpsertReport(r.Context(), report)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("upserting report")
+			s.Logger.WithError(err).Error("upserting report")
 			return
 		}
 
@@ -119,7 +119,7 @@ func (s *Server) leaderboardHandler() http.HandlerFunc {
 		leaderboard, err := s.Store.GetLeaderboard(r.Context())
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("getting leaderboard")
+			s.Logger.WithError(err).Error("getting leaderboard")
 			return
 		}
 

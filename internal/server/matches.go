@@ -39,7 +39,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving event")
+			s.Logger.WithError(err).Error("retrieving event")
 			return
 		}
 
@@ -55,14 +55,14 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("updating match data")
+			s.Logger.WithError(err).Error("updating match data")
 			return
 		}
 
 		fullMatches, err := s.Store.GetMatches(r.Context(), eventKey, teams, tbaDeleted)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving event matches")
+			s.Logger.WithError(err).Error("retrieving event matches")
 			return
 		}
 
@@ -99,7 +99,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving event")
+			s.Logger.WithError(err).Error("retrieving event")
 			return
 		}
 
@@ -119,7 +119,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("updating match data")
+			s.Logger.WithError(err).Error("updating match data")
 			return
 		}
 
@@ -130,7 +130,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving match")
+			s.Logger.WithError(err).Error("retrieving match")
 			return
 		}
 
@@ -167,7 +167,7 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving event")
+			s.Logger.WithError(err).Error("retrieving event")
 			return
 		}
 
@@ -193,7 +193,7 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 
 		if err := s.Store.UpsertMatch(r.Context(), sm); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("upserting match")
+			s.Logger.WithError(err).Error("upserting match")
 			return
 		}
 

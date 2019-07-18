@@ -18,7 +18,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := s.updateEvents(r.Context()); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("unable to update event data")
+			s.Logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
@@ -41,7 +41,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("retrieving event data")
+			s.Logger.WithError(err).Error("retrieving event data")
 			return
 		}
 
@@ -55,7 +55,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 		// Get new event data from TBA
 		if err := s.updateEvents(r.Context()); err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("unable to update event data")
+			s.Logger.WithError(err).Error("unable to update event data")
 			return
 		}
 
@@ -68,7 +68,7 @@ func (s *Server) eventHandler() http.HandlerFunc {
 				return
 			}
 			ihttp.Error(w, http.StatusInternalServerError)
-			go s.Logger.WithError(err).Error("unable to retrieve event data")
+			s.Logger.WithError(err).Error("unable to retrieve event data")
 			return
 		}
 
@@ -106,7 +106,7 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 			case store.ErrFKeyViolation:
 				ihttp.Error(w, http.StatusUnprocessableEntity)
 			default:
-				go s.Logger.WithError(err).Error("unable to upsert event data")
+				s.Logger.WithError(err).Error("unable to upsert event data")
 				ihttp.Error(w, http.StatusInternalServerError)
 			}
 
