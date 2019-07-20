@@ -17,8 +17,8 @@ action "go test" {
 }
 
 workflow "Docker Build and Push" {
-  on = "push"
   resolves = ["GitHub Action for Docker-1"]
+  on = "release"
 }
 
 action "GitHub Action for Docker" {
