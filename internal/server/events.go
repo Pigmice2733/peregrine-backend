@@ -1,14 +1,11 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
-	"time"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
-	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 )
@@ -16,12 +13,6 @@ import (
 // eventsHandler returns a handler to get all events in a given year.
 func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := s.updateEvents(r.Context()); err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("unable to update event data")
-			return
-		}
-
 		tbaDeleted := r.URL.Query().Get("tbaDeleted") == "true"
 
 		roles := ihttp.GetRoles(r)
@@ -52,13 +43,6 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 // eventHandler returns a handler to get a specific event.
 func (s *Server) eventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Get new event data from TBA
-		if err := s.updateEvents(r.Context()); err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("unable to update event data")
-			return
-		}
-
 		eventKey := mux.Vars(r)["eventKey"]
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
@@ -119,47 +103,6 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 			w.WriteHeader(http.StatusNoContent)
 		}
 	}
-}
-
-// Hours to cache teams data from TBA for
-const eventsExpiry = 3.0
-
-// Get new event data from TBA only if event data is over 3 hours old.
-// Upsert event data into database.
-func (s *Server) updateEvents(ctx context.Context) error {
-	now := time.Now()
-
-	if s.eventsLastUpdate == nil || now.Sub(*s.eventsLastUpdate).Hours() > eventsExpiry {
-		schema, err := s.Store.GetSchemaByYear(ctx, s.Year)
-		var schemaID *int64
-		if err != nil {
-			_, ok := err.(store.ErrNoResults)
-			if !ok {
-				return err
-			}
-		} else {
-			schemaID = &schema.ID
-		}
-
-		events, err := s.TBA.GetEvents(ctx, s.Year, schemaID)
-		if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
-			return nil
-		} else if err != nil {
-			return err
-		}
-
-		if err := s.Store.EventsUpsert(ctx, events); err != nil {
-			return errors.Wrap(err, "upserting events")
-		}
-
-		if err := s.Store.MarkEventsDeleted(ctx, events); err != nil {
-			return errors.Wrap(err, "marking missing events deleted")
-		}
-
-		s.eventsLastUpdate = &now
-	}
-
-	return nil
 }
 
 // Returns whether a user can access an event or its matches

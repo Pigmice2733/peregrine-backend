@@ -148,7 +148,7 @@ func (s *Service) Ping(ctx context.Context) error {
 }
 
 // GetEvents retrieves all events from the given year (e.g. 2018).
-func (s *Service) GetEvents(ctx context.Context, year int, schemaID *int64) ([]store.Event, error) {
+func (s *Service) GetEvents(ctx context.Context, year int) ([]store.Event, error) {
 	path := fmt.Sprintf("/events/%d", year)
 
 	response, err := s.makeRequest(ctx, path)
@@ -212,7 +212,6 @@ func (s *Service) GetEvents(ctx context.Context, year int, schemaID *int64) ([]s
 			Lat:          tbaEvent.Lat,
 			Lon:          tbaEvent.Lng,
 			LocationName: tbaEvent.LocationName,
-			SchemaID:     schemaID,
 		})
 	}
 
@@ -281,24 +280,6 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 	}
 
 	return matches, nil
-}
-
-// GetTeamKeys retrieves all team keys from a specific event
-func (s *Service) GetTeamKeys(ctx context.Context, eventKey string) ([]string, error) {
-	path := fmt.Sprintf("/event/%s/teams/keys", eventKey)
-
-	response, err := s.makeRequest(ctx, path)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to make request")
-	}
-
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("got unexpected status: %d", response.StatusCode)
-	}
-
-	var teamKeys []string
-	err = json.NewDecoder(io.LimitReader(response.Body, maxResponseSize)).Decode(&teamKeys)
-	return teamKeys, err
 }
 
 // GetTeams retrieves all teams

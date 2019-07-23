@@ -60,7 +60,7 @@ func (s *Service) EventTeamKeysUpsert(ctx context.Context, eventKey string, keys
 		return err
 	}
 
-	allTeamsStmt, err := tx.PrepareNamedContext(ctx, `
+	allTeamsStmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO all_teams (key)
 		VALUES ($1)
 		ON CONFLICT

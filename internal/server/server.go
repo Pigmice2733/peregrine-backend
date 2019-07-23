@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -43,12 +42,6 @@ func (s *Server) Run() error {
 	handler = ihttp.Auth(handler, s.JWTSecret)
 	handler = ihttp.CORS(handler, s.Origin)
 
-	s.Logger.Info("fetching seed events")
-	if err := s.updateEvents(context.Background()); err != nil {
-		s.Logger.WithError(err).Error("updating event data on server run")
-	}
-	s.Logger.Info("fetched seed events")
-
 	httpServer := &http.Server{
 		Addr:              s.Listen,
 		Handler:           handler,
@@ -58,6 +51,8 @@ func (s *Server) Run() error {
 		IdleTimeout:       time.Second * 30,
 		MaxHeaderBytes:    4096,
 	}
+
+	go s.BeginTbaBackgroundUpdates()
 
 	s.start = time.Now()
 	s.Logger.WithField("httpAddress", s.Listen).Info("serving http")

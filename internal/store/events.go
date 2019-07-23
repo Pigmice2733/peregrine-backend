@@ -82,6 +82,44 @@ func (s *Service) GetEventsFromRealm(ctx context.Context, realm *int64, tbaDelet
 	return events, s.db.SelectContext(ctx, &events, query+" AND events.realm_id IS NULL OR events.realm_id = $1", *realm)
 }
 
+// GetActiveEvents returns all events that are currently happening. If tbaDeleted is true,
+// events that have been deleted from TBA will be returned in addition to events that have
+// not been deleted. Otherwise, only events that have not been deleted will be returned.
+func (s *Service) GetActiveEvents(ctx context.Context, tbaDeleted bool) ([]Event, error) {
+	query := `
+	SELECT
+	    key,
+		name,
+		district,
+		full_district,
+		week,
+		start_date,
+		end_date,
+		webcasts,
+		location_name,
+		lat,
+		lon,
+		tba_deleted,
+		events.realm_id,
+		COALESCE(schema_id, s.id) AS schema_id
+	FROM
+		events
+	LEFT JOIN
+		schemas s
+	ON
+		s.year = EXTRACT(YEAR FROM start_date)
+	WHERE
+		start_date <= CURRENT_DATE
+		AND end_date >= CURRENT_DATE`
+
+	if !tbaDeleted {
+		query += " AND NOT tba_deleted"
+	}
+
+	events := []Event{}
+	return events, s.db.SelectContext(ctx, &events, query)
+}
+
 // CheckTBAEventKeyExists checks whether a specific event key exists and is from
 // TBA rather than manually added. Returns ErrNoResults if event does not exist.
 func (s *Service) CheckTBAEventKeyExists(ctx context.Context, eventKey string) (bool, error) {
@@ -110,7 +148,7 @@ func (s *Service) GetEvent(ctx context.Context, eventKey string) (Event, error) 
 }
 
 // EventsUpsert upserts multiple events into the database. It will set tba_deleted
-// to false for all updated events.
+// to false for all updated events. schema_id will only be updated if null.
 func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -135,7 +173,7 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 					lat = :lat,
 					lon = :lon,
 					realm_id = :realm_id,
-					schema_id = :schema_id,
+					schema_id = COALESCE(events.schema_id, :schema_id),
 					tba_deleted = false
 	`)
 	if err != nil {
