@@ -228,7 +228,7 @@ func TestGetEvents(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server.getEventsHandler = tt.getEventsHandler
 
-			events, err := s.GetEvents(context.TODO(), testingYear, nil)
+			events, err := s.GetEvents(context.TODO(), testingYear)
 			if !tt.expectErr && err != nil {
 				t.Errorf("did not expect an error but got one: %v", err)
 			} else if tt.expectErr && err == nil {
