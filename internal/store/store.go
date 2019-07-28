@@ -79,7 +79,7 @@ func (s *Service) doTransaction(ctx context.Context, txWrapper func(*sqlx.Tx) er
 	}
 
 	if err := txWrapper(tx); err != nil {
-		if rbErr := tx.Rollback(); rbErr != nil {
+		if rbErr := tx.Rollback(); rbErr != nil && ctx.Err() != context.Canceled {
 			s.logErr(errors.Wrap(err, "unable to rollback transaction"))
 		}
 

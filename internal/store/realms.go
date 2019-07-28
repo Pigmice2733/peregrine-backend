@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 )
@@ -41,31 +42,21 @@ func (s *Service) GetRealm(ctx context.Context, id int64) (Realm, error) {
 
 // InsertRealm inserts a realm into the database.
 func (s *Service) InsertRealm(ctx context.Context, realm Realm) (int64, error) {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return 0, errors.Wrap(err, "unable to begin transaction")
-	}
+	var realmID int64
 
-	stmt, err := tx.PrepareNamedContext(ctx, `
+	err := s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+		err := tx.GetContext(ctx, &realm.ID, `
 	    INSERT INTO realms (name, share_reports)
 		    VALUES (:name, :share_reports)
 	        RETURNING id
-    `)
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return 0, errors.Wrap(err, "unable to prepare realm insert statement")
-	}
-
-	err = stmt.GetContext(ctx, &realm.ID, realm)
-	if err != nil {
-		s.logErr(tx.Rollback())
+		`, realm)
 		if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
-			return 0, ErrExists{errors.Wrapf(err, "realm with name: %s already exists", realm.Name)}
+			return ErrExists{errors.Wrapf(err, "realm with name: %s already exists", realm.Name)}
 		}
-		return 0, errors.Wrap(err, "unable to insert realm")
-	}
+		return errors.Wrap(err, "unable to insert realm")
+	})
 
-	return realm.ID, tx.Commit()
+	return realmID, err
 }
 
 // DeleteRealm deletes a realm from the database.

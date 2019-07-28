@@ -16,12 +16,12 @@ type Server struct {
 	LogLevel  logrus.Level `json:"logLevel"`
 	LogJSON   bool         `json:"logJSON"`
 	JWTSecret string       `json:"jwtSecret" validate:"required,min=32"`
-	Year      int          `json:"year" validate:"required"`
 }
 
 // Config holds information about how the peregrine backend is configured.
 type Config struct {
 	Server Server `json:"server" validate:"dive"`
+	Year   int    `json:"year" validate:"required"`
 	TBA    struct {
 		URL    string `validate:"required"`
 		APIKey string `validate:"required"`

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 )
@@ -150,12 +151,8 @@ func (s *Service) GetEvent(ctx context.Context, eventKey string) (Event, error) 
 // EventsUpsert upserts multiple events into the database. It will set tba_deleted
 // to false for all updated events. schema_id will only be updated if null.
 func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	eventStmt, err := tx.PrepareNamedContext(ctx, `
+	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+		eventStmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, lat, lon, realm_id, schema_id, tba_deleted)
 		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
 		ON CONFLICT (key)
@@ -175,28 +172,27 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 					realm_id = :realm_id,
 					schema_id = COALESCE(events.schema_id, :schema_id),
 					tba_deleted = false
-	`)
-	if err != nil {
-		s.logErr(errors.Wrap(tx.Rollback(), "rolling back events upsert tx"))
-		return err
-	}
-	defer eventStmt.Close()
-
-	for _, event := range events {
-		if _, err = eventStmt.ExecContext(ctx, event); err != nil {
-			s.logErr(errors.Wrap(tx.Rollback(), "rolling back events upsert tx"))
-			if err, ok := err.(*pq.Error); ok {
-				if err.Code == pgExists {
-					return ErrExists{errors.Wrapf(err, "event with key %s already exists", event.Key)}
-				} else if err.Code == pgFKeyViolation {
-					return ErrFKeyViolation{errors.Wrap(err, "foreign key violation")}
-				}
-			}
-			return err
+		`)
+		if err != nil {
+			return errors.Wrap(err, "unable to prepare events upsert statemant")
 		}
-	}
+		defer eventStmt.Close()
 
-	return tx.Commit()
+		for _, event := range events {
+			if _, err = eventStmt.ExecContext(ctx, event); err != nil {
+				if err, ok := err.(*pq.Error); ok {
+					if err.Code == pgExists {
+						return ErrExists{errors.Wrapf(err, "event with key %s already exists", event.Key)}
+					} else if err.Code == pgFKeyViolation {
+						return ErrFKeyViolation{errors.Wrap(err, "foreign key violation")}
+					}
+				}
+				return errors.Wrap(err, "unable to upsert events")
+			}
+		}
+
+		return nil
+	})
 }
 
 // MarkEventsDeleted will set tba_deleted to true on all events that were
@@ -222,48 +218,44 @@ func (s *Service) MarkEventsDeleted(ctx context.Context, events []Event) error {
 // UpsertEvent upserts a single event into the database and returns whether
 // the event was created or updated.
 func (s *Service) UpsertEvent(ctx context.Context, event Event) (created bool, err error) {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return false, errors.Wrap(err, "unable to begin transaction for event upsert")
-	}
-
-	if _, err := tx.Exec("LOCK TABLE events IN EXCLUSIVE MODE"); err != nil {
-		s.logErr(errors.Wrap(tx.Rollback(), "rolling back event upsert tx"))
-		return false, errors.Wrap(err, "unable to lock events")
-	}
-
 	var existed bool
-	err = tx.QueryRow("SELECT EXISTS(SELECT FROM events WHERE key = $1)", event.Key).Scan(&existed)
-	if err != nil {
-		s.logErr(errors.Wrap(tx.Rollback(), "rolling back event upsert tx"))
-		return false, errors.Wrap(err, "unable to determine if event exists")
-	}
 
-	_, err = tx.NamedExecContext(ctx, `
-		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, lat, lon, realm_id, schema_id, tba_deleted)
-		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
-		ON CONFLICT (key)
-		DO
-			UPDATE
-				SET
-					name = :name,
-					district = :district,
-					full_district = :full_district,
-					week = :week,
-					start_date = :start_date,
-					end_date = :end_date,
-					webcasts = :webcasts,
-					location_name = :location_name,
-					lat = :lat,
-					lon = :lon,
-					realm_id = :realm_id,
-					schema_id = :schema_id,
-					tba_deleted = :tba_deleted
-	`, event)
-	if err != nil {
-		s.logErr(errors.Wrap(tx.Rollback(), "rolling back event upsert tx"))
-		return false, errors.Wrap(err, "unable to upsert event")
-	}
+	err = s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+		if _, err := tx.Exec("LOCK TABLE events IN EXCLUSIVE MODE"); err != nil {
+			return errors.Wrap(err, "unable to lock events")
+		}
 
-	return !existed, errors.Wrap(tx.Commit(), "unable to commit transaction")
+		err = tx.QueryRow("SELECT EXISTS(SELECT FROM events WHERE key = $1)", event.Key).Scan(&existed)
+		if err != nil {
+			return errors.Wrap(err, "unable to determine if event exists")
+		}
+
+		_, err = tx.NamedExecContext(ctx, `
+			INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, lat, lon, realm_id, schema_id, tba_deleted)
+			VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
+			ON CONFLICT (key)
+			DO
+				UPDATE
+					SET
+						name = :name,
+						district = :district,
+						full_district = :full_district,
+						week = :week,
+						start_date = :start_date,
+						end_date = :end_date,
+						webcasts = :webcasts,
+						location_name = :location_name,
+						lat = :lat,
+						lon = :lon,
+						realm_id = :realm_id,
+						schema_id = :schema_id,
+						tba_deleted = :tba_deleted
+		`, event)
+		if err != nil {
+			return errors.Wrap(err, "unable to upsert event")
+		}
+		return nil
+	})
+
+	return !existed, err
 }

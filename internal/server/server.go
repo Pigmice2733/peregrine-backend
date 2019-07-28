@@ -19,12 +19,10 @@ var openAPI []byte
 type Server struct {
 	config.Server
 
-	TBA              *tba.Service
-	Store            *store.Service
-	Logger           *logrus.Logger
-	eventsLastUpdate *time.Time
-	teamsLastUpdate  *time.Time
-	start            time.Time
+	TBA    *tba.Service
+	Store  *store.Service
+	Logger *logrus.Logger
+	start  time.Time
 }
 
 func (s *Server) uptime() time.Duration {
@@ -51,8 +49,6 @@ func (s *Server) Run() error {
 		IdleTimeout:       time.Second * 30,
 		MaxHeaderBytes:    4096,
 	}
-
-	go s.BeginTbaBackgroundUpdates()
 
 	s.start = time.Now()
 	s.Logger.WithField("httpAddress", s.Listen).Info("serving http")
