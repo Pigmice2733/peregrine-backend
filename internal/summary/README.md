@@ -233,7 +233,6 @@ A schema defines how these data sources should be summarized. There is both an a
 A reference defines how to access a previously computed property and consists of the following fields:
 
 * `name` - name of the schema field
-* `period` - whether this is an `auto` or `teleop` field
 
 An `equalExpression` consists of the following fields:
 
@@ -296,7 +295,6 @@ Example (teleop):
       "anyOf":[
          {
             "name":"endgame",
-            "period": "teleop",
             "equals":"HabLevel1"
          }
       ]
@@ -307,7 +305,6 @@ Example (teleop):
       "anyOf":[
          {
             "name":"endgame",
-            "period": "teleop",
             "equals":"HabLevel2"
          }
       ]
@@ -318,7 +315,6 @@ Example (teleop):
       "anyOf":[
          {
             "name":"endgame",
-            "period": "teleop",
             "equals":"HabLevel3"
          }
       ]
@@ -329,17 +325,14 @@ Example (teleop):
       "anyOf":[
          {
             "name":"Climbed Lvl 1",
-            "period": "teleop",
             "equals":true
          },
          {
             "name":"Climbed Lvl 2",
-            "period": "teleop",
             "equals":true
          },
          {
             "name":"Climbed Lvl 3",
-            "period": "teleop",
             "equals":true
          }
       ]
@@ -350,12 +343,10 @@ Example (teleop):
       "anyOf":[
          {
             "name":"Climbed Lvl 2",
-            "period": "teleop",
             "equals":true
          },
          {
             "name":"Climbed Lvl 3",
-            "period": "teleop",
             "equals":true
          }
       ]
@@ -369,28 +360,28 @@ Example (teleop):
       "name":"Teleop Hatches",
       "type":"number",
       "sum":[
-         {"name": "Rocket Hatches Lvl 1", "period": "teleop"},
-         {"name": "Rocket Hatches Lvl 2", "period": "teleop"},
-         {"name": "Rocket Hatches Lvl 3", "period": "teleop"},
-         {"name": "Cargo Ship Hatches", "period": "teleop"}
+         {"name": "Rocket Hatches Lvl 1"},
+         {"name": "Rocket Hatches Lvl 2"},
+         {"name": "Rocket Hatches Lvl 3"},
+         {"name": "Cargo Ship Hatches"}
       ]
    },
    {
       "name":"Teleop Cargo",
       "type":"number",
       "sum":[
-         {"name": "Rocket Cargo Lvl 1", "period": "teleop"},
-         {"name": "Rocket Cargo Lvl 2", "period": "teleop"},
-         {"name": "Rocket Cargo Lvl 3", "period": "teleop"},
-         {"name": "Cargo Ship Cargo", "period": "teleop"}
+         {"name": "Rocket Cargo Lvl 1"},
+         {"name": "Rocket Cargo Lvl 2"},
+         {"name": "Rocket Cargo Lvl 3"},
+         {"name": "Cargo Ship Cargo"}
       ]
    },
    {
       "name":"Teleop Gamepieces",
       "type":"number",
       "sum":[
-         {"name": "Teleop Hatches", "period": "teleop"},
-         {"name": "Teleop Cargo", "period": "teleop"}
+         {"name": "Teleop Hatches"},
+         {"name": "Teleop Cargo"}
       ]
    }
 ]
