@@ -1,5 +1,11 @@
 package summary
 
+import (
+	"fmt"
+
+	"github.com/pkg/errors"
+)
+
 // Report defines a report for a single team in a single match at a single event, which is
 // just a list of name/values.
 type Report []ReportField
@@ -66,5 +72,97 @@ type SummaryStat struct {
 // passed must be ONLY for the team being analyzed and have RobotPosition and ScoreBreakdown
 // set properly.
 func SummarizeTeam(schema Schema, matches []Match) (Summary, error) {
-	return Summary{}, nil
+	records := make(map[string][]float64)
+
+	for _, match := range matches {
+		matchRecords, err := summarizeMatch(schema, match)
+		if err != nil {
+			return Summary{}, errors.Wrap(err, "unable to summarize match")
+		}
+
+		for statName, matchRecord := range matchRecords {
+			avg := sumJSONValues(matchRecord) / float64(len(matchRecord))
+			records[statName] = append(records[statName], avg)
+		}
+	}
+
+	var summary Summary
+	for statName, record := range records {
+		stat := SummaryStat{
+			FieldDescriptor: FieldDescriptor{Name: statName},
+			Max:             max(record),
+			Average:         sum(record) / float64(len(record)),
+		}
+
+		summary = append(summary, stat)
+	}
+
+	return summary, nil
+}
+
+func max(values []float64) float64 {
+	var max float64
+	for _, v := range values {
+		if v > max {
+			max = v
+		}
+	}
+	return max
+}
+
+func sum(values []float64) float64 {
+	var sum float64
+	for _, v := range values {
+		sum += v
+	}
+	return sum
+}
+
+func sumJSONValues(values []interface{}) float64 {
+	var sum float64
+	for _, value := range values {
+		switch value := value.(type) {
+		case float64:
+			sum += value
+		case bool:
+			if value {
+				sum++
+			}
+		}
+	}
+	return sum
+}
+
+func summarizeMatch(schema Schema, match Match) (map[string][]interface{}, error) {
+	records := make(map[string][]interface{})
+
+	for _, statDescription := range schema {
+		if statDescription.ReportReference != "" {
+			if err := summarizeReportReference(statDescription, match, records); err != nil {
+				return nil, errors.Wrap(err, "unable to summarize report reference")
+			}
+		} else if statDescription.TBAReference != "" {
+			// summarizeTBAReference(statDescription, match)
+		} else if len(statDescription.Sum) != 0 {
+			// summarizeSum(statDescription, match)
+		} else if len(statDescription.AnyOf) != 0 {
+			// summarizeAnyOf(statDescription, match)
+		} else {
+			return nil, fmt.Errorf("got invalid stat description: no ReportReference, TBAReference, Sum, or AnyOf")
+		}
+	}
+
+	return records, nil
+}
+
+func summarizeReportReference(statDescription SchemaField, match Match, records map[string][]interface{}) error {
+	for _, report := range match.Reports {
+		for _, reportField := range report {
+			if reportField.Name == statDescription.ReportReference {
+				records[statDescription.Name] = append(records[statDescription.Name], reportField.Value)
+			}
+		}
+	}
+
+	return nil
 }
