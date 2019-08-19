@@ -401,7 +401,68 @@ Example (teleop):
 ## Summary Psuedo Code
 
 ```python
-def summarizeTeam(team, teamMatches, teamReports):
-   for match in teamMatches:
+# python-like psuedocode
 
+def summarize_team(team, auto_schema, teleop_schema, team_matches, team_reports):
+   team_summary = {}
+
+   for match in team_matches:
+      auto_records = {}
+      teleop_records = {}
+
+      summarize_match(team, match, auto_schema, auto_records, reports, True)
+      summarize_match(team, match, teleop_schema, teleop_records, reports, False)
+
+      match_summary = {}
+      for name, record in auto_records:
+         match_summary.auto[name] = {max: max(record), avg: sum(record)/len(record), type: auto_schema[name].type}
+      for name, record in teleop_records:
+         match_summary.teleop[name] = {max: max(record), avg: sum(record)/len(record), type: teleop_schema[name].type}
+
+      team_summary[match.key] = team_summary
+
+def summarize_match(team, match, schema, records, reports):
+   for stat_description in schema:
+      if stat_description.report_reference:
+         summarize_report_reference(stat_description, reports, records)
+      elif stat_description.tba_reference:
+         summarize_tba_reference(match, team, stat_description, records)
+      elif stat_description.sum:
+         summarize_sum(stat_description, records)
+      elif stat_description.any_of:
+         summarize_any_of(stat_description, records)
+
+def summarize_report_reference(stat_description, reports, records):
+   for report in reports:
+      if report.name == stat_description.report_reference:
+            records[stat_description.name].append(report.value)
+
+def summarize_tba_reference(match, team, stat_description, records):
+   index = index_of(match.red_alliance, team)
+   breakdown = red_breakdown
+   if index == -1:
+      index = index_of(match.blue_alliance, team)
+      breakdown = blue_breakdown
+
+   if index == -1:
+      continue
+
+   key = template(stat_description.name, index)
+
+   records[stat_description.name].append(breakdown[key])
+
+def summarize_sum(stat_description, records):
+   records_sum = 0
+   for ref in stat_description.sum:
+      records_sum += sum(records[ref.name])
+
+   records[stat_description.name].append(records_sum)
+
+def summarize_any_of(stat_description, records):
+   for ref in stat_description.any_of:
+      for value in source_records[ref.name]:
+         if value == ref.equals:
+            records[stat_description.name].append(True)
+            return
+   records[stat_description.name].append(False)
 ```
