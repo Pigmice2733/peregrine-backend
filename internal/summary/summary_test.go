@@ -76,10 +76,10 @@ var testSchema Schema = []SchemaField{
 		FieldDescriptor: FieldDescriptor{Name: "Rocket Cargo Lvl 3"},
 		ReportReference: "Rocket Cargo Lvl 3",
 	},
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "endgame"},
-	// 	TBAReference:    "endgameRobot{{.robotIndex}}",
-	// },
+	{
+		FieldDescriptor: FieldDescriptor{Name: "endgame"},
+		TBAReference:    "endgameRobot{{.RobotPosition}}",
+	},
 	// {
 	// 	FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 1"},
 	// 	AnyOf: []EqualExpression{

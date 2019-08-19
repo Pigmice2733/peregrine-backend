@@ -1,7 +1,9 @@
 package summary
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 
 	"github.com/pkg/errors"
 )
@@ -154,7 +156,9 @@ func summarizeMatch(schema Schema, match Match) (rawRecords, error) {
 				return nil, errors.Wrap(err, "unable to summarize report reference")
 			}
 		} else if statDescription.TBAReference != "" {
-			// summarizeTBAReference(statDescription, match)
+			if err := summarizeTBAReference(statDescription, match, records); err != nil {
+				return nil, errors.Wrap(err, "unable to summarize TBA reference")
+			}
 		} else if len(statDescription.Sum) != 0 {
 			if err := summarizeSum(statDescription, match, records); err != nil {
 				return nil, errors.Wrap(err, "unable to summarize sum stat")
@@ -179,6 +183,31 @@ func summarizeReportReference(statDescription SchemaField, match Match, records 
 		}
 		records[statDescription.Name] = append(records[statDescription.Name], reportGroup)
 	}
+
+	return nil
+}
+
+type templateData struct {
+	RobotPosition int
+}
+
+func summarizeTBAReference(statDescription SchemaField, match Match, records rawRecords) error {
+	tmpl, err := template.New("key").Parse(statDescription.TBAReference)
+	if err != nil {
+		return errors.Wrap(err, "unable to parse tba reference template")
+	}
+
+	buf := new(bytes.Buffer)
+	if err := tmpl.Execute(buf, templateData{RobotPosition: match.RobotPosition}); err != nil {
+		return errors.Wrap(err, "unable to execute template")
+	}
+
+	value, ok := match.ScoreBreakdown[buf.String()]
+	if !ok {
+		return nil
+	}
+
+	records[statDescription.Name] = append(records[statDescription.Name], []interface{}{value})
 
 	return nil
 }
