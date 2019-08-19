@@ -141,31 +141,31 @@ var testSchema Schema = []SchemaField{
 		FieldDescriptor: FieldDescriptor{Name: "Assisted Climb Points"},
 		ReportReference: "Assisted Climb Points",
 	},
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "Teleop Hatches"},
-	// 	Sum: []FieldDescriptor{
-	// 		{Name: "Rocket Hatches Lvl 1"},
-	// 		{Name: "Rocket Hatches Lvl 2"},
-	// 		{Name: "Rocket Hatches Lvl 3"},
-	// 		{Name: "Cargo Ship Hatches"},
-	// 	},
-	// },
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "Teleop Cargo"},
-	// 	Sum: []FieldDescriptor{
-	// 		{Name: "Rocket Cargo Lvl 1"},
-	// 		{Name: "Rocket Cargo Lvl 2"},
-	// 		{Name: "Rocket Cargo Lvl 3"},
-	// 		{Name: "Cargo Ship Cargo"},
-	// 	},
-	// },
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "Teleop Gamepieces"},
-	// 	Sum: []FieldDescriptor{
-	// 		{Name: "Teleop Hatches"},
-	// 		{Name: "Teleop Cargo"},
-	// 	},
-	// },
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Teleop Hatches"},
+		Sum: []FieldDescriptor{
+			{Name: "Rocket Hatches Lvl 1"},
+			{Name: "Rocket Hatches Lvl 2"},
+			{Name: "Rocket Hatches Lvl 3"},
+			{Name: "Cargo Ship Hatches"},
+		},
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Teleop Cargo"},
+		Sum: []FieldDescriptor{
+			{Name: "Rocket Cargo Lvl 1"},
+			{Name: "Rocket Cargo Lvl 2"},
+			{Name: "Rocket Cargo Lvl 3"},
+			{Name: "Cargo Ship Cargo"},
+		},
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Teleop Gamepieces"},
+		Sum: []FieldDescriptor{
+			{Name: "Teleop Hatches"},
+			{Name: "Teleop Cargo"},
+		},
+	},
 }
 
 var testSummary Summary = []SummaryStat{
@@ -224,21 +224,21 @@ var testSummary Summary = []SummaryStat{
 		Average:         0,
 		Max:             0,
 	},
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "Teleop Hatches"},
-	// 	Average:         37 / 9,
-	// 	Max:             6,
-	// },
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "Teleop Cargo"},
-	// 	Average:         48 / 9,
-	// 	Max:             7,
-	// },
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "Teleop Gamepieces"},
-	// 	Average:         84 / 9,
-	// 	Max:             12,
-	// },
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Teleop Hatches"},
+		Average:         37.0 / 9.0,
+		Max:             6,
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Teleop Cargo"},
+		Average:         48.0 / 9.0,
+		Max:             7,
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Teleop Gamepieces"},
+		Average:         85.0 / 9.0,
+		Max:             12,
+	},
 }
 
 var testMatches = []Match{

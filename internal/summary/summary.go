@@ -81,8 +81,16 @@ func SummarizeTeam(schema Schema, matches []Match) (Summary, error) {
 		}
 
 		for statName, matchRecord := range matchRecords {
-			avg := sumJSONValues(matchRecord) / float64(len(matchRecord))
-			records[statName] = append(records[statName], avg)
+			// if there are multiple reports for one match we need to
+			// average them so one match isn't weighted twice as much
+			// as another if it has two reports
+
+			var sum float64
+			for _, reportGroup := range matchRecord {
+				sum += sumJSONValues(reportGroup)
+			}
+
+			records[statName] = append(records[statName], sum/float64(len(matchRecord)))
 		}
 	}
 
@@ -133,8 +141,12 @@ func sumJSONValues(values []interface{}) float64 {
 	return sum
 }
 
-func summarizeMatch(schema Schema, match Match) (map[string][]interface{}, error) {
-	records := make(map[string][]interface{})
+// mapping of stat names to a list of report values: list of JSON values
+// (float64, bool, string)
+type rawRecords map[string][][]interface{}
+
+func summarizeMatch(schema Schema, match Match) (rawRecords, error) {
+	records := make(rawRecords)
 
 	for _, statDescription := range schema {
 		if statDescription.ReportReference != "" {
@@ -144,7 +156,9 @@ func summarizeMatch(schema Schema, match Match) (map[string][]interface{}, error
 		} else if statDescription.TBAReference != "" {
 			// summarizeTBAReference(statDescription, match)
 		} else if len(statDescription.Sum) != 0 {
-			// summarizeSum(statDescription, match)
+			if err := summarizeSum(statDescription, match, records); err != nil {
+				return nil, errors.Wrap(err, "unable to summarize sum stat")
+			}
 		} else if len(statDescription.AnyOf) != 0 {
 			// summarizeAnyOf(statDescription, match)
 		} else {
@@ -155,14 +169,43 @@ func summarizeMatch(schema Schema, match Match) (map[string][]interface{}, error
 	return records, nil
 }
 
-func summarizeReportReference(statDescription SchemaField, match Match, records map[string][]interface{}) error {
+func summarizeReportReference(statDescription SchemaField, match Match, records rawRecords) error {
 	for _, report := range match.Reports {
+		var reportGroup []interface{}
 		for _, reportField := range report {
 			if reportField.Name == statDescription.ReportReference {
-				records[statDescription.Name] = append(records[statDescription.Name], reportField.Value)
+				reportGroup = append(reportGroup, reportField.Value)
 			}
 		}
+		records[statDescription.Name] = append(records[statDescription.Name], reportGroup)
 	}
+
+	return nil
+}
+
+func summarizeSum(statDescription SchemaField, match Match, records rawRecords) error {
+	var sum float64
+
+	for _, ref := range statDescription.Sum {
+		refRecords := records[ref.Name]
+
+		if len(refRecords) == 0 {
+			// we can't resolve one of the records, return
+			// this can happen if a match is missing a report field, or if
+			// it's a match that only has TBA data and no reports (if you
+			// are summing report data)
+			return nil
+		}
+
+		var statsum float64
+		for _, reportGroup := range refRecords {
+			statsum += sumJSONValues(reportGroup)
+		}
+
+		sum += statsum / float64(len(refRecords))
+	}
+
+	records[statDescription.Name] = append(records[statDescription.Name], []interface{}{sum})
 
 	return nil
 }
