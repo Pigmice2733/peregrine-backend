@@ -7,9 +7,7 @@ import (
 )
 
 func TestSummarizeTeam(t *testing.T) {
-	const team = "frc254"
-
-	actualSummary, err := SummarizeTeam(team, testSchema, testMatches)
+	actualSummary, err := SummarizeTeam(testSchema, testMatches)
 
 	if err != nil {
 		t.Errorf("did not expect error but got: %v\n", err)

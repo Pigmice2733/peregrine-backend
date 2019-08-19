@@ -62,7 +62,9 @@ type SummaryStat struct {
 	Average float64
 }
 
-// SummarizeTeam summarizes a singular team's performance in a list of matches.
-func SummarizeTeam(team string, schema Schema, matches []Match) (Summary, error) {
+// SummarizeTeam summarizes a singular team's performance in a single match. The matches
+// passed must be ONLY for the team being analyzed and have RobotPosition and ScoreBreakdown
+// set properly.
+func SummarizeTeam(schema Schema, matches []Match) (Summary, error) {
 	return Summary{}, nil
 }
