@@ -13,54 +13,50 @@ import (
 
 // Schema describes the statistics that reports should include
 type Schema struct {
-	ID      int64            `json:"id" db:"id"`
-	Year    *int64           `json:"year,omitempty" db:"year"`
-	RealmID *int64           `json:"realmId,omitempty" db:"realm_id"`
-	Auto    StatDescriptions `json:"auto" db:"auto"`
-	Teleop  StatDescriptions `json:"teleop" db:"teleop"`
+	ID      int64        `json:"id" db:"id"`
+	Year    *int64       `json:"year,omitempty" db:"year"`
+	RealmID *int64       `json:"realmId,omitempty" db:"realm_id"`
+	Schema  SchemaFields `json:"auto" db:"auto"`
 }
 
-// StatDescription describes a single statistic in a schema
-type StatDescription struct {
-	Name  string      `json:"name"`
-	Type  string      `json:"type"`
-	Sum   []Reference `json:"sum"`   // only non-nil on type "number" stats
-	AnyOf []AnyOf     `json:"anyOf"` // only non-nil on type "boolean" stats
+// FieldDescriptor defines properties of a schema field that aren't related to how it should be
+// summarized, but just information about the field (name, period, type).
+type FieldDescriptor struct {
+	Name string `json:"name"`
 }
 
-// Reference is used to refer to a TBA or report field.
-type Reference struct {
-	// TBA match score breakdown field name, you can use {{ robotIndex }}
-	// to inject the index of the robot (1, 2, 3) for fields like "endgameRobot1"
-	TBA string `json:"tba"`
-	// Field is the name of the report field to use. Note you can only use TBA *or*
-	// Field, not both.
-	Field string `json:"field"`
+// SchemaField is a singular schema field. Only specify one of: ReportReference, TBAReference,
+// Sum, or AnyOf.
+type SchemaField struct {
+	FieldDescriptor
+	ReportReference string            `json:"reportReference"`
+	TBAReference    string            `json:"tbaReference"`
+	Sum             []FieldDescriptor `json:"sum"`
+	AnyOf           []EqualExpression `json:"anyOf"`
+
+	Hide   bool   `json:"hide"`
+	Type   string `json:"type"`
+	Period string `json:"period"`
 }
 
-// AnyOf is used for boolean stats. If the TBA ore report field value matches the
-// given equals value, the boolean stat is true.
-type AnyOf struct {
-	Reference
-	// Equals is a string, but the value it refers to can be a string, number, or
-	// bool. If the reference refers to a number or bool the string will be parsed
-	// and then compared.
-	// We decided to go with this over using an interface or multiple fields for
-	// each type.
-	Equals string `json:"equals"`
+// EqualExpression defines a reference that should equal some JSON value (float64, number,
+// string).
+type EqualExpression struct {
+	FieldDescriptor
+	Equals interface{} `json:"equals"`
 }
 
-// StatDescriptions holds multiple StatDescriptions for storing in one DB column
-type StatDescriptions []StatDescription
+// SchemaFields holds multiple SchemaFields for storing in one DB column
+type SchemaFields []SchemaField
 
 // Value implements driver.Valuer to return JSON for the DB from StatDescription.
-func (sd StatDescriptions) Value() (driver.Value, error) { return json.Marshal(sd) }
+func (sd SchemaFields) Value() (driver.Value, error) { return json.Marshal(sd) }
 
-// Scan implements sql.Scanner to scan JSON from the DB into StatDescriptions.
-func (sd *StatDescriptions) Scan(src interface{}) error {
+// Scan implements sql.Scanner to scan JSON from the DB into SchemaFields.
+func (sd *SchemaFields) Scan(src interface{}) error {
 	j, ok := src.([]byte)
 	if !ok {
-		return errors.New("got invalid type for StatDescriptions")
+		return errors.New("got invalid type for SchemaFields")
 	}
 
 	return json.Unmarshal(j, sd)
@@ -76,8 +72,8 @@ func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
 	_, err = tx.NamedExecContext(ctx, `
 	INSERT
 		INTO
-			schemas (year, realm_id, auto, teleop)
-		VALUES (:year, :realm_id, :auto, :teleop)
+			schemas (year, realm_id, schema)
+		VALUES (:year, :realm_id, :schema)
 	`, schema)
 
 	if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
