@@ -80,63 +80,63 @@ var testSchema Schema = []SchemaField{
 		FieldDescriptor: FieldDescriptor{Name: "endgame"},
 		TBAReference:    "endgameRobot{{.RobotPosition}}",
 	},
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 1"},
-	// 	AnyOf: []EqualExpression{
-	// 		{
-	// 			FieldDescriptor: FieldDescriptor{Name: "endgame"},
-	// 			Equals:          "HabLevel1",
-	// 		},
-	// 	},
-	// },
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 2"},
-	// 	AnyOf: []EqualExpression{
-	// 		{
-	// 			FieldDescriptor: FieldDescriptor{Name: "endgame"},
-	// 			Equals:          "HabLevel2",
-	// 		},
-	// 	},
-	// },
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 3"},
-	// 	AnyOf: []EqualExpression{
-	// 		{
-	// 			FieldDescriptor: FieldDescriptor{Name: "endgame"},
-	// 			Equals:          "HabLevel3",
-	// 		},
-	// 	},
-	// },
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 1+"},
-	// 	AnyOf: []EqualExpression{
-	// 		{
-	// 			FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 1"},
-	// 			Equals:          true,
-	// 		},
-	// 		{
-	// 			FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 2"},
-	// 			Equals:          true,
-	// 		},
-	// 		{
-	// 			FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 3"},
-	// 			Equals:          true,
-	// 		},
-	// 	},
-	// },
-	// {
-	// 	FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 2+"},
-	// 	AnyOf: []EqualExpression{
-	// 		{
-	// 			FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 2"},
-	// 			Equals:          true,
-	// 		},
-	// 		{
-	// 			FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 3"},
-	// 			Equals:          true,
-	// 		},
-	// 	},
-	// },
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 1"},
+		AnyOf: []EqualExpression{
+			{
+				FieldDescriptor: FieldDescriptor{Name: "endgame"},
+				Equals:          "HabLevel1",
+			},
+		},
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 2"},
+		AnyOf: []EqualExpression{
+			{
+				FieldDescriptor: FieldDescriptor{Name: "endgame"},
+				Equals:          "HabLevel2",
+			},
+		},
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 3"},
+		AnyOf: []EqualExpression{
+			{
+				FieldDescriptor: FieldDescriptor{Name: "endgame"},
+				Equals:          "HabLevel3",
+			},
+		},
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 1+"},
+		AnyOf: []EqualExpression{
+			{
+				FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 1"},
+				Equals:          true,
+			},
+			{
+				FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 2"},
+				Equals:          true,
+			},
+			{
+				FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 3"},
+				Equals:          true,
+			},
+		},
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 2+"},
+		AnyOf: []EqualExpression{
+			{
+				FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 2"},
+				Equals:          true,
+			},
+			{
+				FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 3"},
+				Equals:          true,
+			},
+		},
+	},
 	{
 		FieldDescriptor: FieldDescriptor{Name: "Assisted Climb Points"},
 		ReportReference: "Assisted Climb Points",
@@ -220,6 +220,31 @@ var testSummary Summary = []SummaryStat{
 		Max:             2,
 	},
 	{
+		FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 1"},
+		Average:         0.4375,
+		Max:             1,
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 1+"},
+		Average:         0.9375,
+		Max:             1,
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 2"},
+		Average:         0.0625,
+		Max:             1,
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 2+"},
+		Average:         0.5,
+		Max:             1,
+	},
+	{
+		FieldDescriptor: FieldDescriptor{Name: "Climbed Lvl 3"},
+		Average:         0.4375,
+		Max:             1,
+	},
+	{
 		FieldDescriptor: FieldDescriptor{Name: "Assisted Climb Points"},
 		Average:         0,
 		Max:             0,
@@ -239,6 +264,7 @@ var testSummary Summary = []SummaryStat{
 		Average:         85.0 / 9.0,
 		Max:             12,
 	},
+	{FieldDescriptor: FieldDescriptor{Name: "endgame"}},
 }
 
 var testMatches = []Match{

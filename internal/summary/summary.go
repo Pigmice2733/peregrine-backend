@@ -164,7 +164,9 @@ func summarizeMatch(schema Schema, match Match) (rawRecords, error) {
 				return nil, errors.Wrap(err, "unable to summarize sum stat")
 			}
 		} else if len(statDescription.AnyOf) != 0 {
-			// summarizeAnyOf(statDescription, match)
+			if err := summarizeAnyOf(statDescription, match, records); err != nil {
+				return nil, errors.Wrap(err, "unable to summarize any of stat")
+			}
 		} else {
 			return nil, fmt.Errorf("got invalid stat description: no ReportReference, TBAReference, Sum, or AnyOf")
 		}
@@ -237,4 +239,42 @@ func summarizeSum(statDescription SchemaField, match Match, records rawRecords) 
 	records[statDescription.Name] = append(records[statDescription.Name], []interface{}{sum})
 
 	return nil
+}
+
+func summarizeAnyOf(statDescription SchemaField, match Match, records rawRecords) error {
+	for _, ref := range statDescription.AnyOf {
+		refRecords := records[ref.Name]
+
+		for _, reportGroup := range refRecords {
+			for _, record := range reportGroup {
+				if compareRecords(record, ref.Equals) {
+					records[statDescription.Name] = append(records[statDescription.Name], []interface{}{1.0})
+					return nil
+				}
+			}
+		}
+	}
+
+	records[statDescription.Name] = append(records[statDescription.Name], []interface{}{0.0})
+	return nil
+}
+
+func compareRecords(a, b interface{}) bool {
+	aString, aOk := a.(string)
+	bString, bOk := b.(string)
+	if aOk && bOk {
+		return aString == bString
+	}
+
+	aFloat, aOk := a.(float64)
+	bFloat, bOk := b.(float64)
+
+	if aBool, aOk := a.(bool); aOk && aBool {
+		aFloat = 1.0
+	}
+	if bBool, bOk := b.(bool); bOk && bBool {
+		bFloat = 1.0
+	}
+
+	return aFloat == bFloat
 }
