@@ -127,9 +127,9 @@ func selectTeamMatches(storeMatches []store.Match, reports []store.Report) map[s
 	for _, storeMatch := range storeMatches {
 		teams := append([]string(storeMatch.RedAlliance), []string(storeMatch.BlueAlliance)...)
 		for i, team := range teams {
-			position := (i % 3) + 1
+			position := (i % len(storeMatch.RedAlliance)) + 1
 			breakdown := storeMatch.RedScoreBreakdown
-			if i >= 3 {
+			if i >= len(storeMatch.RedAlliance) {
 				breakdown = storeMatch.BlueScoreBreakdown
 			}
 
