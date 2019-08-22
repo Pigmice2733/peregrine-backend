@@ -21,12 +21,6 @@ type Team struct {
 	Nickname string `json:"nickname" db:"nickname"`
 }
 
-// GetEventTeamKeys retrieves all team keys from an event specified by eventKey.
-func (s *Service) GetEventTeamKeys(ctx context.Context, eventKey string) ([]string, error) {
-	teamKeys := []string{}
-	return teamKeys, s.db.SelectContext(ctx, &teamKeys, "SELECT key FROM teams WHERE event_key = $1", eventKey)
-}
-
 // GetEventTeam retrieves a team specified by teamKey from an event specified by eventKey.
 func (s *Service) GetEventTeam(ctx context.Context, teamKey string, eventKey string) (EventTeam, error) {
 	var t EventTeam

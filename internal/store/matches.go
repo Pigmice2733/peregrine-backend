@@ -261,6 +261,7 @@ func (s *Service) GetAnalysisInfo(ctx context.Context, eventKey string) ([]Match
 
 	err := s.db.SelectContext(ctx, &matches, `
 	SELECT
+		key,
 		r.team_keys AS red_alliance,
 		b.team_keys AS blue_alliance,
 		red_score_breakdown,

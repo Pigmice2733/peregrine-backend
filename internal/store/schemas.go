@@ -16,7 +16,7 @@ type Schema struct {
 	ID      int64        `json:"id" db:"id"`
 	Year    *int64       `json:"year,omitempty" db:"year"`
 	RealmID *int64       `json:"realmId,omitempty" db:"realm_id"`
-	Schema  SchemaFields `json:"auto" db:"auto"`
+	Schema  SchemaFields `json:"schema" db:"schema"`
 }
 
 // FieldDescriptor defines properties of a schema field that aren't related to how it should be
@@ -29,14 +29,14 @@ type FieldDescriptor struct {
 // Sum, or AnyOf.
 type SchemaField struct {
 	FieldDescriptor
-	ReportReference string            `json:"reportReference"`
-	TBAReference    string            `json:"tbaReference"`
-	Sum             []FieldDescriptor `json:"sum"`
-	AnyOf           []EqualExpression `json:"anyOf"`
+	ReportReference string            `json:"reportReference,omitempty"`
+	TBAReference    string            `json:"tbaReference,omitempty"`
+	Sum             []FieldDescriptor `json:"sum,omitempty"`
+	AnyOf           []EqualExpression `json:"anyOf,omitempty"`
 
-	Hide   bool   `json:"hide"`
-	Type   string `json:"type"`
-	Period string `json:"period"`
+	Hide   bool   `json:"hide,omitempty"`
+	Type   string `json:"type,omitempty"`
+	Period string `json:"period,omitempty"`
 }
 
 // EqualExpression defines a reference that should equal some JSON value (float64, number,
