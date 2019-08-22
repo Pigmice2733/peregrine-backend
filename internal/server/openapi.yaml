@@ -452,7 +452,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/eventKey"
     get:
-      summary: Get performance stats for all teams at an event
+      summary: Get stats summary for all teams at an event
       operationId: getEventStats
       tags:
         - stats
@@ -467,13 +467,12 @@ paths:
                 items:
                   required:
                     - team
+                    - summary
                   properties:
                     team:
                       type: string
                       example: frc2733
-                    auto:
-                      $ref: "#/components/schemas/stats"
-                    teleop:
+                    summary:
                       $ref: "#/components/schemas/stats"
         "400":
           $ref: "#/components/responses/badRequestError"
@@ -1023,28 +1022,20 @@ components:
     reportStat:
       required:
         - name
-        - attempts
-        - successes
+        - value
       properties:
         name:
           type: string
           example: Sandstorm 2
-        attempts:
-          type: integer
-          example: 9
-        successes:
-          type: integer
+        value:
+          type: number
           example: 2
     report:
       required:
-        - autoName
         - data
       properties:
         reporterId:
           $ref: "#/components/schemas/id"
-        autoName:
-          type: string
-          example: Center Scale
         data:
           $ref: "#/components/schemas/reportData"
     comment:
@@ -1062,18 +1053,9 @@ components:
         matchKey:
           $ref: "#/components/schemas/matchKey"
     reportData:
-      required:
-        - auto
-        - teleop
-      properties:
-        auto:
-          type: array
-          items:
-            $ref: "#/components/schemas/reportStat"
-        teleop:
-          type: array
-          items:
-            $ref: "#/components/schemas/reportStat"
+      type: array
+      items:
+        $ref: "#/components/schemas/reportStat"
     match:
       required:
         - key
@@ -1108,34 +1090,25 @@ components:
             type: string
             example: frc4488
     stats:
-      properties:
-        statName:
-          description: There is a key for each stat
-          required:
-            - attempts
-            - successes
-            - type
-          properties:
-            attempts:
-              $ref: "#/components/schemas/statPoint"
-            successes:
-              $ref: "#/components/schemas/statPoint"
-            type:
-              type: string
-              enum: [number, boolean]
-    statPoint:
-      required:
-        - max
-        - avg
-      properties:
-        max:
-          type: number
-          format: double
-          example: 10
-        avg:
-          type: number
-          format: double
-          example: 4.25
+      type: array
+      items:
+        description: A list of stat max/avgs
+        required:
+          - max
+          - avg
+          - name
+        properties:
+          max:
+            type: number
+            format: double
+            example: 4
+          avg:
+            type: number
+            format: double
+            example: 2.25
+          name:
+            type: string
+            example: Rocket Hatches Lvl 1
     event:
       required:
         - key
@@ -1223,8 +1196,7 @@ components:
     schema:
       required:
         - id
-        - auto
-        - teleop
+        - schema
       properties:
         id:
           $ref: "#/components/schemas/id"
@@ -1234,21 +1206,58 @@ components:
           example: 2018
         realmId:
           $ref: "#/components/schemas/id"
-        auto:
-          $ref: "#/components/schemas/statDescriptions"
-        teleop:
+        schema:
           $ref: "#/components/schemas/statDescriptions"
     statDescriptions:
       type: array
       items:
         required:
           - name
-          - type
         properties:
           name:
             type: string
+            example: Cargo Placed
+          reportReference:
+            type: string
+            example: Cargo Placed
+          tbaReference:
+            type: string
+            example: endgameRobot{{.RobotPosition}}
+          anyOf:
+            $ref: '#/components/schemas/anyOf'
+          sum:
+            $ref: '#/components/schemas/sum'
+          hide:
+            type: boolean
+            example: true
+          period:
+            type: string
+            example: auto
           type:
             type: string
+            enum: [number, boolean, string]
+    anyOf:
+      type: array
+      items:
+        properties:
+          name:
+            type: string
+            example: endgame
+          equals:
+            type: string
+            example: HabLevel1
+        required:
+          - name
+          - equals
+    sum:
+      type: array
+      items:
+        properties:
+          name:
+            type: string
+            example: endgame
+        required:
+          - name
     user:
       required:
         - id

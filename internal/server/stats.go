@@ -93,10 +93,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 				return
 			}
 
-			teamAnalyses = append(teamAnalyses, teamAnalysis{
-				Team:    team,
-				Summary: summary,
-			})
+			teamAnalyses = append(teamAnalyses, teamAnalysisFromSummary(summary, team))
 		}
 
 		ihttp.Respond(w, teamAnalyses, http.StatusOK)
@@ -173,6 +170,28 @@ func storeSummaryToSummarySchema(storeSchema store.Schema) summary.Schema {
 }
 
 type teamAnalysis struct {
-	Team    string          `json:"team"`
-	Summary summary.Summary `json:"summary"`
+	Team    string        `json:"team"`
+	Summary []summaryStat `json:"summary"`
+}
+
+type summaryStat struct {
+	Name    string  `json:"name"`
+	Max     float64 `json:"max"`
+	Average float64 `json:"avg"`
+}
+
+func teamAnalysisFromSummary(summary summary.Summary, team string) teamAnalysis {
+	var stats []summaryStat
+	for _, stat := range summary {
+		stats = append(stats, summaryStat{
+			Name:    stat.Name,
+			Max:     stat.Max,
+			Average: stat.Average,
+		})
+	}
+
+	return teamAnalysis{
+		Team:    team,
+		Summary: stats,
+	}
 }
