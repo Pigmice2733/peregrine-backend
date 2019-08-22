@@ -147,16 +147,6 @@ func selectTeamMatches(storeMatches []store.Match, reports []store.Report) map[s
 	return teamToMatches
 }
 
-func indexOf(a []string, v string) int {
-	for i, b := range a {
-		if b == v {
-			return i
-		}
-	}
-
-	return -1
-}
-
 func storeSummaryToSummarySchema(storeSchema store.Schema) summary.Schema {
 	var schema summary.Schema
 	for _, statDescription := range storeSchema.Schema {
