@@ -101,7 +101,7 @@ func (s *Service) EventTeamsUpsert(ctx context.Context, teams []EventTeam) error
 		return err
 	}
 
-	allTeamsStmt, err := tx.PrepareContext(ctx, `
+	allTeamsStmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO all_teams (key)
 		VALUES (:key)
 		ON CONFLICT
@@ -120,7 +120,7 @@ func (s *Service) EventTeamsUpsert(ctx context.Context, teams []EventTeam) error
 		}
 	}
 
-	stmt, err := tx.PrepareContext(ctx, `
+	stmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO teams (key, event_key, rank, ranking_score)
 		VALUES (:key, :event_key, :rank, :ranking_score)
 		ON CONFLICT (key, event_key)
@@ -150,7 +150,7 @@ func (s *Service) TeamsUpsert(ctx context.Context, teams []Team) error {
 		return err
 	}
 
-	stmt, err := tx.PrepareContext(ctx, `
+	stmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO all_teams (key, nickname)
 		VALUES (:key, :nickname)
 		ON CONFLICT (key)
