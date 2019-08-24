@@ -24,6 +24,7 @@ type Event struct {
 	EndDate      time.Time      `json:"endDate" db:"end_date"`
 	Webcasts     pq.StringArray `json:"webcasts" db:"webcasts"`
 	LocationName string         `json:"locationName" db:"location_name"`
+	GMapsURL     *string        `json:"gmapsUrl" db:"gmaps_url"`
 	Lat          float64        `json:"lat" db:"lat"`
 	Lon          float64        `json:"lon" db:"lon"`
 	TBADeleted   bool           `json:"tbaDeleted" db:"tba_deleted"`
@@ -40,6 +41,7 @@ SELECT
 		end_date,
 		webcasts,
 		location_name,
+		gmaps_url,
 		lat,
 		lon,
 		tba_deleted,
@@ -153,8 +155,8 @@ func (s *Service) GetEvent(ctx context.Context, eventKey string) (Event, error) 
 func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
 		eventStmt, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, lat, lon, realm_id, schema_id, tba_deleted)
-		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
+		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, gmaps_url, lat, lon, realm_id, schema_id, tba_deleted)
+		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :gmaps_url, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -167,6 +169,7 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 					end_date = :end_date,
 					webcasts = :webcasts,
 					location_name = :location_name,
+					gmaps_url = :gmaps_url,
 					lat = :lat,
 					lon = :lon,
 					realm_id = :realm_id,
@@ -231,10 +234,9 @@ func (s *Service) UpsertEvent(ctx context.Context, event Event) (created bool, e
 		}
 
 		_, err = tx.NamedExecContext(ctx, `
-			INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, lat, lon, realm_id, schema_id, tba_deleted)
-			VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
-			ON CONFLICT (key)
-			DO
+			INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, gmaps_url, lat, lon, realm_id, schema_id, tba_deleted)
+				VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :gmaps_url, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
+			ON CONFLICT (key) DO
 				UPDATE
 					SET
 						name = :name,
@@ -245,6 +247,7 @@ func (s *Service) UpsertEvent(ctx context.Context, event Event) (created bool, e
 						end_date = :end_date,
 						webcasts = :webcasts,
 						location_name = :location_name,
+						gmaps_url= :gmaps_url,
 						lat = :lat,
 						lon = :lon,
 						realm_id = :realm_id,

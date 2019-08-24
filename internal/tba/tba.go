@@ -38,6 +38,7 @@ type event struct {
 	District     *district `json:"district"`
 	Lat          float64   `json:"lat"`
 	Lng          float64   `json:"lng"`
+	GMapsURL     *string   `json:"gmaps_url"`
 	LocationName string    `json:"location_name"`
 	Week         *int      `json:"week"`
 	StartDate    string    `json:"start_date"`
@@ -211,6 +212,7 @@ func (s *Service) GetEvents(ctx context.Context, year int) ([]store.Event, error
 			Webcasts:     webcasts,
 			Lat:          tbaEvent.Lat,
 			Lon:          tbaEvent.Lng,
+			GMapsURL:     tbaEvent.GMapsURL,
 			LocationName: tbaEvent.LocationName,
 		})
 	}

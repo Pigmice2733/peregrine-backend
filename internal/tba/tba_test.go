@@ -100,6 +100,7 @@ func TestGetEvents(t *testing.T) {
 						],
 						"lat": 41.9911025,
 						"lng": -70.993044,
+						"gmaps_url": "https://www.google.com/maps?cid=7437893320196269298",
 						"location_name": "location1",
 						"timezone": "America/Los_Angeles"
 					}
@@ -121,6 +122,7 @@ func TestGetEvents(t *testing.T) {
 					EndDate:      time.Date(2018, 4, 4, 7, 0, 0, 0, time.UTC),
 					Lat:          41.9911025,
 					Lon:          -70.993044,
+					GMapsURL:     newString("https://www.google.com/maps?cid=7437893320196269298"),
 					LocationName: "location1",
 					Webcasts:     []string{"https://www.twitch.tv/nefirst_blue"},
 				},
@@ -159,6 +161,7 @@ func TestGetEvents(t *testing.T) {
 					    ],
 						"lat": 42.0,
 						"lng": 0.0,
+						"gmaps_url": "https://www.google.com/maps?cid=7437893320196269298",
 						"location_name": "answer"
 					},
 					{
@@ -185,6 +188,7 @@ func TestGetEvents(t *testing.T) {
 							}],
 						"lat": 45.52,
 						"lng": -122.681944,
+						"gmaps_url": "https://www.google.com/maps?cid=7437893320196269298",
 						"location_name": "Portland",
 						"timezone": "America/Los_Angeles"
 				    }
@@ -205,6 +209,7 @@ func TestGetEvents(t *testing.T) {
 				EndDate:      time.Date(2018, 5, 7, 0, 0, 0, 0, time.UTC),
 				Lat:          42.0,
 				Lon:          0.0,
+				GMapsURL:     newString("https://www.google.com/maps?cid=7437893320196269298"),
 				LocationName: "answer",
 				Webcasts:     []string{"https://www.youtube.com/watch?v=rXP6Vz9-Jjg", "https://www.twitch.tv/firstinspires12"},
 			}, {
@@ -217,6 +222,7 @@ func TestGetEvents(t *testing.T) {
 				EndDate:      time.Date(2018, 11, 23, 8, 0, 0, 0, time.UTC),
 				Lat:          45.52,
 				Lon:          -122.681944,
+				GMapsURL:     newString("https://www.google.com/maps?cid=7437893320196269298"),
 				LocationName: "Portland",
 				Webcasts:     []string{"https://www.youtube.com/watch?v=gmsHpsSavuc"},
 			}},
@@ -511,6 +517,7 @@ func TestGetTeams(t *testing.T) {
 						"key": "frc7500",
 						"lat": null,
 						"lng": null,
+						"gmaps_url": null,
 						"location_name": null,
 						"motto": null,
 						"name": "NASA/Florida Power and Light/State of Florida&St Thomas Aquinas High School",
@@ -534,6 +541,7 @@ func TestGetTeams(t *testing.T) {
 						"key": "frc7502",
 						"lat": null,
 						"lng": null,
+						"gmaps_url": null,
 						"location_name": null,
 						"motto": null,
 						"name": "NASA/Middlebury Community Schools&Northridge High School",
@@ -562,6 +570,7 @@ func TestGetTeams(t *testing.T) {
 						"key": "frc2733",
 						"lat": null,
 						"lng": null,
+						"gmaps_url": null,
 						"location_name": null,
 						"motto": null,
 						"name": "Daimler/TE Connectivity/Boeing/Oregon Dept of Education/FLIR/Autodesk/DW Fritz Automation/Marathon Oil/SolidWorks/Hankins Hardware&Cleveland High School&Family/Community",

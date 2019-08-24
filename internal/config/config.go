@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/pkg/errors"
@@ -43,5 +44,5 @@ func Open(path string) (Config, error) {
 	}
 
 	validate := validator.New()
-	return c, errors.Wrap(validate.Struct(c), "config loaded from environment variables fails to validate")
+	return c, errors.Wrap(validate.Struct(c), fmt.Sprintf("config loaded from %s fails to validate", path))
 }
