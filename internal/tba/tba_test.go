@@ -17,7 +17,6 @@ type tbaServer struct {
 	*httptest.Server
 	getEventsHandler       func(w http.ResponseWriter, r *http.Request)
 	getMatchesHandler      func(w http.ResponseWriter, r *http.Request)
-	getTeamKeysHandler     func(w http.ResponseWriter, r *http.Request)
 	getTeamRankingsHandler func(w http.ResponseWriter, r *http.Request)
 	getTeamsHandler        func(w http.ResponseWriter, r *http.Request)
 }
@@ -46,7 +45,6 @@ func newTBAServer() *tbaServer {
 	r := mux.NewRouter()
 	r.HandleFunc("/events/"+strconv.Itoa(testingYear), func(w http.ResponseWriter, r *http.Request) { ts.getEventsHandler(w, r) })
 	r.HandleFunc("/event/{eventKey}/matches/simple", func(w http.ResponseWriter, r *http.Request) { ts.getMatchesHandler(w, r) })
-	r.HandleFunc("/event/{eventKey}/teams/keys", func(w http.ResponseWriter, r *http.Request) { ts.getTeamKeysHandler(w, r) })
 	r.HandleFunc("/event/{eventKey}/rankings", func(w http.ResponseWriter, r *http.Request) { ts.getTeamRankingsHandler(w, r) })
 	r.HandleFunc("/teams/{page}", func(w http.ResponseWriter, r *http.Request) { ts.getTeamsHandler(w, r) })
 
@@ -236,7 +234,7 @@ func TestGetEvents(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server.getEventsHandler = tt.getEventsHandler
 
-			events, err := s.GetEvents(context.TODO(), testingYear, nil)
+			events, err := s.GetEvents(context.TODO(), testingYear)
 			if !tt.expectErr && err != nil {
 				t.Errorf("did not expect an error but got one: %v", err)
 			} else if tt.expectErr && err == nil {
@@ -453,79 +451,6 @@ func TestGetMatches(t *testing.T) {
 
 			if !cmp.Equal(matches, tt.matches) {
 				t.Errorf("expected matches do not equal actual matches, got dif: %s", cmp.Diff(tt.matches, matches))
-			}
-		})
-	}
-}
-
-func TestGetTeamKeys(t *testing.T) {
-	server := newTBAServer()
-	defer server.Close()
-
-	APIKey := "notARealKey"
-
-	s := Service{URL: server.URL, APIKey: APIKey}
-
-	const eventKey = "2018abca"
-
-	testCases := []struct {
-		name               string
-		getTeamKeysHandler func(w http.ResponseWriter, r *http.Request)
-		keys               []string
-		expectErr          bool
-	}{
-		{
-			name: "tba team keys route gives 500",
-			getTeamKeysHandler: func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusInternalServerError)
-			},
-			keys:      nil,
-			expectErr: true,
-		},
-		{
-			name: "tba gives several team keys",
-			getTeamKeysHandler: func(w http.ResponseWriter, r *http.Request) {
-				if r.Header.Get("X-TBA-Auth-Key") != "notARealKey" {
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-
-				vars := mux.Vars(r)
-				if key, ok := vars["eventKey"]; !ok || key != eventKey {
-					w.WriteHeader(http.StatusNotFound)
-					return
-				}
-
-				w.WriteHeader(http.StatusOK)
-				_, err := w.Write([]byte(`
-				[
-                    "frc2733", "frc254", "frc0", "frc2471", "frc118", "frc1", "frc2"
-				]
-				`))
-
-				if err != nil {
-					t.Errorf("failed to write test data")
-				}
-			},
-			keys: []string{
-				"frc2733", "frc254", "frc0", "frc2471", "frc118", "frc1", "frc2",
-			},
-		},
-	}
-
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			server.getTeamKeysHandler = tt.getTeamKeysHandler
-
-			keys, err := s.GetTeamKeys(context.TODO(), eventKey)
-			if !tt.expectErr && err != nil {
-				t.Errorf("did not expect an error but got one: %v", err)
-			} else if tt.expectErr && err == nil {
-				t.Errorf("expected error but didnt get one: %v", err)
-			}
-
-			if !cmp.Equal(keys, tt.keys) {
-				t.Errorf("expected keys do not equal actual keys, got dif: %s", cmp.Diff(tt.keys, keys))
 			}
 		})
 	}

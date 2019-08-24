@@ -8,7 +8,6 @@ import (
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 )
 
 // eventStats analyzes the event-wide statistics of every team at an event with submitted reports
@@ -34,18 +33,6 @@ func (s *Server) eventStats() http.HandlerFunc {
 
 		if event.SchemaID == nil {
 			ihttp.Respond(w, fmt.Errorf("no schema found"), http.StatusBadRequest)
-			return
-		}
-
-		// Get new team data from TBA
-		if err := s.updateEventTeamKeys(r.Context(), eventKey); err != nil {
-			// 404 if eventKey isn't a real event
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("updating team key data")
 			return
 		}
 

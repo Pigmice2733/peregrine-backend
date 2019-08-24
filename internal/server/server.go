@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -20,12 +19,10 @@ var openAPI []byte
 type Server struct {
 	config.Server
 
-	TBA              *tba.Service
-	Store            *store.Service
-	Logger           *logrus.Logger
-	eventsLastUpdate *time.Time
-	teamsLastUpdate  *time.Time
-	start            time.Time
+	TBA    *tba.Service
+	Store  *store.Service
+	Logger *logrus.Logger
+	start  time.Time
 }
 
 func (s *Server) uptime() time.Duration {
@@ -42,12 +39,6 @@ func (s *Server) Run() error {
 	handler = ihttp.Log(handler, s.Logger)
 	handler = ihttp.Auth(handler, s.JWTSecret)
 	handler = ihttp.CORS(handler, s.Origin)
-
-	s.Logger.Info("fetching seed events")
-	if err := s.updateEvents(context.Background()); err != nil {
-		s.Logger.WithError(err).Error("updating event data on server run")
-	}
-	s.Logger.Info("fetched seed events")
 
 	httpServer := &http.Server{
 		Addr:              s.Listen,

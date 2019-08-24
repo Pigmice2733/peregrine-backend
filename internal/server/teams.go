@@ -1,13 +1,10 @@
 package server
 
 import (
-	"context"
 	"net/http"
-	"time"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
-	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 )
@@ -15,12 +12,6 @@ import (
 // teamHandler returns a handler to get general info for a specific team
 func (s *Server) teamHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := s.updateTeams(r.Context()); err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("unable to update teams data")
-			return
-		}
-
 		vars := mux.Vars(r)
 		teamKey := vars["teamKey"]
 
@@ -59,17 +50,6 @@ func (s *Server) eventTeamHandler() http.HandlerFunc {
 			return
 		}
 
-		// Get new team rankings data from TBA
-		err = s.updateEventTeamRankings(r.Context(), eventKey)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("updating team rankings data")
-			return
-		}
-
 		team, err := s.Store.GetEventTeam(r.Context(), teamKey, eventKey)
 		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
@@ -105,17 +85,6 @@ func (s *Server) eventTeamsHandler() http.HandlerFunc {
 			return
 		}
 
-		// Get new team rankings data from TBA
-		err = s.updateEventTeamRankings(r.Context(), eventKey)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("updating team rankings data")
-			return
-		}
-
 		teams, err := s.Store.GetEventTeams(r.Context(), eventKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -125,72 +94,4 @@ func (s *Server) eventTeamsHandler() http.HandlerFunc {
 
 		ihttp.Respond(w, teams, http.StatusOK)
 	}
-}
-
-// Get new team key data from TBA for a particular event. Upsert data into database.
-func (s *Server) updateEventTeamKeys(ctx context.Context, eventKey string) error {
-	// Check that eventKey is a valid event key
-	valid, err := s.Store.CheckTBAEventKeyExists(ctx, eventKey)
-	if err != nil {
-		return err
-	}
-	if !valid {
-		return nil
-	}
-
-	teams, err := s.TBA.GetTeamKeys(ctx, eventKey)
-	if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	return s.Store.EventTeamKeysUpsert(ctx, eventKey, teams)
-}
-
-// Get new team rankings data from TBA for a particular event. Upsert data into database.
-func (s *Server) updateEventTeamRankings(ctx context.Context, eventKey string) error {
-	// Check that eventKey is a valid event key
-	valid, err := s.Store.CheckTBAEventKeyExists(ctx, eventKey)
-	if err != nil {
-		return err
-	}
-	if !valid {
-		return nil
-	}
-
-	teams, err := s.TBA.GetTeamRankings(ctx, eventKey)
-	if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	return s.Store.EventTeamsUpsert(ctx, teams)
-}
-
-// Hours to cache teams data from TBA for
-const teamsExpiry = 6.0
-
-// Get new teams data from TBA only if data are over 3 hours old.
-// Upsert teams data into database.
-func (s *Server) updateTeams(ctx context.Context) error {
-	now := time.Now()
-
-	if s.teamsLastUpdate == nil || now.Sub(*s.teamsLastUpdate).Hours() > teamsExpiry {
-		teams, err := s.TBA.GetTeams(ctx)
-		if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
-			return nil
-		} else if err != nil {
-			return errors.Wrap(err, "retrieving teams")
-		}
-
-		if err := s.Store.TeamsUpsert(ctx, teams); err != nil {
-			return errors.Wrap(err, "upserting teams")
-		}
-
-		s.teamsLastUpdate = &now
-	}
-
-	return nil
 }

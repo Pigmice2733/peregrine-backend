@@ -5,6 +5,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/pkg/errors"
 )
 
 // AlliancesUpsert upserts the red and blue alliances for a specific match.
@@ -19,14 +20,14 @@ func (s *Service) AlliancesUpsert(ctx context.Context, matchKey string, blueAlli
 				SET team_keys = $1
 	`)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "unable to prepare alliances upsert statement")
 	}
 	defer stmt.Close()
 
 	_, err = stmt.ExecContext(ctx, pq.Array(&blueAlliance), matchKey, true)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "unable to upsert blue alliance")
 	}
 	_, err = stmt.ExecContext(ctx, pq.Array(&redAlliance), matchKey, false)
-	return err
+	return errors.Wrap(err, "unable to upsert red alliance")
 }

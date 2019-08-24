@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
 
@@ -20,6 +21,13 @@ type Team struct {
 	Key      string `json:"key" db:"key"`
 	Nickname string `json:"nickname" db:"nickname"`
 }
+
+const allTeamsKeyUpsert = `
+INSERT INTO all_teams (key)
+	VALUES (:key)
+	ON CONFLICT
+		DO NOTHING
+`
 
 // GetEventTeamKeys retrieves all team keys from an event specified by eventKey.
 func (s *Service) GetEventTeamKeys(ctx context.Context, eventKey string) ([]string, error) {
@@ -53,129 +61,104 @@ func (s *Service) GetTeam(ctx context.Context, teamKey string) (Team, error) {
 	return t, err
 }
 
-// EventTeamKeysUpsert upserts multiple team keys from a single event into the database.
-func (s *Service) EventTeamKeysUpsert(ctx context.Context, eventKey string, keys []string) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	allTeamsStmt, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO all_teams (key)
-		VALUES ($1)
-		ON CONFLICT
-			DO NOTHING
-	`)
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
-	defer allTeamsStmt.Close()
-
-	for _, team := range keys {
-		if _, err = allTeamsStmt.ExecContext(ctx, team); err != nil {
-			s.logErr(tx.Rollback())
-			return err
-		}
-	}
-
-	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO teams (key, event_key)
-		VALUES ($1, $2)
-		ON CONFLICT (key, event_key) DO NOTHING
-	`)
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
-	defer stmt.Close()
-
-	for _, key := range keys {
-		if _, err = stmt.ExecContext(ctx, key, eventKey); err != nil {
-			s.logErr(tx.Rollback())
-			return err
-		}
-	}
-
-	return tx.Commit()
-}
-
 // EventTeamsUpsert upserts multiple teams for a specific event into the database.
 func (s *Service) EventTeamsUpsert(ctx context.Context, teams []EventTeam) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	allTeamsStmt, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO all_teams (key)
-		VALUES (:key)
-		ON CONFLICT
-			DO NOTHING
-	`)
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
-	defer allTeamsStmt.Close()
-
-	for _, team := range teams {
-		if _, err = allTeamsStmt.ExecContext(ctx, team); err != nil {
-			s.logErr(tx.Rollback())
-			return err
+	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+		allTeamsStmt, err := tx.PrepareNamedContext(ctx, allTeamsKeyUpsert)
+		if err != nil {
+			return errors.Wrap(err, "unable to prepare all_teams upsert statement")
 		}
-	}
+		defer allTeamsStmt.Close()
 
-	stmt, err := tx.PrepareNamedContext(ctx, `
+		for _, team := range teams {
+			if _, err = allTeamsStmt.ExecContext(ctx, team); err != nil {
+				return errors.Wrap(err, "unable to upsert into all_teams")
+			}
+		}
+
+		stmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO teams (key, event_key, rank, ranking_score)
 		VALUES (:key, :event_key, :rank, :ranking_score)
 		ON CONFLICT (key, event_key)
 			DO UPDATE
 				SET rank = $3, ranking_score = $4
-	`)
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
-	defer stmt.Close()
-
-	for _, team := range teams {
-		if _, err = stmt.ExecContext(ctx, team); err != nil {
-			s.logErr(tx.Rollback())
-			return err
+		`)
+		if err != nil {
+			return errors.Wrap(err, "unable to prepare teams upsert statement")
 		}
-	}
+		defer stmt.Close()
 
-	return tx.Commit()
+		for _, team := range teams {
+			if _, err = stmt.ExecContext(ctx, team); err != nil {
+				return errors.Wrap(err, "unable to upsert into teams")
+			}
+		}
+
+		return nil
+	})
 }
 
 // TeamsUpsert upserts multiple teams into the database.
 func (s *Service) TeamsUpsert(ctx context.Context, teams []Team) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	stmt, err := tx.PrepareNamedContext(ctx, `
+	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+		stmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO all_teams (key, nickname)
 		VALUES (:key, :nickname)
 		ON CONFLICT (key)
 		DO
 			UPDATE
 				SET nickname = $2
-	`)
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
-	defer stmt.Close()
-
-	for _, team := range teams {
-		if _, err = stmt.ExecContext(ctx, team); err != nil {
-			s.logErr(tx.Rollback())
-			return err
+		`)
+		if err != nil {
+			return errors.Wrap(err, "unable to prepare all_teams upsert statement")
 		}
-	}
+		defer stmt.Close()
 
-	return tx.Commit()
+		for _, team := range teams {
+			if _, err = stmt.ExecContext(ctx, team); err != nil {
+				return errors.Wrap(err, "")
+			}
+		}
+		return nil
+	})
+}
+
+// EventTeamKeysUpsert upserts multiple team keys from a single event into the database.
+func (s *Service) EventTeamKeysUpsert(ctx context.Context, eventKey string, keys []string) error {
+	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+		allTeamsStmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO all_teams (key)
+		VALUES ($1)
+		ON CONFLICT
+			DO NOTHING
+		`)
+		if err != nil {
+			return errors.Wrap(err, "unable to prepare all teams key upsert statement")
+		}
+		defer allTeamsStmt.Close()
+
+		for _, team := range keys {
+			if _, err = allTeamsStmt.ExecContext(ctx, team); err != nil {
+				return errors.Wrap(err, "unable to upsert all team key")
+			}
+		}
+
+		stmt, err := tx.PrepareContext(ctx, `
+			INSERT INTO teams (key, event_key)
+			VALUES ($1, $2)
+			ON CONFLICT (key, event_key) DO NOTHING
+		`)
+		if err != nil {
+			return errors.Wrap(err, "unable to prepare teams key upsert statement")
+		}
+		defer stmt.Close()
+
+		for _, key := range keys {
+			if _, err = stmt.ExecContext(ctx, key, eventKey); err != nil {
+				return errors.Wrap(err, "unable to upsert team key")
+			}
+		}
+
+		return nil
+	})
 }

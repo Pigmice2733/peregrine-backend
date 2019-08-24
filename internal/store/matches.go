@@ -125,12 +125,8 @@ func (s *Service) GetMatch(ctx context.Context, matchKey string) (Match, error) 
 
 // UpsertMatch upserts a match and its alliances into the database.
 func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.NamedExecContext(ctx, `
+	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+		_, err := tx.NamedExecContext(ctx, `
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted)
 		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted)
 		ON CONFLICT (key)
@@ -144,23 +140,17 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 					red_score = :red_score,
 					blue_score = :blue_score,
 					tba_deleted = :tba_deleted
-	`, match)
-	if err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
+		`, match)
+		if err != nil {
+			return errors.Wrap(err, "unable to upsert matches")
+		}
 
-	if err = s.AlliancesUpsert(ctx, match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
+		if err = s.AlliancesUpsert(ctx, match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
+			return err
+		}
 
-	if err = s.EventTeamKeysUpsert(ctx, match.EventKey, append(match.BlueAlliance, match.RedAlliance...)); err != nil {
-		s.logErr(tx.Rollback())
-		return err
-	}
-
-	return tx.Commit()
+		return s.EventTeamKeysUpsert(ctx, match.EventKey, append(match.BlueAlliance, match.RedAlliance...))
+	})
 }
 
 // MarkMatchesDeleted will set tba_deleted to true on all matches for an event
