@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"time"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -45,13 +44,6 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 			s.Logger.WithError(err).Error("creating schema")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
-		}
-
-		// If a new schema is created for a specific year, invalidate the events
-		// route so events (and their schemas) will be updated.
-		if schema.Year != nil {
-			expiredUpdate := time.Now().Add(-(eventsExpiry + 1) * time.Hour)
-			s.eventsLastUpdate = &expiredUpdate
 		}
 
 		w.WriteHeader(http.StatusCreated)

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 )
@@ -64,27 +65,20 @@ func (sd *SchemaFields) Scan(src interface{}) error {
 
 // CreateSchema creates a new schema
 func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return errors.Wrap(err, "unable to begin transaction")
-	}
+	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+		_, err := tx.NamedExecContext(ctx, `
+		INSERT
+			INTO
+				schemas (year, realm_id, schema)
+			VALUES (:year, :realm_id, :schema)
+		`, schema)
 
-	_, err = tx.NamedExecContext(ctx, `
-	INSERT
-		INTO
-			schemas (year, realm_id, schema)
-		VALUES (:year, :realm_id, :schema)
-	`, schema)
+		if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
+			return &ErrExists{fmt.Errorf("schema already exists: %v", err.Error())}
+		}
 
-	if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
-		_ = tx.Rollback()
-		return &ErrExists{fmt.Errorf("schema already exists: %v", err.Error())}
-	} else if err != nil {
-		_ = tx.Rollback()
 		return errors.Wrap(err, "unable to insert schema")
-	}
-
-	return errors.Wrap(tx.Commit(), "unable to commit transaction")
+	})
 }
 
 // GetSchemaByID retrieves a schema given its ID
@@ -123,7 +117,7 @@ func (s *Service) GetVisibleSchemas(ctx context.Context, realmID *int64) ([]Sche
 		WITH public_realms AS (
 			SELECT id FROM realms WHERE share_reports = true
 		)
-		SELECT * 
+		SELECT *
 			FROM schemas
 				WHERE year IS NULL OR realm_id IN (SELECT id FROM public_realms)
 		`)
@@ -132,7 +126,7 @@ func (s *Service) GetVisibleSchemas(ctx context.Context, realmID *int64) ([]Sche
 		WITH public_realms AS (
 			SELECT id FROM realms WHERE share_reports = true
 		)
-		SELECT * 
+		SELECT *
 			FROM schemas
 			    WHERE year IS NULL OR realm_id = $1 OR (SELECT id FROM public_realms)
 		`, *realmID)

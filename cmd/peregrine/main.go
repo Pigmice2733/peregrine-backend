@@ -10,6 +10,7 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/server"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
+	"github.com/Pigmice2733/peregrine-backend/internal/tbaupdater"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -58,6 +59,13 @@ func run(configPath string) error {
 	defer sto.Close()
 	logger.Info("connected to postgres")
 
+	tbaUpdates := &tbaupdater.Service{
+		TBA:    tba,
+		Store:  sto,
+		Logger: logger,
+		Year:   c.Year,
+	}
+
 	s := &server.Server{
 		TBA:    tba,
 		Store:  sto,
@@ -65,5 +73,9 @@ func run(configPath string) error {
 		Server: c.Server,
 	}
 
-	return errors.Wrap(s.Run(), "running server")
+	tbaUpdates.Begin()
+	err = errors.Wrap(s.Run(), "running server")
+	tbaUpdates.End()
+
+	return err
 }

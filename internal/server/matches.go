@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,7 +9,6 @@ import (
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
-	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 )
@@ -45,17 +43,6 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 
 		if !s.checkEventAccess(event.RealmID, r) {
 			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
-		if err := s.updateMatches(r.Context(), event); err != nil {
-			// 404 if eventKey isn't a real event
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("updating match data")
 			return
 		}
 
@@ -111,17 +98,6 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
-
-		if err := s.updateMatches(r.Context(), event); err != nil {
-			// 404 if eventKey isn't a real event
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("updating match data")
-			return
-		}
 
 		fullMatch, err := s.Store.GetMatch(r.Context(), matchKey)
 		if err != nil {
@@ -199,34 +175,4 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 
 		w.WriteHeader(http.StatusCreated)
 	}
-}
-
-// Get new match data from TBA for a particular event. Upsert match data into database.
-func (s *Server) updateMatches(ctx context.Context, event store.Event) error {
-	// Check that eventKey is a valid event key
-	valid, err := s.Store.CheckTBAEventKeyExists(ctx, event.Key)
-	if err != nil {
-		return errors.Wrap(err, "unable to check if tba event key exists")
-	}
-	if !valid {
-		return nil
-	}
-
-	var fullMatches []store.Match
-
-	if !event.TBADeleted {
-		fullMatches, err = s.TBA.GetMatches(ctx, event.Key)
-		if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
-			return nil
-		} else if err != nil {
-			return errors.Wrap(err, "unable to fetch matches from TBA")
-		}
-
-		if err := s.Store.UpdateTBAMatches(ctx, event.Key, fullMatches); err != nil {
-			return errors.Wrap(err, "unable to update matches")
-		}
-	}
-
-	err = s.Store.MarkMatchesDeleted(ctx, event.Key, fullMatches)
-	return errors.Wrap(err, "unable to mark deleted matches")
 }

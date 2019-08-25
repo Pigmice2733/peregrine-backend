@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
 
@@ -52,45 +53,40 @@ type Leaderboard []struct {
 // returns a boolean that is true when the report was created, and false when it
 // was updated.
 func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err error) {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return false, errors.Wrap(err, "unable to begin transaction for report upsert")
-	}
-
-	if _, err := tx.Exec("LOCK TABLE reports IN EXCLUSIVE MODE"); err != nil {
-		s.logErr(errors.Wrap(tx.Rollback(), "rolling back report upsert tx"))
-		return false, errors.Wrap(err, "unable to lock reports")
-	}
-
 	var existed bool
-	err = tx.QueryRow(`
-		SELECT EXISTS(
-			SELECT FROM reports
-				WHERE match_key = $1 AND
-				team_key = $2
-		)
-		`, r.MatchKey, r.TeamKey).Scan(&existed)
-	if err != nil {
-		s.logErr(errors.Wrap(tx.Rollback(), "rolling back report upsert tx"))
-		return false, errors.Wrap(err, "unable to determine if report exists")
-	}
 
-	_, err = tx.NamedExecContext(ctx, `
-	INSERT
-		INTO
-			reports (match_key, team_key, reporter_id, realm_id, data)
-		VALUES (:match_key, :team_key, :reporter_id, :realm_id, :data)
-		ON CONFLICT (match_key, team_key, reporter_id) DO
-			UPDATE
-				SET
-					data = :data
-	`, r)
-	if err != nil {
-		s.logErr(errors.Wrap(tx.Rollback(), "rolling back report upsert tx"))
-		return false, errors.Wrap(err, "unable to upsert report")
-	}
+	err = s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+		if _, err := tx.Exec("LOCK TABLE reports IN EXCLUSIVE MODE"); err != nil {
+			return errors.Wrap(err, "unable to lock reports")
+		}
 
-	return !existed, errors.Wrap(tx.Commit(), "unable to commit transaction")
+		var existed bool
+		err = tx.QueryRow(`
+			SELECT EXISTS(
+				SELECT FROM reports
+					WHERE match_key = $1 AND
+					team_key = $2
+			)
+			`, r.MatchKey, r.TeamKey).Scan(&existed)
+		if err != nil {
+			return errors.Wrap(err, "unable to determine if report exists")
+		}
+
+		_, err = tx.NamedExecContext(ctx, `
+		INSERT
+			INTO
+				reports (match_key, team_key, reporter_id, realm_id, data)
+			VALUES (:match_key, :team_key, :reporter_id, :realm_id, :data)
+			ON CONFLICT (match_key, team_key, reporter_id) DO
+				UPDATE
+					SET
+						data = :data
+		`, r)
+
+		return errors.Wrap(err, "unable to upsert report")
+	})
+
+	return !existed, err
 }
 
 // GetTeamMatchReports retrieves all reports for a specific team and match from the db.
@@ -107,7 +103,7 @@ func (s *Service) GetEventReports(ctx context.Context, eventKey string, realmID 
 
 	if realmID != nil {
 		return reports, s.db.SelectContext(ctx, &reports, `
-	SELECT reports.* 
+	SELECT reports.*
 		FROM
 			reports
 		INNER JOIN
@@ -121,7 +117,7 @@ func (s *Service) GetEventReports(ctx context.Context, eventKey string, realmID 
 	}
 
 	return reports, s.db.SelectContext(ctx, &reports, `
-	SELECT reports.* 
+	SELECT reports.*
 		FROM
 			reports
 		INNER JOIN
@@ -140,7 +136,7 @@ func (s *Service) GetTeamEventReports(ctx context.Context, eventKey string, team
 
 	if realmID != nil {
 		return reports, s.db.SelectContext(ctx, &reports, `
-	SELECT reports.* 
+	SELECT reports.*
 		FROM
 			reports
 		INNER JOIN
@@ -155,7 +151,7 @@ func (s *Service) GetTeamEventReports(ctx context.Context, eventKey string, team
 	}
 
 	return reports, s.db.SelectContext(ctx, &reports, `
-	SELECT reports.* 
+	SELECT reports.*
 		FROM
 			reports
 		INNER JOIN

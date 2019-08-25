@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/pkg/errors"
@@ -16,12 +17,12 @@ type Server struct {
 	LogLevel  logrus.Level `json:"logLevel"`
 	LogJSON   bool         `json:"logJSON"`
 	JWTSecret string       `json:"jwtSecret" validate:"required,min=32"`
-	Year      int          `json:"year" validate:"required"`
 }
 
 // Config holds information about how the peregrine backend is configured.
 type Config struct {
 	Server Server `json:"server" validate:"dive"`
+	Year   int    `json:"year" validate:"required"`
 	TBA    struct {
 		URL    string `validate:"required"`
 		APIKey string `validate:"required"`
@@ -43,5 +44,5 @@ func Open(path string) (Config, error) {
 	}
 
 	validate := validator.New()
-	return c, errors.Wrap(validate.Struct(c), "config loaded from environment variables fails to validate")
+	return c, errors.Wrap(validate.Struct(c), fmt.Sprintf("config loaded from %s fails to validate", path))
 }

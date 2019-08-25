@@ -17,7 +17,6 @@ type tbaServer struct {
 	*httptest.Server
 	getEventsHandler       func(w http.ResponseWriter, r *http.Request)
 	getMatchesHandler      func(w http.ResponseWriter, r *http.Request)
-	getTeamKeysHandler     func(w http.ResponseWriter, r *http.Request)
 	getTeamRankingsHandler func(w http.ResponseWriter, r *http.Request)
 	getTeamsHandler        func(w http.ResponseWriter, r *http.Request)
 }
@@ -102,6 +101,7 @@ func TestGetEvents(t *testing.T) {
 						],
 						"lat": 41.9911025,
 						"lng": -70.993044,
+						"gmaps_url": "https://www.google.com/maps?cid=7437893320196269298",
 						"location_name": "location1",
 						"timezone": "America/Los_Angeles"
 					}
@@ -123,6 +123,7 @@ func TestGetEvents(t *testing.T) {
 					EndDate:      time.Date(2018, 4, 4, 7, 0, 0, 0, time.UTC),
 					Lat:          41.9911025,
 					Lon:          -70.993044,
+					GMapsURL:     newString("https://www.google.com/maps?cid=7437893320196269298"),
 					LocationName: "location1",
 					Webcasts:     []string{"https://www.twitch.tv/nefirst_blue"},
 				},
@@ -161,6 +162,7 @@ func TestGetEvents(t *testing.T) {
 					    ],
 						"lat": 42.0,
 						"lng": 0.0,
+						"gmaps_url": "https://www.google.com/maps?cid=7437893320196269298",
 						"location_name": "answer"
 					},
 					{
@@ -187,6 +189,7 @@ func TestGetEvents(t *testing.T) {
 							}],
 						"lat": 45.52,
 						"lng": -122.681944,
+						"gmaps_url": "https://www.google.com/maps?cid=7437893320196269298",
 						"location_name": "Portland",
 						"timezone": "America/Los_Angeles"
 				    }
@@ -207,6 +210,7 @@ func TestGetEvents(t *testing.T) {
 				EndDate:      time.Date(2018, 5, 7, 0, 0, 0, 0, time.UTC),
 				Lat:          42.0,
 				Lon:          0.0,
+				GMapsURL:     newString("https://www.google.com/maps?cid=7437893320196269298"),
 				LocationName: "answer",
 				Webcasts:     []string{"https://www.youtube.com/watch?v=rXP6Vz9-Jjg", "https://www.twitch.tv/firstinspires12"},
 			}, {
@@ -219,6 +223,7 @@ func TestGetEvents(t *testing.T) {
 				EndDate:      time.Date(2018, 11, 23, 8, 0, 0, 0, time.UTC),
 				Lat:          45.52,
 				Lon:          -122.681944,
+				GMapsURL:     newString("https://www.google.com/maps?cid=7437893320196269298"),
 				LocationName: "Portland",
 				Webcasts:     []string{"https://www.youtube.com/watch?v=gmsHpsSavuc"},
 			}},
@@ -230,7 +235,7 @@ func TestGetEvents(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server.getEventsHandler = tt.getEventsHandler
 
-			events, err := s.GetEvents(context.TODO(), testingYear, nil)
+			events, err := s.GetEvents(context.TODO(), testingYear)
 			if !tt.expectErr && err != nil {
 				t.Errorf("did not expect an error but got one: %v", err)
 			} else if tt.expectErr && err == nil {
@@ -476,79 +481,6 @@ func TestGetMatches(t *testing.T) {
 	}
 }
 
-func TestGetTeamKeys(t *testing.T) {
-	server := newTBAServer()
-	defer server.Close()
-
-	APIKey := "notARealKey"
-
-	s := Service{URL: server.URL, APIKey: APIKey}
-
-	const eventKey = "2018abca"
-
-	testCases := []struct {
-		name               string
-		getTeamKeysHandler func(w http.ResponseWriter, r *http.Request)
-		keys               []string
-		expectErr          bool
-	}{
-		{
-			name: "tba team keys route gives 500",
-			getTeamKeysHandler: func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusInternalServerError)
-			},
-			keys:      nil,
-			expectErr: true,
-		},
-		{
-			name: "tba gives several team keys",
-			getTeamKeysHandler: func(w http.ResponseWriter, r *http.Request) {
-				if r.Header.Get("X-TBA-Auth-Key") != "notARealKey" {
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-
-				vars := mux.Vars(r)
-				if key, ok := vars["eventKey"]; !ok || key != eventKey {
-					w.WriteHeader(http.StatusNotFound)
-					return
-				}
-
-				w.WriteHeader(http.StatusOK)
-				_, err := w.Write([]byte(`
-				[
-                    "frc2733", "frc254", "frc0", "frc2471", "frc118", "frc1", "frc2"
-				]
-				`))
-
-				if err != nil {
-					t.Errorf("failed to write test data")
-				}
-			},
-			keys: []string{
-				"frc2733", "frc254", "frc0", "frc2471", "frc118", "frc1", "frc2",
-			},
-		},
-	}
-
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			server.getTeamKeysHandler = tt.getTeamKeysHandler
-
-			keys, err := s.GetTeamKeys(context.TODO(), eventKey)
-			if !tt.expectErr && err != nil {
-				t.Errorf("did not expect an error but got one: %v", err)
-			} else if tt.expectErr && err == nil {
-				t.Errorf("expected error but didnt get one: %v", err)
-			}
-
-			if !cmp.Equal(keys, tt.keys) {
-				t.Errorf("expected keys do not equal actual keys, got dif: %s", cmp.Diff(tt.keys, keys))
-			}
-		})
-	}
-}
-
 func TestGetTeams(t *testing.T) {
 	server := newTBAServer()
 	defer server.Close()
@@ -610,6 +542,7 @@ func TestGetTeams(t *testing.T) {
 						"key": "frc7500",
 						"lat": null,
 						"lng": null,
+						"gmaps_url": null,
 						"location_name": null,
 						"motto": null,
 						"name": "NASA/Florida Power and Light/State of Florida&St Thomas Aquinas High School",
@@ -633,6 +566,7 @@ func TestGetTeams(t *testing.T) {
 						"key": "frc7502",
 						"lat": null,
 						"lng": null,
+						"gmaps_url": null,
 						"location_name": null,
 						"motto": null,
 						"name": "NASA/Middlebury Community Schools&Northridge High School",
@@ -661,6 +595,7 @@ func TestGetTeams(t *testing.T) {
 						"key": "frc2733",
 						"lat": null,
 						"lng": null,
+						"gmaps_url": null,
 						"location_name": null,
 						"motto": null,
 						"name": "Daimler/TE Connectivity/Boeing/Oregon Dept of Education/FLIR/Autodesk/DW Fritz Automation/Marathon Oil/SolidWorks/Hankins Hardware&Cleveland High School&Family/Community",
