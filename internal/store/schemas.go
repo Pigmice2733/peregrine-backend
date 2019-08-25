@@ -14,38 +14,50 @@ import (
 
 // Schema describes the statistics that reports should include
 type Schema struct {
-	ID      int64            `json:"id" db:"id"`
-	Year    *int64           `json:"year,omitempty" db:"year"`
-	RealmID *int64           `json:"realmId,omitempty" db:"realm_id"`
-	Auto    StatDescriptions `json:"auto" db:"auto"`
-	Teleop  StatDescriptions `json:"teleop" db:"teleop"`
+	ID      int64        `json:"id" db:"id"`
+	Year    *int64       `json:"year,omitempty" db:"year"`
+	RealmID *int64       `json:"realmId,omitempty" db:"realm_id"`
+	Schema  SchemaFields `json:"schema" db:"schema"`
 }
 
-// PatchSchema is a nullable schema for patching.
-type PatchSchema struct {
-	ID     int64            `json:"id" db:"id"`
-	Year   *int64           `json:"year,omitempty" db:"year"`
-	Auto   StatDescriptions `json:"auto" db:"auto"`
-	Teleop StatDescriptions `json:"teleop" db:"teleop"`
-}
-
-// StatDescription describes a single statistic in a schema
-type StatDescription struct {
+// FieldDescriptor defines properties of a schema field that aren't related to how it should be
+// summarized, but just information about the field (name, period, type).
+type FieldDescriptor struct {
 	Name string `json:"name"`
-	Type string `json:"type"`
 }
 
-// StatDescriptions holds multiple StatDescriptions for storing in one DB column
-type StatDescriptions []StatDescription
+// SchemaField is a singular schema field. Only specify one of: ReportReference, TBAReference,
+// Sum, or AnyOf.
+type SchemaField struct {
+	FieldDescriptor
+	ReportReference string            `json:"reportReference,omitempty"`
+	TBAReference    string            `json:"tbaReference,omitempty"`
+	Sum             []FieldDescriptor `json:"sum,omitempty"`
+	AnyOf           []EqualExpression `json:"anyOf,omitempty"`
+
+	Hide   bool   `json:"hide,omitempty"`
+	Type   string `json:"type,omitempty"`
+	Period string `json:"period,omitempty"`
+}
+
+// EqualExpression defines a reference that should equal some JSON value (float64, number,
+// string).
+type EqualExpression struct {
+	FieldDescriptor
+	Equals interface{} `json:"equals"`
+}
+
+// SchemaFields holds multiple SchemaFields for storing in one DB column
+type SchemaFields []SchemaField
 
 // Value implements driver.Valuer to return JSON for the DB from StatDescription.
-func (sd StatDescriptions) Value() (driver.Value, error) { return json.Marshal(sd) }
+func (sd SchemaFields) Value() (driver.Value, error) { return json.Marshal(sd) }
 
-// Scan implements sql.Scanner to scan JSON from the DB into StatDescriptions.
-func (sd *StatDescriptions) Scan(src interface{}) error {
+// Scan implements sql.Scanner to scan JSON from the DB into SchemaFields.
+func (sd *SchemaFields) Scan(src interface{}) error {
 	j, ok := src.([]byte)
 	if !ok {
-		return errors.New("got invalid type for StatDescriptions")
+		return errors.New("got invalid type for SchemaFields")
 	}
 
 	return json.Unmarshal(j, sd)
@@ -57,8 +69,8 @@ func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
 		_, err := tx.NamedExecContext(ctx, `
 		INSERT
 			INTO
-				schemas (year, realm_id, auto, teleop)
-			VALUES (:year, :realm_id, :auto, :teleop)
+				schemas (year, realm_id, schema)
+			VALUES (:year, :realm_id, :schema)
 		`, schema)
 
 		if err, ok := err.(*pq.Error); ok && err.Code == pgExists {

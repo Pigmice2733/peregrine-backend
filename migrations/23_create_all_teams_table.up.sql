@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS all_teams (
     nickname TEXT
 );
 
-INSERT INTO all_teams (key) SELECT key FROM teams;
+INSERT INTO all_teams (key) SELECT DISTINCT key FROM teams;
 
 ALTER TABLE teams
     ADD CONSTRAINT teams_key_fkey

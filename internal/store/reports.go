@@ -12,16 +12,12 @@ import (
 // A Stat holds a single statistic from a single match, and could be either a
 // boolean or numeric statistic
 type Stat struct {
-	Attempts  *int   `json:"attempts,omitempty"`
-	Successes *int   `json:"successes,omitempty"`
-	Name      string `json:"name"`
+	Value float64 `json:"value"`
+	Name  string  `json:"name"`
 }
 
 // ReportData holds all the data in a report
-type ReportData struct {
-	Auto   []Stat `json:"auto"`
-	Teleop []Stat `json:"teleop"`
-}
+type ReportData []Stat
 
 // Value implements driver.Valuer to return JSON for the DB from ReportData.
 func (rd ReportData) Value() (driver.Value, error) { return json.Marshal(rd) }
@@ -43,7 +39,6 @@ type Report struct {
 	TeamKey    string     `json:"-" db:"team_key"`
 	ReporterID *int64     `json:"reporterId" db:"reporter_id"`
 	RealmID    *int64     `json:"-" db:"realm_id"`
-	AutoName   string     `json:"autoName" db:"auto_name"`
 	Data       ReportData `json:"data" db:"data"`
 }
 
@@ -80,12 +75,11 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 		_, err = tx.NamedExecContext(ctx, `
 		INSERT
 			INTO
-				reports (match_key, team_key, reporter_id, realm_id, auto_name, data)
-			VALUES (:match_key, :team_key, :reporter_id, :realm_id, :auto_name, :data)
+				reports (match_key, team_key, reporter_id, realm_id, data)
+			VALUES (:match_key, :team_key, :reporter_id, :realm_id, :data)
 			ON CONFLICT (match_key, team_key, reporter_id) DO
 				UPDATE
 					SET
-						auto_name = :auto_name,
 						data = :data
 		`, r)
 
