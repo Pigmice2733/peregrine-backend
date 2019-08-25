@@ -45,7 +45,6 @@ func newTBAServer() *tbaServer {
 	r := mux.NewRouter()
 	r.HandleFunc("/events/"+strconv.Itoa(testingYear), func(w http.ResponseWriter, r *http.Request) { ts.getEventsHandler(w, r) })
 	r.HandleFunc("/event/{eventKey}/matches", func(w http.ResponseWriter, r *http.Request) { ts.getMatchesHandler(w, r) })
-	r.HandleFunc("/event/{eventKey}/teams/keys", func(w http.ResponseWriter, r *http.Request) { ts.getTeamKeysHandler(w, r) })
 	r.HandleFunc("/event/{eventKey}/rankings", func(w http.ResponseWriter, r *http.Request) { ts.getTeamRankingsHandler(w, r) })
 	r.HandleFunc("/teams/{page}", func(w http.ResponseWriter, r *http.Request) { ts.getTeamsHandler(w, r) })
 
