@@ -49,6 +49,10 @@ func (s *Server) eventStats() http.HandlerFunc {
 		if _, ok := err.(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
+		} else if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.Logger.WithError(err).Error("retrieving reports")
+			return
 		}
 
 		storeSchema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
@@ -84,6 +88,81 @@ func (s *Server) eventStats() http.HandlerFunc {
 		}
 
 		ihttp.Respond(w, teamAnalyses, http.StatusOK)
+	}
+}
+
+func (s *Server) matchTeamStats() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		eventKey := vars["eventKey"]
+		partialMatchKey := vars["matchKey"]
+		teamKey := vars["teamKey"]
+
+		event, err := s.Store.GetEvent(r.Context(), eventKey)
+		if _, ok := err.(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.Logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.RealmID, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
+		if event.SchemaID == nil {
+			ihttp.Respond(w, fmt.Errorf("no schema found"), http.StatusBadRequest)
+			return
+		}
+
+		// Add eventKey as prefix to matchKey so that matchKey is globally
+		// unique and consistent with TBA match keys.
+		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
+		match, err := s.Store.GetMatch(r.Context(), matchKey)
+		if _, ok := err.(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.Logger.WithError(err).Error("retrieving match")
+			return
+		}
+
+		reports, err := s.Store.GetTeamMatchReports(r.Context(), matchKey, teamKey)
+		if _, ok := err.(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.Logger.WithError(err).Error("retrieving reports")
+			return
+		}
+
+		storeSchema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
+		if _, ok := err.(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.Logger.WithError(err).Error("retrieving event schema")
+			return
+		}
+
+		schema := storeSummaryToSummarySchema(storeSchema)
+		teamToMatches := selectTeamMatches([]store.Match{match}, reports)
+
+		summary, err := summary.SummarizeTeam(schema, teamToMatches[teamKey])
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.Logger.WithError(err).WithField("team", teamKey).Error("retrieving match summary")
+			return
+		}
+
+		teamAnalysis := teamAnalysisFromSummary(summary, teamKey)
+		ihttp.Respond(w, teamAnalysis, http.StatusOK)
 	}
 }
 
