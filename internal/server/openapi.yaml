@@ -1087,7 +1087,6 @@ components:
     match:
       required:
         - key
-        - time
         - redAlliance
         - blueAlliance
       properties:
