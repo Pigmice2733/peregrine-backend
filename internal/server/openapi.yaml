@@ -484,6 +484,34 @@ paths:
           $ref: "#/components/responses/notFoundError"
         "500":
           $ref: "#/components/responses/internalServerError"
+  /events/{eventKey}/matches/{matchKey}/teams/{teamKey}/stats:
+    parameters:
+      - $ref: "#/components/parameters/eventKey"
+      - $ref: "#/components/parameters/matchKey"
+      - $ref: "#/components/parameters/teamKey"
+    get:
+      summary: Get stats summary for team in specific match
+      operationId: getMatchTeamStats
+      tags:
+        - stats
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/stats"
+        "400":
+          $ref: "#/components/responses/badRequestError"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/matches:
     parameters:
       - $ref: "#/components/parameters/eventKey"
@@ -1059,7 +1087,6 @@ components:
     match:
       required:
         - key
-        - time
         - redAlliance
         - blueAlliance
       properties:
