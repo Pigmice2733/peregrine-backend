@@ -273,6 +273,8 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 			blueScore = tbaMatch.Alliances.Blue.Score
 		}
 
+		matchURL := fmt.Sprintf("https://www.thebluealliance.com/match/%s", tbaMatch.Key)
+
 		match := store.Match{
 			Key:                tbaMatch.Key,
 			EventKey:           eventKey,
@@ -285,7 +287,9 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 			BlueAlliance:       tbaMatch.Alliances.Blue.TeamKeys,
 			RedScoreBreakdown:  tbaMatch.ScoreBreakdown.Red,
 			BlueScoreBreakdown: tbaMatch.ScoreBreakdown.Blue,
+			TBAURL:             &matchURL,
 		}
+
 		matches = append(matches, match)
 	}
 

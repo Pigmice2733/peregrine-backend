@@ -22,6 +22,7 @@ type match struct {
 	RedAlliance   []string   `json:"redAlliance"`
 	BlueAlliance  []string   `json:"blueAlliance"`
 	TBADeleted    bool       `json:"tbaDeleted"`
+	TBAURL        *string    `json:"tbaUrl"`
 }
 
 // matchesHandler returns a handler to get all matches at a given event.
@@ -67,6 +68,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 				RedAlliance:   fullMatch.RedAlliance,
 				BlueAlliance:  fullMatch.BlueAlliance,
 				TBADeleted:    fullMatch.TBADeleted,
+				TBAURL:        fullMatch.TBAURL,
 			})
 		}
 
@@ -121,13 +123,14 @@ func (s *Server) matchHandler() http.HandlerFunc {
 			RedAlliance:  fullMatch.RedAlliance,
 			BlueAlliance: fullMatch.BlueAlliance,
 			TBADeleted:   fullMatch.TBADeleted,
+			TBAURL:       fullMatch.TBAURL,
 		}
 
 		ihttp.Respond(w, match, http.StatusOK)
 	}
 }
 
-func (s *Server) createMatchHandler() http.HandlerFunc {
+func (s *Server) upsertMatchHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var m match
 		if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
@@ -135,7 +138,14 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 			return
 		}
 
-		eventKey := mux.Vars(r)["eventKey"]
+		if m.RedAlliance == nil || m.BlueAlliance == nil {
+			ihttp.Error(w, http.StatusUnprocessableEntity)
+			return
+		}
+
+		vars := mux.Vars(r)
+		eventKey := vars["eventKey"]
+		matchKey := vars["matchKey"]
 
 		event, err := s.Store.GetEvent(r.Context(), eventKey)
 		if _, ok := err.(store.ErrNoResults); ok {
@@ -154,10 +164,10 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
-		m.Key = fmt.Sprintf("%s_%s", eventKey, m.Key)
+		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
 
 		sm := store.Match{
-			Key:           m.Key,
+			Key:           matchKey,
 			EventKey:      eventKey,
 			ActualTime:    m.Time,
 			ScheduledTime: m.Time,
@@ -165,6 +175,7 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 			BlueScore:     m.BlueScore,
 			RedAlliance:   m.RedAlliance,
 			BlueAlliance:  m.BlueAlliance,
+			TBAURL:        m.TBAURL,
 		}
 
 		if err := s.Store.UpsertMatch(r.Context(), sm); err != nil {
@@ -173,6 +184,45 @@ func (s *Server) createMatchHandler() http.HandlerFunc {
 			return
 		}
 
-		w.WriteHeader(http.StatusCreated)
+		ihttp.Respond(w, m, http.StatusOK)
+	}
+}
+
+func (s *Server) deleteMatchHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		eventKey := vars["eventKey"]
+		matchKey := vars["matchKey"]
+
+		event, err := s.Store.GetEvent(r.Context(), eventKey)
+		if _, ok := err.(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.Logger.WithError(err).Error("retrieving event")
+			return
+		}
+
+		if !s.checkEventAccess(event.RealmID, r) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
+		// Add eventKey as prefix to matchKey so that matchKey is globally
+		// unique and consistent with TBA match keys.
+		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
+
+		err = s.Store.DeleteMatch(r.Context(), matchKey)
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.Logger.WithError(err).Error("upserting match")
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	}
 }

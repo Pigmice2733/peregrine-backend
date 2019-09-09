@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -26,6 +27,7 @@ type Match struct {
 	TBADeleted         bool           `json:"tbaDeleted" db:"tba_deleted"`
 	RedScoreBreakdown  ScoreBreakdown `json:"redScoreBreakdown" db:"red_score_breakdown"`
 	BlueScoreBreakdown ScoreBreakdown `json:"blueScoreBreakdown" db:"blue_score_breakdown"`
+	TBAURL             *string        `json:"tbaUrl" db:"tba_url"`
 }
 
 // ScoreBreakdown changes year to year, but it's generally a map of strings
@@ -78,7 +80,8 @@ SELECT
 	r.team_keys AS red_alliance,
 	b.team_keys AS blue_alliance,
 	red_score_breakdown,
-	blue_score_breakdown
+	blue_score_breakdown,
+	tba_url
 FROM
 	matches
 INNER JOIN
@@ -132,7 +135,8 @@ func (s *Service) GetMatch(ctx context.Context, matchKey string) (Match, error) 
 		r.team_keys AS red_alliance,
 		b.team_keys AS blue_alliance,
 		red_score_breakdown,
-		blue_score_breakdown
+		blue_score_breakdown,
+		tba_url
 	FROM
 		matches
 	INNER JOIN
@@ -152,12 +156,31 @@ func (s *Service) GetMatch(ctx context.Context, matchKey string) (Match, error) 
 	return m, err
 }
 
+// DeleteMatch deletes a specific match.
+func (s *Service) DeleteMatch(ctx context.Context, matchKey string) error {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM matches WHERE key = $1`, matchKey)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected != 1 {
+		return ErrNoResults{errors.New(fmt.Sprintf("Can't delete match %s, no such match found", matchKey))}
+	}
+
+	return nil
+}
+
 // UpsertMatch upserts a match and its alliances into the database.
 func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
 		_, err := tx.NamedExecContext(ctx, `
-		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown)
-		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown)
+		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url)
+		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -170,7 +193,8 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 					blue_score = :blue_score,
 					tba_deleted = :tba_deleted,
 					red_score_breakdown = :red_score_breakdown,
-					blue_score_breakdown = :blue_score_breakdown
+					blue_score_breakdown = :blue_score_breakdown,
+					tba_url = :tba_url
 		`, match)
 		if err != nil {
 			return errors.Wrap(err, "unable to upsert matches")
@@ -212,8 +236,8 @@ func (s *Service) MarkMatchesDeleted(ctx context.Context, eventKey string, match
 func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches []Match) error {
 	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
 		upsert, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown)
-		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown)
+		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url)
+		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -226,7 +250,8 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches
 					blue_score = :blue_score,
 					tba_deleted = false,
 					red_score_breakdown = :red_score_breakdown,
-					blue_score_breakdown = :blue_score_breakdown
+					blue_score_breakdown = :blue_score_breakdown,
+					tba_url = :tba_url
 	`)
 		if err != nil {
 			return errors.Wrap(err, "unable to prepare query to upsert matches")

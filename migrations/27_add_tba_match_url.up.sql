@@ -1,0 +1,1 @@
+ALTER TABLE matches ADD COLUMN tba_url TEXT;

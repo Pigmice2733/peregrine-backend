@@ -33,8 +33,9 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/events/{eventKey}/stats", s.eventStats()).Methods("GET")
 
 	r.Handle("/events/{eventKey}/matches", s.matchesHandler()).Methods("GET")
-	r.Handle("/events/{eventKey}/matches", ihttp.ACL(s.createMatchHandler(), true, true, true)).Methods("POST")
 	r.Handle("/events/{eventKey}/matches/{matchKey}", s.matchHandler()).Methods("GET")
+	r.Handle("/events/{eventKey}/matches/{matchKey}", ihttp.ACL(s.upsertMatchHandler(), true, true, true)).Methods("PUT")
+	r.Handle("/events/{eventKey}/matches/{matchKey}", ihttp.ACL(s.deleteMatchHandler(), true, true, true)).Methods("DELETE")
 
 	r.Handle("/events/{eventKey}/teams", s.eventTeamsHandler()).Methods("GET")
 	r.Handle("/events/{eventKey}/teams/{teamKey}", s.eventTeamHandler()).Methods("GET")
