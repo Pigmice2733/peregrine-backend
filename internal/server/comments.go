@@ -109,16 +109,6 @@ func (s *Server) putMatchTeamComment() http.HandlerFunc {
 		// unique and consistent with TBA match keys.
 		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
 
-		exists, err := s.Store.CheckMatchKeyExists(matchKey)
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("checking that match exists")
-			return
-		} else if !exists {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		}
-
 		var comment store.Comment
 		if err := json.NewDecoder(r.Body).Decode(&comment); err != nil {
 			ihttp.Error(w, http.StatusUnprocessableEntity)

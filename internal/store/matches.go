@@ -62,12 +62,6 @@ func (m *Match) GetTime() *time.Time {
 	return m.ScheduledTime
 }
 
-// CheckMatchKeyExists returns whether the match key exists in the database.
-func (s *Service) CheckMatchKeyExists(matchKey string) (bool, error) {
-	var exists bool
-	return exists, s.db.Get(&exists, "SELECT EXISTS(SELECT true FROM matches WHERE key = $1)", matchKey)
-}
-
 const matchesQuery = `
 SELECT
 	key,

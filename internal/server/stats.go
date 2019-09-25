@@ -16,7 +16,13 @@ func (s *Server) eventStats() http.HandlerFunc {
 		vars := mux.Vars(r)
 		eventKey := vars["eventKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
+		var realmID *int64
+		userRealmID, realmErr := ihttp.GetRealmID(r)
+		if realmErr != nil {
+			realmID = &userRealmID
+		}
+
+		event, err := s.Store.GetEventForRealm(r.Context(), eventKey, realmID)
 		if _, ok := err.(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
@@ -42,12 +48,6 @@ func (s *Server) eventStats() http.HandlerFunc {
 		if ihttp.GetRoles(r).IsSuperAdmin {
 			reports, err = s.Store.GetEventReports(r.Context(), eventKey)
 		} else {
-			var realmID *int64
-			userRealmID, realmErr := ihttp.GetRealmID(r)
-			if realmErr != nil {
-				realmID = &userRealmID
-			}
-
 			reports, err = s.Store.GetEventReportsForRealm(r.Context(), eventKey, realmID)
 		}
 
@@ -100,7 +100,13 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
+		var realmID *int64
+		userRealmID, realmErr := ihttp.GetRealmID(r)
+		if realmErr != nil {
+			realmID = &userRealmID
+		}
+
+		event, err := s.Store.GetEventForRealm(r.Context(), eventKey, realmID)
 		if _, ok := err.(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return
@@ -139,12 +145,6 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 		if ihttp.GetRoles(r).IsSuperAdmin {
 			reports, err = s.Store.GetMatchTeamReports(r.Context(), eventKey, teamKey)
 		} else {
-			var realmID *int64
-			userRealmID, realmErr := ihttp.GetRealmID(r)
-			if realmErr != nil {
-				realmID = &userRealmID
-			}
-
 			reports, err = s.Store.GetMatchTeamReportsForRealm(r.Context(), eventKey, teamKey, realmID)
 		}
 

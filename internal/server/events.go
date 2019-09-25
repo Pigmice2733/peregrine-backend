@@ -16,18 +16,18 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 		tbaDeleted := r.URL.Query().Get("tbaDeleted") == "true"
 
 		roles := ihttp.GetRoles(r)
-		userRealm, getRealmErr := ihttp.GetRealmID(r)
+
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err != nil {
+			realmID = &userRealmID
+		}
 
 		var events []store.Event
-		var err error
 		if roles.IsSuperAdmin {
 			events, err = s.Store.GetEvents(r.Context(), tbaDeleted)
 		} else {
-			if getRealmErr != nil {
-				events, err = s.Store.GetEventsFromRealm(r.Context(), nil, tbaDeleted)
-			} else {
-				events, err = s.Store.GetEventsFromRealm(r.Context(), &userRealm, tbaDeleted)
-			}
+			events, err = s.Store.GetEventsForRealm(r.Context(), tbaDeleted, realmID)
 		}
 
 		if err != nil {
@@ -45,22 +45,21 @@ func (s *Server) eventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if err != nil {
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
+		}
+
+		event, err := s.Store.GetEventForRealm(r.Context(), eventKey, realmID)
+		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("unable to retrieve event data")
 			return
 		}
-
-		// TODO: fix this by crafting a better query
-		// if !s.checkEventAccess(event.RealmID, r) {
-		// 	ihttp.Error(w, http.StatusForbidden)
-		// 	return
-		// }
 
 		ihttp.Respond(w, &event, http.StatusOK)
 	}
