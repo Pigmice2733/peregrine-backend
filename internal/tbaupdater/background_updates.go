@@ -22,7 +22,7 @@ type Service struct {
 // Begin starts periodic updates of TBA data
 func (s *Service) Begin() {
 	if s.cancel == nil {
-		s.Logger.Info("Beginning background TBA updates")
+		s.Logger.Info("beginning background TBA updates")
 		ctx, cancel := context.WithCancel(context.Background())
 		s.cancel = &cancel
 		go s.run(ctx)
@@ -32,7 +32,7 @@ func (s *Service) Begin() {
 // End stops periodic updates of TBA data, if running
 func (s *Service) End() {
 	if s.cancel != nil {
-		s.Logger.Info("Ending background TBA updates")
+		s.Logger.Info("ending background TBA updates")
 		(*s.cancel)()
 		s.cancel = nil
 	}
@@ -43,7 +43,7 @@ func (s *Service) run(ctx context.Context) {
 	inactiveUpdates := time.Tick(15 * time.Minute)
 	activeUpdates := time.Tick(1 * time.Minute)
 
-	s.Logger.Info("Seeding TBA data")
+	s.Logger.Info("seeding TBA data")
 	go s.updateEvents(ctx)
 	go s.updateTeams(ctx)
 	go s.updatePerEventData(ctx, false)

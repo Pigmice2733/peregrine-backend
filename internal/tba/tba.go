@@ -164,7 +164,7 @@ func (s *Service) GetEvents(ctx context.Context, year int) ([]store.Event, error
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("got unexpected status: %d", response.StatusCode)
+		return nil, fmt.Errorf("got unexpected status for url %q: %d", response.Request.URL, response.StatusCode)
 	}
 
 	var tbaEvents []event
@@ -236,7 +236,7 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("got unexpected status: %d", response.StatusCode)
+		return nil, fmt.Errorf("got unexpected status for url %q: %d", response.Request.URL, response.StatusCode)
 	}
 
 	var tbaMatches []match
@@ -308,7 +308,7 @@ func (s *Service) GetTeams(ctx context.Context) ([]store.Team, error) {
 		}
 
 		if response.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("got unexpected status: %d", response.StatusCode)
+			return nil, fmt.Errorf("got unexpected status for url %q: %d", response.Request.URL, response.StatusCode)
 		}
 
 		teams := []store.Team{}
@@ -336,7 +336,7 @@ func (s *Service) GetTeamRankings(ctx context.Context, eventKey string) ([]store
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("got unexpected status: %d", response.StatusCode)
+		return nil, fmt.Errorf("got unexpected status for url %q: %d", response.Request.URL, response.StatusCode)
 	}
 
 	teamRankings := rankings{

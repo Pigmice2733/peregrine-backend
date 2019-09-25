@@ -28,27 +28,25 @@ func (s *Server) getMatchTeamComments() http.HandlerFunc {
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
-		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		}
-
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
 
-		exists, err := s.Store.CheckMatchKeyExists(matchKey)
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("checking that match exists")
-			return
-		}
-		if !exists {
-			ihttp.Error(w, http.StatusNotFound)
-			return
+		var comments []store.Comment
+		var err error
+
+		if ihttp.GetRoles(r).IsSuperAdmin {
+			comments, err = s.Store.GetMatchComments(r.Context(), matchKey, teamKey)
+		} else {
+			var realmID *int64
+			userRealmID, realmErr := ihttp.GetRealmID(r)
+			if realmErr != nil {
+				realmID = &userRealmID
+			}
+
+			comments, err = s.Store.GetMatchCommentsForRealm(r.Context(), matchKey, teamKey, realmID)
 		}
 
-		comments, err := s.Store.GetMatchTeamComments(r.Context(), matchKey, teamKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("getting comments")
@@ -70,12 +68,21 @@ func (s *Server) getEventComments() http.HandlerFunc {
 		eventKey := vars["eventKey"]
 		teamKey := vars["teamKey"]
 
-		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
-			ihttp.Error(w, http.StatusNotFound)
-			return
+		var comments []store.Comment
+		var err error
+
+		if ihttp.GetRoles(r).IsSuperAdmin {
+			comments, err = s.Store.GetEventComments(r.Context(), eventKey, teamKey)
+		} else {
+			var realmID *int64
+			userRealmID, realmErr := ihttp.GetRealmID(r)
+			if realmErr != nil {
+				realmID = &userRealmID
+			}
+
+			comments, err = s.Store.GetEventCommentsForRealm(r.Context(), eventKey, teamKey, realmID)
 		}
 
-		comments, err := s.Store.GetEventComments(r.Context(), eventKey, teamKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("getting comments")
