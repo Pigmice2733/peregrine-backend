@@ -35,6 +35,7 @@ func (rd *ReportData) Scan(src interface{}) error {
 // Report is data about how an FRC team performed in a specific match.
 type Report struct {
 	ID         int64      `json:"-" db:"id"`
+	EventKey   string     `json:"-" db:"event_key"`
 	MatchKey   string     `json:"-" db:"match_key"`
 	TeamKey    string     `json:"-" db:"team_key"`
 	ReporterID *int64     `json:"reporterId" db:"reporter_id"`
@@ -56,18 +57,16 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 	var existed bool
 
 	err = s.doTransaction(ctx, func(tx *sqlx.Tx) error {
-		if _, err := tx.Exec("LOCK TABLE reports IN EXCLUSIVE MODE"); err != nil {
-			return errors.Wrap(err, "unable to lock reports")
-		}
-
 		var existed bool
 		err = tx.QueryRow(`
 			SELECT EXISTS(
 				SELECT FROM reports
-					WHERE match_key = $1 AND
-					team_key = $2
+				WHERE
+					match_key = $1 AND
+					team_key = $2 AND
+					reporter_id = $3
 			)
-			`, r.MatchKey, r.TeamKey).Scan(&existed)
+			`, r.MatchKey, r.TeamKey, r.ReporterID).Scan(&existed)
 		if err != nil {
 			return errors.Wrap(err, "unable to determine if report exists")
 		}
@@ -89,93 +88,92 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 	return !existed, err
 }
 
-// GetTeamMatchReports retrieves all reports for a specific team and match from the db.
-func (s *Service) GetTeamMatchReports(ctx context.Context, matchKey string, teamKey string) ([]Report, error) {
-	reports := []Report{}
-
-	return reports, s.db.SelectContext(ctx, &reports, "SELECT * FROM reports WHERE match_key = $1 AND team_key = $2", matchKey, teamKey)
-}
-
-// GetEventReports retrieves all reports for an event from the db. If a realmID
-// is specified, only reports from that realm will be included.
-func (s *Service) GetEventReports(ctx context.Context, eventKey string, realmID *int64) ([]Report, error) {
-	reports := []Report{}
-
-	if realmID != nil {
-		return reports, s.db.SelectContext(ctx, &reports, `
-	SELECT reports.*
-		FROM
-			reports
-		INNER JOIN
-			matches m
-		ON
-			m.key = match_key
-		WHERE
-		    realm_id = $1 AND
-			m.event_key = $2
-	`, realmID, eventKey)
-	}
-
-	return reports, s.db.SelectContext(ctx, &reports, `
-	SELECT reports.*
-		FROM
-			reports
-		INNER JOIN
-			matches m
-		ON
-			m.key = match_key
-		WHERE
-		    m.event_key = $1
-	`, eventKey)
-}
-
-// GetTeamEventReports retrieves all reports for a specific team and event from
-// the db. If a realmID is specified, only reports from that realm will be included.
-func (s *Service) GetTeamEventReports(ctx context.Context, eventKey string, teamKey string, realmID *int64) ([]Report, error) {
-	reports := []Report{}
-
-	if realmID != nil {
-		return reports, s.db.SelectContext(ctx, &reports, `
-	SELECT reports.*
-		FROM
-			reports
-		INNER JOIN
-			matches m
-		ON
-			m.key = match_key
-		WHERE
-		    realm_id = $1 AND
-			team_key = $2 AND
-			m.event_key = $3
-	`, realmID, teamKey, eventKey)
-	}
-
-	return reports, s.db.SelectContext(ctx, &reports, `
-	SELECT reports.*
-		FROM
-			reports
-		INNER JOIN
-			matches m
-		ON
-			m.key = match_key
-		WHERE
-		    team_key = $1 AND
-			m.event_key = $2
-	`, teamKey, eventKey)
-}
-
-// GetReportsBySchemaID retrieves all reports with a specific schema.
-func (s *Service) GetReportsBySchemaID(ctx context.Context, schemaID int64) ([]Report, error) {
-	reports := []Report{}
-
-	return reports, s.db.SelectContext(ctx, &reports, `
-	SELECT reports.*
-	FROM reports, matches, events
+// GetEventReports returns all event reports for a specific event. This returns all reports without filtering for a realm,
+// so it should only be used for super-admins.
+func (s *Service) GetEventReports(ctx context.Context, eventKey string) ([]Report, error) {
+	const query = `
+	SELECT *
+	FROM reports
 	WHERE
-		reports.match_key = matches.key
-		AND matches.event_key = events.key
-		AND event.schema_id = $1
-	`, schemaID)
+		event_key = $1`
+
+	reports := []Report{}
+	return reports, s.db.SelectContext(ctx, &reports, query, eventKey)
+}
+
+// GetEventReportsForRealm returns all event reports for a specific event and realm.
+func (s *Service) GetEventReportsForRealm(ctx context.Context, eventKey string, realmID *int64) ([]Report, error) {
+	const query = `
+	SELECT reports.*
+	FROM reports
+	INNER JOIN realms
+		ON realms.id = reports.realm_id
+	WHERE
+		reports.event_key = $1 AND
+		(realms.share_reports = true OR realms.id = $2)`
+
+	reports := []Report{}
+	return reports, s.db.SelectContext(ctx, &reports, query, eventKey, realmID)
+}
+
+// GetMatchTeamReports retrieves all reports for a specific team and match from the db. This returns all reports without
+// filtering for a realm, so it should only be used for super-admins.
+func (s *Service) GetMatchTeamReports(ctx context.Context, matchKey string, teamKey string) ([]Report, error) {
+	const query = `
+	SELECT *
+	FROM reports
+	WHERE
+		match_key = $1 AND
+		team_key = $2`
+	reports := []Report{}
+	return reports, s.db.SelectContext(ctx, &reports, query, matchKey, teamKey)
+}
+
+// GetEventTeamReports retrieves all reports for a specific team and match from the db. This returns all reports without
+// filtering for a realm, so it should only be used for super-admins.
+func (s *Service) GetEventTeamReports(ctx context.Context, eventKey string, teamKey string) ([]Report, error) {
+	const query = `
+	SELECT *
+	FROM reports
+	WHERE
+		event_key = $1 AND
+		team_key = $2`
+	reports := []Report{}
+	return reports, s.db.SelectContext(ctx, &reports, query, eventKey, teamKey)
+}
+
+// GetEventTeamReportsForRealm retrieves all reports for a specific team and event, filtering to only retrieve reports for realms
+// that are sharing reports or have a matching realm ID.
+func (s *Service) GetEventTeamReportsForRealm(ctx context.Context, eventKey string, teamKey string, realmID *int64) (reports []Report, err error) {
+	const query = `
+	SELECT reports.*
+	FROM reports
+	INNER JOIN realms
+		ON realms.id = reports.realm_id
+	WHERE
+		reports.event_key = $1 AND
+		reports.team_key = $2 AND
+		(realms.share_reports = true OR realms.id = $3)`
+
+	reports = make([]Report, 0)
+	return reports, s.db.SelectContext(ctx, &reports, query, eventKey, teamKey, realmID)
+}
+
+// GetMatchTeamReportsForRealm retrieves all reports for a specific team and event, filtering to only retrieve reports for realms
+// that are sharing reports or have a matching realm ID.
+func (s *Service) GetMatchTeamReportsForRealm(ctx context.Context, matchKey string, teamKey string, realmID *int64) (reports []Report, err error) {
+	const query = `
+	SELECT reports.*
+	FROM reports
+	INNER JOIN realms
+		ON realms.id = reports.realm_id
+	WHERE
+		reports.match_key = $1 AND
+		reports.team_key = $2 AND
+		(realms.share_reports = true OR realms.id = $3)`
+
+	reports = make([]Report, 0)
+	return reports, s.db.SelectContext(ctx, &reports, query, matchKey, teamKey, realmID)
 }
 
 // GetLeaderboard retrieves leaderboard information from the reports and users table.

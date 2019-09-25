@@ -58,9 +58,9 @@ func (s *Service) UpsertMatchTeamComment(ctx context.Context, c Comment) (create
 	return !existed, err
 }
 
-// GetMatchComments gets all comments for a given team in a match. This returns all comments without
+// GetMatchTeamComments gets all comments for a given team in a match. This returns all comments without
 // filtering for a realm, so it should only be used for super-admins.
-func (s *Service) GetMatchComments(ctx context.Context, matchKey, teamKey string) (comments []Comment, err error) {
+func (s *Service) GetMatchTeamComments(ctx context.Context, matchKey, teamKey string) (comments []Comment, err error) {
 	const query = `
 	SELECT *
 	FROM comments
@@ -72,9 +72,9 @@ func (s *Service) GetMatchComments(ctx context.Context, matchKey, teamKey string
 	return comments, s.db.SelectContext(ctx, &comments, query, matchKey, teamKey)
 }
 
-// GetMatchCommentsForRealm gets all comments for a given team in a match, filtering to only retrieve comments for realms
+// GetMatchTeamCommentsForRealm gets all comments for a given team in a match, filtering to only retrieve comments for realms
 // that are sharing reports or have a matching realm ID.
-func (s *Service) GetMatchCommentsForRealm(ctx context.Context, matchKey, teamKey string, realmID *int64) (comments []Comment, err error) {
+func (s *Service) GetMatchTeamCommentsForRealm(ctx context.Context, matchKey, teamKey string, realmID *int64) (comments []Comment, err error) {
 	const query = `
 	SELECT comments.*
 	FROM comments
@@ -89,9 +89,9 @@ func (s *Service) GetMatchCommentsForRealm(ctx context.Context, matchKey, teamKe
 	return comments, s.db.SelectContext(ctx, &comments, query, matchKey, teamKey, realmID)
 }
 
-// GetEventComments gets all comments for a given team in a match. This returns all comments without
+// GetEventTeamComments gets all comments for a given team in a match. This returns all comments without
 // filtering for a realm, so it should only be used for super-admins.
-func (s *Service) GetEventComments(ctx context.Context, matchKey, teamKey string) (comments []Comment, err error) {
+func (s *Service) GetEventTeamComments(ctx context.Context, matchKey, teamKey string) (comments []Comment, err error) {
 	const query = `
 	SELECT *
 	FROM comments
@@ -103,9 +103,9 @@ func (s *Service) GetEventComments(ctx context.Context, matchKey, teamKey string
 	return comments, s.db.SelectContext(ctx, &comments, query, matchKey, teamKey)
 }
 
-// GetEventCommentsForRealm gets all comments for a given team in an event, filtering to only retrieve comments for realms
+// GetEventTeamCommentsForRealm gets all comments for a given team in an event, filtering to only retrieve comments for realms
 // that are sharing reports or have a matching realm ID.
-func (s *Service) GetEventCommentsForRealm(ctx context.Context, eventKey, teamKey string, realmID *int64) (comments []Comment, err error) {
+func (s *Service) GetEventTeamCommentsForRealm(ctx context.Context, eventKey, teamKey string, realmID *int64) (comments []Comment, err error) {
 	const query = `
 	SELECT comments.*
 	FROM comments

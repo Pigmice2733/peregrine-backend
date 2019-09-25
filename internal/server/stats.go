@@ -26,10 +26,11 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
+		// TODO: handle this better by crafting a better query
+		// if !s.checkEventAccess(event.RealmID, r) {
+		// 	ihttp.Error(w, http.StatusForbidden)
+		// 	return
+		// }
 
 		if event.SchemaID == nil {
 			ihttp.Respond(w, fmt.Errorf("no schema found"), http.StatusBadRequest)
@@ -38,18 +39,19 @@ func (s *Server) eventStats() http.HandlerFunc {
 
 		var reports []store.Report
 
-		realmID, err := ihttp.GetRealmID(r)
-
-		if err != nil {
-			reports, err = s.Store.GetEventReports(r.Context(), eventKey, nil)
+		if ihttp.GetRoles(r).IsSuperAdmin {
+			reports, err = s.Store.GetEventReports(r.Context(), eventKey)
 		} else {
-			reports, err = s.Store.GetEventReports(r.Context(), eventKey, &realmID)
+			var realmID *int64
+			userRealmID, realmErr := ihttp.GetRealmID(r)
+			if realmErr != nil {
+				realmID = &userRealmID
+			}
+
+			reports, err = s.Store.GetEventReportsForRealm(r.Context(), eventKey, realmID)
 		}
 
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
+		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving reports")
 			return
@@ -108,10 +110,11 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 			return
 		}
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
+		// TODO: handle this by crafting a better query
+		// if !s.checkEventAccess(event.RealmID, r) {
+		// 	ihttp.Error(w, http.StatusForbidden)
+		// 	return
+		// }
 
 		if event.SchemaID == nil {
 			ihttp.Respond(w, fmt.Errorf("no schema found"), http.StatusBadRequest)
@@ -131,16 +134,25 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 			return
 		}
 
-		reports, err := s.Store.GetTeamMatchReports(r.Context(), matchKey, teamKey)
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
+		var reports []store.Report
+
+		if ihttp.GetRoles(r).IsSuperAdmin {
+			reports, err = s.Store.GetMatchTeamReports(r.Context(), eventKey, teamKey)
+		} else {
+			var realmID *int64
+			userRealmID, realmErr := ihttp.GetRealmID(r)
+			if realmErr != nil {
+				realmID = &userRealmID
+			}
+
+			reports, err = s.Store.GetMatchTeamReportsForRealm(r.Context(), eventKey, teamKey, realmID)
+		}
+
+		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving reports")
 			return
 		}
-
 		storeSchema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
 		if _, ok := err.(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)

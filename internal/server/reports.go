@@ -18,27 +18,25 @@ func (s *Server) getReports() http.HandlerFunc {
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
-		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		}
-
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
 
-		exists, err := s.Store.CheckMatchKeyExists(matchKey)
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("checking that match exists")
-			return
-		}
-		if !exists {
-			ihttp.Error(w, http.StatusNotFound)
-			return
+		var reports []store.Report
+		var err error
+
+		if ihttp.GetRoles(r).IsSuperAdmin {
+			reports, err = s.Store.GetMatchTeamReports(r.Context(), matchKey, teamKey)
+		} else {
+			var realmID *int64
+			userRealmID, realmErr := ihttp.GetRealmID(r)
+			if realmErr != nil {
+				realmID = &userRealmID
+			}
+
+			reports, err = s.Store.GetMatchTeamReportsForRealm(r.Context(), matchKey, teamKey, realmID)
 		}
 
-		reports, err := s.Store.GetTeamMatchReports(r.Context(), matchKey, teamKey)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("getting reports")
@@ -56,24 +54,9 @@ func (s *Server) putReport() http.HandlerFunc {
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
-		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		}
-
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
-
-		exists, err := s.Store.CheckMatchKeyExists(matchKey)
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("checking that match exists")
-			return
-		} else if !exists {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		}
 
 		var report store.Report
 		if err := json.NewDecoder(r.Body).Decode(&report); err != nil {

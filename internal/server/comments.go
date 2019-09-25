@@ -36,7 +36,7 @@ func (s *Server) getMatchTeamComments() http.HandlerFunc {
 		var err error
 
 		if ihttp.GetRoles(r).IsSuperAdmin {
-			comments, err = s.Store.GetMatchComments(r.Context(), matchKey, teamKey)
+			comments, err = s.Store.GetMatchTeamComments(r.Context(), matchKey, teamKey)
 		} else {
 			var realmID *int64
 			userRealmID, realmErr := ihttp.GetRealmID(r)
@@ -44,7 +44,7 @@ func (s *Server) getMatchTeamComments() http.HandlerFunc {
 				realmID = &userRealmID
 			}
 
-			comments, err = s.Store.GetMatchCommentsForRealm(r.Context(), matchKey, teamKey, realmID)
+			comments, err = s.Store.GetMatchTeamCommentsForRealm(r.Context(), matchKey, teamKey, realmID)
 		}
 
 		if err != nil {
@@ -72,7 +72,7 @@ func (s *Server) getEventComments() http.HandlerFunc {
 		var err error
 
 		if ihttp.GetRoles(r).IsSuperAdmin {
-			comments, err = s.Store.GetEventComments(r.Context(), eventKey, teamKey)
+			comments, err = s.Store.GetEventTeamComments(r.Context(), eventKey, teamKey)
 		} else {
 			var realmID *int64
 			userRealmID, realmErr := ihttp.GetRealmID(r)
@@ -80,7 +80,7 @@ func (s *Server) getEventComments() http.HandlerFunc {
 				realmID = &userRealmID
 			}
 
-			comments, err = s.Store.GetEventCommentsForRealm(r.Context(), eventKey, teamKey, realmID)
+			comments, err = s.Store.GetEventTeamCommentsForRealm(r.Context(), eventKey, teamKey, realmID)
 		}
 
 		if err != nil {
@@ -104,11 +104,6 @@ func (s *Server) putMatchTeamComment() http.HandlerFunc {
 		eventKey := vars["eventKey"]
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
-
-		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		}
 
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.

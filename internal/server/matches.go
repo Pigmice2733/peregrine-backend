@@ -32,20 +32,21 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 		teams := r.URL.Query()["team"]
 		tbaDeleted := r.URL.Query().Get("tbaDeleted") == "true"
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
+		// event, err := s.Store.GetEvent(r.Context(), eventKey)
+		// if _, ok := err.(store.ErrNoResults); ok {
+		// 	ihttp.Error(w, http.StatusNotFound)
+		// 	return
+		// } else if err != nil {
+		// 	ihttp.Error(w, http.StatusInternalServerError)
+		// 	s.Logger.WithError(err).Error("retrieving event")
+		// 	return
+		// }
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
+		// TODO: implement this without by crafting a better query
+		// if !s.checkEventAccess(event.RealmID, r) {
+		// 	ihttp.Error(w, http.StatusForbidden)
+		// 	return
+		// }
 
 		fullMatches, err := s.Store.GetMatches(r.Context(), eventKey, teams, tbaDeleted)
 		if err != nil {
@@ -82,20 +83,21 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		vars := mux.Vars(r)
 		eventKey, matchKey := vars["eventKey"], vars["matchKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
+		// event, err := s.Store.GetEvent(r.Context(), eventKey)
+		// if _, ok := err.(store.ErrNoResults); ok {
+		// 	ihttp.Error(w, http.StatusNotFound)
+		// 	return
+		// } else if err != nil {
+		// 	ihttp.Error(w, http.StatusInternalServerError)
+		// 	s.Logger.WithError(err).Error("retrieving event")
+		// 	return
+		// }
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
+		// TODO: fix this by crafting a better query
+		// if !s.checkEventAccess(event.RealmID, r) {
+		// 	ihttp.Error(w, http.StatusForbidden)
+		// 	return
+		// }
 
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
@@ -147,20 +149,21 @@ func (s *Server) upsertMatchHandler() http.HandlerFunc {
 		eventKey := vars["eventKey"]
 		matchKey := vars["matchKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
+		// TODO: fix this by crafting a better query
+		// event, err := s.Store.GetEvent(r.Context(), eventKey)
+		// if _, ok := err.(store.ErrNoResults); ok {
+		// 	ihttp.Error(w, http.StatusNotFound)
+		// 	return
+		// } else if err != nil {
+		// 	ihttp.Error(w, http.StatusInternalServerError)
+		// 	s.Logger.WithError(err).Error("retrieving event")
+		// 	return
+		// }
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
+		// if !s.checkEventAccess(event.RealmID, r) {
+		// 	ihttp.Error(w, http.StatusForbidden)
+		// 	return
+		// }
 
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
@@ -194,26 +197,27 @@ func (s *Server) deleteMatchHandler() http.HandlerFunc {
 		eventKey := vars["eventKey"]
 		matchKey := vars["matchKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
+		// event, err := s.Store.GetEvent(r.Context(), eventKey)
+		// if _, ok := err.(store.ErrNoResults); ok {
+		// 	ihttp.Error(w, http.StatusNotFound)
+		// 	return
+		// } else if err != nil {
+		// 	ihttp.Error(w, http.StatusInternalServerError)
+		// 	s.Logger.WithError(err).Error("retrieving event")
+		// 	return
+		// }
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
+		// TODO: fix this by crafting a better query
+		// if !s.checkEventAccess(event.RealmID, r) {
+		// 	ihttp.Error(w, http.StatusForbidden)
+		// 	return
+		// }
 
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
 
-		err = s.Store.DeleteMatch(r.Context(), matchKey)
+		err := s.Store.DeleteMatch(r.Context(), matchKey)
 		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return

@@ -123,21 +123,6 @@ func (s *Service) GetActiveEvents(ctx context.Context, tbaDeleted bool) ([]Event
 	return events, s.db.SelectContext(ctx, &events, query)
 }
 
-// CheckTBAEventKeyExists checks whether a specific event key exists and is from
-// TBA rather than manually added. Returns ErrNoResults if event does not exist.
-func (s *Service) CheckTBAEventKeyExists(ctx context.Context, eventKey string) (bool, error) {
-	var realmID *int64
-
-	err := s.db.GetContext(ctx, &realmID, "SELECT realm_id FROM events WHERE key = $1", eventKey)
-	if err == sql.ErrNoRows {
-		return false, ErrNoResults{errors.Wrapf(err, "event key %s not found", eventKey)}
-	} else if err != nil {
-		return false, err
-	}
-
-	return realmID == nil, nil
-}
-
 // GetEvent retrieves a specific event.
 func (s *Service) GetEvent(ctx context.Context, eventKey string) (Event, error) {
 	var event Event

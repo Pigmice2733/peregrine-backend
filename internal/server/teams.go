@@ -35,20 +35,21 @@ func (s *Server) eventTeamHandler() http.HandlerFunc {
 		vars := mux.Vars(r)
 		eventKey, teamKey := vars["eventKey"], vars["teamKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
+		// event, err := s.Store.GetEvent(r.Context(), eventKey)
+		// if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+		// 	ihttp.Error(w, http.StatusNotFound)
+		// 	return
+		// } else if err != nil {
+		// 	ihttp.Error(w, http.StatusInternalServerError)
+		// 	s.Logger.WithError(err).Error("retrieving event")
+		// 	return
+		// }
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
+		// TODO: do this by crafting the query better
+		// if !s.checkEventAccess(event.RealmID, r) {
+		// 	ihttp.Error(w, http.StatusForbidden)
+		// 	return
+		// }
 
 		team, err := s.Store.GetEventTeam(r.Context(), teamKey, eventKey)
 		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
@@ -69,21 +70,22 @@ func (s *Server) eventTeamsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
+		// event, err := s.Store.GetEvent(r.Context(), eventKey)
 
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
+		// if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+		// 	ihttp.Error(w, http.StatusNotFound)
+		// 	return
+		// } else if err != nil {
+		// 	ihttp.Error(w, http.StatusInternalServerError)
+		// 	s.Logger.WithError(err).Error("retrieving event")
+		// 	return
+		// }
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
+		// TODO: do this by building queries better
+		// if !s.checkEventAccess(event.RealmID, r) {
+		// 	ihttp.Error(w, http.StatusForbidden)
+		// 	return
+		// }
 
 		teams, err := s.Store.GetEventTeams(r.Context(), eventKey)
 		if err != nil {
