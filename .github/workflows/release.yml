@@ -1,0 +1,25 @@
+on: release
+name: Docker Build and Push
+jobs:
+  gitHubActionForDocker:
+    name: GitHub Action for Docker
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: GitHub Action for Docker
+      uses: actions/docker/cli@86ff551d26008267bb89ac11198ba7f1d807b699
+      with:
+        args: build -t peregrine-backend .
+    - name: Docker Tag
+      uses: actions/docker/tag@86ff551d26008267bb89ac11198ba7f1d807b699
+      with:
+        args: peregrine-backend pigmice2733/peregrine-backend
+    - name: Docker Registry
+      uses: actions/docker/login@86ff551d26008267bb89ac11198ba7f1d807b699
+      env:
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+    - name: GitHub Action for Docker-1
+      uses: actions/docker/cli@86ff551d26008267bb89ac11198ba7f1d807b699
+      with:
+        args: push pigmice2733/peregrine-backend
