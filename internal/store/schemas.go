@@ -65,7 +65,7 @@ func (sd *SchemaFields) Scan(src interface{}) error {
 
 // CreateSchema creates a new schema
 func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		_, err := tx.NamedExecContext(ctx, `
 		INSERT
 			INTO

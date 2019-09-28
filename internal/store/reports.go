@@ -56,7 +56,7 @@ type Leaderboard []struct {
 func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err error) {
 	var existed bool
 
-	err = s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	err = s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		var existed bool
 		err = tx.QueryRow(`
 			SELECT EXISTS(

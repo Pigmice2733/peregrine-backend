@@ -72,7 +72,9 @@ func (s *Service) logErr(err error) {
 	}
 }
 
-func (s *Service) doTransaction(ctx context.Context, txWrapper func(*sqlx.Tx) error) error {
+// DoTransaction opens a SQL transaction and calls txWrapper with the transaction. If the txWrapper
+// return an error, the transaction will be rolled back.
+func (s *Service) DoTransaction(ctx context.Context, txWrapper func(*sqlx.Tx) error) error {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "unable to begin transaction")

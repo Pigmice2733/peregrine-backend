@@ -7,6 +7,7 @@ import (
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
 
@@ -69,8 +70,8 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 
-		var e store.Event
-		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+		var event store.Event
+		if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
 			return
 		}
@@ -80,24 +81,52 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
+		roles := ihttp.GetRoles(r)
 
-		e.Key = eventKey
-		e.RealmID = &creatorRealm
+		event.Key = eventKey
+		event.RealmID = &creatorRealm
 
-		created, err := s.Store.UpsertEvent(r.Context(), e)
-		if err != nil {
-			switch errors.Cause(err).(type) {
-			case store.ErrFKeyViolation:
-				ihttp.Error(w, http.StatusUnprocessableEntity)
-			default:
-				s.Logger.WithError(err).Error("unable to upsert event data")
+		var eventCreated bool
+
+		err = s.Store.DoTransaction(r.Context(), func(tx *sqlx.Tx) error {
+			if err := s.Store.ExclusiveLockEventsTx(r.Context(), tx); err != nil {
+				s.Logger.WithError(err).Error("unable to acquire exclusive lock")
 				ihttp.Error(w, http.StatusInternalServerError)
+				return err
 			}
 
+			realmID, err := s.Store.GetEventRealmIDTx(r.Context(), tx, event.Key)
+			if _, ok := err.(store.ErrNoResults); ok {
+				eventCreated = true
+			} else if err != nil {
+				s.Logger.WithError(err).Error("unable to get event realm ID")
+				ihttp.Error(w, http.StatusInternalServerError)
+				return err
+			}
+
+			if realmID == nil && !roles.IsSuperAdmin {
+				ihttp.Error(w, http.StatusForbidden)
+				return errors.New("only super-admins can edit events with no realm ID")
+			} else if realmID != nil && *realmID != creatorRealm && !roles.IsSuperAdmin {
+				ihttp.Error(w, http.StatusForbidden)
+				return errors.New("only super-admins or realm admins with matching realm IDs can edit events with a specified realm ID")
+			}
+
+			if err := s.Store.UpsertEventTx(r.Context(), tx, event); err != nil {
+				s.Logger.WithError(err).Error("unable to upsert event data")
+				ihttp.Error(w, http.StatusInternalServerError)
+				return err
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			// responses are written within tx handler
 			return
 		}
 
-		if created {
+		if eventCreated {
 			w.WriteHeader(http.StatusCreated)
 		} else {
 			w.WriteHeader(http.StatusNoContent)

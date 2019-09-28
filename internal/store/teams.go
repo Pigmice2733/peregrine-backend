@@ -57,7 +57,7 @@ func (s *Service) GetTeam(ctx context.Context, teamKey string) (Team, error) {
 
 // EventTeamsUpsert upserts multiple teams for a specific event into the database.
 func (s *Service) EventTeamsUpsert(ctx context.Context, teams []EventTeam) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		allTeamsStmt, err := tx.PrepareNamedContext(ctx, allTeamsKeyUpsert)
 		if err != nil {
 			return errors.Wrap(err, "unable to prepare all_teams upsert statement")
@@ -94,7 +94,7 @@ func (s *Service) EventTeamsUpsert(ctx context.Context, teams []EventTeam) error
 
 // TeamsUpsert upserts multiple teams into the database.
 func (s *Service) TeamsUpsert(ctx context.Context, teams []Team) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		stmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO all_teams (key, nickname)
 		VALUES (:key, :nickname)
@@ -119,7 +119,7 @@ func (s *Service) TeamsUpsert(ctx context.Context, teams []Team) error {
 
 // EventTeamKeysUpsert upserts multiple team keys from a single event into the database.
 func (s *Service) EventTeamKeysUpsert(ctx context.Context, eventKey string, keys []string) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		allTeamsStmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO all_teams (key)
 		VALUES ($1)

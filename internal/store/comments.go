@@ -24,7 +24,7 @@ type Comment struct {
 func (s *Service) UpsertMatchTeamComment(ctx context.Context, c Comment) (created bool, err error) {
 	var existed bool
 
-	err = s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	err = s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		err = tx.QueryRow(`
 			SELECT EXISTS(
 				SELECT FROM comments

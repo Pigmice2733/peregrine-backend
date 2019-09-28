@@ -137,7 +137,7 @@ func (s *Service) GetActiveEvents(ctx context.Context, tbaDeleted bool) ([]Event
 // EventsUpsert upserts multiple events into the database. It will set tba_deleted
 // to false for all updated events. schema_id will only be updated if null.
 func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		eventStmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, gmaps_url, lat, lon, realm_id, schema_id, tba_deleted)
 		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :gmaps_url, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
@@ -202,22 +202,26 @@ func (s *Service) MarkEventsDeleted(ctx context.Context, events []Event) error {
 	return errors.Wrap(err, "unable to mark tba_deleted on missing events")
 }
 
-// UpsertEvent upserts a single event into the database and returns whether
+// ExclusiveLockEventsTx acquires an exclusive lock on the events table.
+func (s *Service) ExclusiveLockEventsTx(ctx context.Context, tx *sqlx.Tx) error {
+	_, err := tx.Exec("LOCK TABLE events IN EXCLUSIVE MODE")
+	return errors.Wrap(err, "unable to lock events")
+}
+
+// GetEventRealmIDTx returns the realm ID of an event by key.
+func (s *Service) GetEventRealmIDTx(ctx context.Context, tx *sqlx.Tx, eventKey string) (realmID *int64, err error) {
+	err = tx.QueryRow("SELECT realm_id FROM events WHERE key = $1", eventKey).Scan(&realmID)
+	if err == sql.ErrNoRows {
+		return nil, ErrNoResults{errors.Wrap(err, "couldn't find event by key")}
+	}
+
+	return realmID, errors.Wrap(err, "unable to determine event realm ID")
+}
+
+// UpsertEventTx upserts a single event into the database and returns whether
 // the event was created or updated.
-func (s *Service) UpsertEvent(ctx context.Context, event Event) (created bool, err error) {
-	var existed bool
-
-	err = s.doTransaction(ctx, func(tx *sqlx.Tx) error {
-		if _, err := tx.Exec("LOCK TABLE events IN EXCLUSIVE MODE"); err != nil {
-			return errors.Wrap(err, "unable to lock events")
-		}
-
-		err = tx.QueryRow("SELECT EXISTS(SELECT FROM events WHERE key = $1)", event.Key).Scan(&existed)
-		if err != nil {
-			return errors.Wrap(err, "unable to determine if event exists")
-		}
-
-		_, err = tx.NamedExecContext(ctx, `
+func (s *Service) UpsertEventTx(ctx context.Context, tx *sqlx.Tx, event Event) error {
+	_, err := tx.NamedExecContext(ctx, `
 			INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, gmaps_url, lat, lon, realm_id, schema_id, tba_deleted)
 				VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :gmaps_url, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
 			ON CONFLICT (key) DO
@@ -238,11 +242,6 @@ func (s *Service) UpsertEvent(ctx context.Context, event Event) (created bool, e
 						schema_id = :schema_id,
 						tba_deleted = :tba_deleted
 		`, event)
-		if err != nil {
-			return errors.Wrap(err, "unable to upsert event")
-		}
-		return nil
-	})
 
-	return !existed, err
+	return errors.Wrap(err, "unable to upsert event")
 }

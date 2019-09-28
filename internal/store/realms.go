@@ -44,7 +44,7 @@ func (s *Service) GetRealm(ctx context.Context, id int64) (Realm, error) {
 func (s *Service) InsertRealm(ctx context.Context, realm Realm) (int64, error) {
 	var realmID int64
 
-	err := s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	err := s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		err := tx.GetContext(ctx, &realm.ID, `
 	    INSERT INTO realms (name, share_reports)
 		    VALUES (:name, :share_reports)

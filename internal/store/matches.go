@@ -171,7 +171,7 @@ func (s *Service) DeleteMatch(ctx context.Context, matchKey string) error {
 
 // UpsertMatch upserts a match and its alliances into the database.
 func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		_, err := tx.NamedExecContext(ctx, `
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url)
 		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url)
@@ -228,7 +228,7 @@ func (s *Service) MarkMatchesDeleted(ctx context.Context, eventKey string, match
 // matches will be unaffected. If eventKey is specified, only matches from that
 // event will be affected. It will set tba_deleted to false for all updated matches.
 func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches []Match) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		upsert, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url)
 		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url)

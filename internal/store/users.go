@@ -77,7 +77,7 @@ func (s *Service) GetUserByUsername(ctx context.Context, username string) (User,
 
 // CreateUser creates a given user.
 func (s *Service) CreateUser(ctx context.Context, u User) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		u.PasswordChanged = time.Now()
 
 		userStmt, err := tx.PrepareNamedContext(ctx, `
@@ -207,7 +207,7 @@ func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 
 // PatchUser updates a user by their ID.
 func (s *Service) PatchUser(ctx context.Context, pu PatchUser) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		if pu.HashedPassword != nil {
 			now := time.Now()
 			pu.PasswordChanged = &now
@@ -259,7 +259,7 @@ func (s *Service) PatchUser(ctx context.Context, pu PatchUser) error {
 
 // DeleteUser deletes a specific user from the database.
 func (s *Service) DeleteUser(ctx context.Context, id int64) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		_, err := tx.ExecContext(ctx, `
 	    DELETE FROM stars
 	        WHERE user_id = $1
