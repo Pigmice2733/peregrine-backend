@@ -22,21 +22,13 @@ func (s *Server) getReports() http.HandlerFunc {
 		// unique and consistent with TBA match keys.
 		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
 
-		var reports []store.Report
-		var err error
-
-		if ihttp.GetRoles(r).IsSuperAdmin {
-			reports, err = s.Store.GetMatchTeamReports(r.Context(), matchKey, teamKey)
-		} else {
-			var realmID *int64
-			userRealmID, realmErr := ihttp.GetRealmID(r)
-			if realmErr != nil {
-				realmID = &userRealmID
-			}
-
-			reports, err = s.Store.GetMatchTeamReportsForRealm(r.Context(), matchKey, teamKey, realmID)
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err != nil {
+			realmID = &userRealmID
 		}
 
+		reports, err := s.Store.GetMatchTeamReportsForRealm(r.Context(), matchKey, teamKey, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("getting reports")

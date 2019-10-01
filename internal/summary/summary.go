@@ -266,8 +266,8 @@ func compareRecords(a, b interface{}) bool {
 		return aString == bString
 	}
 
-	aFloat, aOk := a.(float64)
-	bFloat, bOk := b.(float64)
+	aFloat, _ := a.(float64)
+	bFloat, _ := b.(float64)
 
 	if aBool, aOk := a.(bool); aOk && aBool {
 		aFloat = 1.0

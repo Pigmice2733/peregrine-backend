@@ -88,19 +88,6 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 	return !existed, err
 }
 
-// GetEventReports returns all event reports for a specific event. This returns all reports without filtering for a realm,
-// so it should only be used for super-admins.
-func (s *Service) GetEventReports(ctx context.Context, eventKey string) ([]Report, error) {
-	const query = `
-	SELECT *
-	FROM reports
-	WHERE
-		event_key = $1`
-
-	reports := []Report{}
-	return reports, s.db.SelectContext(ctx, &reports, query, eventKey)
-}
-
 // GetEventReportsForRealm returns all event reports for a specific event and realm.
 func (s *Service) GetEventReportsForRealm(ctx context.Context, eventKey string, realmID *int64) ([]Report, error) {
 	const query = `
@@ -114,32 +101,6 @@ func (s *Service) GetEventReportsForRealm(ctx context.Context, eventKey string, 
 
 	reports := []Report{}
 	return reports, s.db.SelectContext(ctx, &reports, query, eventKey, realmID)
-}
-
-// GetMatchTeamReports retrieves all reports for a specific team and match from the db. This returns all reports without
-// filtering for a realm, so it should only be used for super-admins.
-func (s *Service) GetMatchTeamReports(ctx context.Context, matchKey string, teamKey string) ([]Report, error) {
-	const query = `
-	SELECT *
-	FROM reports
-	WHERE
-		match_key = $1 AND
-		team_key = $2`
-	reports := []Report{}
-	return reports, s.db.SelectContext(ctx, &reports, query, matchKey, teamKey)
-}
-
-// GetEventTeamReports retrieves all reports for a specific team and match from the db. This returns all reports without
-// filtering for a realm, so it should only be used for super-admins.
-func (s *Service) GetEventTeamReports(ctx context.Context, eventKey string, teamKey string) ([]Report, error) {
-	const query = `
-	SELECT *
-	FROM reports
-	WHERE
-		event_key = $1 AND
-		team_key = $2`
-	reports := []Report{}
-	return reports, s.db.SelectContext(ctx, &reports, query, eventKey, teamKey)
 }
 
 // GetEventTeamReportsForRealm retrieves all reports for a specific team and event, filtering to only retrieve reports for realms

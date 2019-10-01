@@ -105,39 +105,22 @@ func (s *Service) GetSchemaByYear(ctx context.Context, year int) (Schema, error)
 	return schema, errors.Wrap(err, "unable to retrieve schema")
 }
 
-// GetVisibleSchemas retrieves schemas from the database frm a specific realm,
+// GetSchemasForRealm retrieves schemas from the database frm a specific realm,
 // from realms with public events, and standard FRC schemas. If the realm ID is
 // nil, no private realms' schemas will be retrieved.
-func (s *Service) GetVisibleSchemas(ctx context.Context, realmID *int64) ([]Schema, error) {
+func (s *Service) GetSchemasForRealm(ctx context.Context, realmID *int64) ([]Schema, error) {
 	schemas := []Schema{}
-	var err error
 
-	if realmID == nil {
-		err = s.db.SelectContext(ctx, &schemas, `
-		WITH public_realms AS (
-			SELECT id FROM realms WHERE share_reports = true
-		)
-		SELECT *
-			FROM schemas
-				WHERE year IS NULL OR realm_id IN (SELECT id FROM public_realms)
-		`)
-	} else {
-		err = s.db.SelectContext(ctx, &schemas, `
-		WITH public_realms AS (
-			SELECT id FROM realms WHERE share_reports = true
-		)
-		SELECT *
-			FROM schemas
-			    WHERE year IS NULL OR realm_id = $1 OR (SELECT id FROM public_realms)
-		`, *realmID)
-	}
+	err := s.db.SelectContext(ctx, &schemas, `
+	SELECT schemas.*
+	FROM schemas
+	LEFT JOIN realms
+		ON realms.id = schemas.realm_id
+	WHERE
+		schemas.year IS NULL OR
+		realms.id = NULL OR
+		(realms.share_reports = true OR realms.id = $1)
+	`, realmID)
 
-	return schemas, errors.Wrap(err, "unable to retrieve schemas")
-}
-
-// GetSchemas retrieves all schemas from the database.
-func (s *Service) GetSchemas(ctx context.Context) ([]Schema, error) {
-	schemas := []Schema{}
-	err := s.db.SelectContext(ctx, &schemas, "SELECT * FROM schemas")
 	return schemas, errors.Wrap(err, "unable to retrieve schemas")
 }

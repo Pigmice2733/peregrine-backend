@@ -73,30 +73,17 @@ func (s *Server) getSchemasHandler() http.HandlerFunc {
 			return
 		}
 
-		var schemas []store.Schema
-		var err error
-		roles := ihttp.GetRoles(r)
-		if roles.IsSuperAdmin {
-			schemas, err = s.Store.GetSchemas(r.Context())
-			if err != nil {
-				s.Logger.WithError(err).Error("getting schemas")
-				ihttp.Error(w, http.StatusInternalServerError)
-				return
-			}
-		} else {
-			var realmID *int64
-			realm, err := ihttp.GetRealmID(r)
-			if err != nil {
-				realmID = nil
-			} else {
-				realmID = &realm
-			}
-			schemas, err = s.Store.GetVisibleSchemas(r.Context(), realmID)
-			if err != nil {
-				s.Logger.WithError(err).Error("getting schemas")
-				ihttp.Error(w, http.StatusInternalServerError)
-				return
-			}
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
+		}
+
+		schemas, err := s.Store.GetSchemasForRealm(r.Context(), realmID)
+		if err != nil {
+			s.Logger.WithError(err).Error("getting schemas")
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
 		}
 
 		ihttp.Respond(w, schemas, http.StatusOK)

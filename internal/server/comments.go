@@ -35,17 +35,13 @@ func (s *Server) getMatchTeamComments() http.HandlerFunc {
 		var comments []store.Comment
 		var err error
 
-		if ihttp.GetRoles(r).IsSuperAdmin {
-			comments, err = s.Store.GetMatchTeamComments(r.Context(), matchKey, teamKey)
-		} else {
-			var realmID *int64
-			userRealmID, realmErr := ihttp.GetRealmID(r)
-			if realmErr != nil {
-				realmID = &userRealmID
-			}
-
-			comments, err = s.Store.GetMatchTeamCommentsForRealm(r.Context(), matchKey, teamKey, realmID)
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err != nil {
+			realmID = &userRealmID
 		}
+
+		comments, err = s.Store.GetMatchTeamCommentsForRealm(r.Context(), matchKey, teamKey, realmID)
 
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -71,17 +67,13 @@ func (s *Server) getEventComments() http.HandlerFunc {
 		var comments []store.Comment
 		var err error
 
-		if ihttp.GetRoles(r).IsSuperAdmin {
-			comments, err = s.Store.GetEventTeamComments(r.Context(), eventKey, teamKey)
-		} else {
-			var realmID *int64
-			userRealmID, realmErr := ihttp.GetRealmID(r)
-			if realmErr != nil {
-				realmID = &userRealmID
-			}
-
-			comments, err = s.Store.GetEventTeamCommentsForRealm(r.Context(), eventKey, teamKey, realmID)
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err != nil {
+			realmID = &userRealmID
 		}
+
+		comments, err = s.Store.GetEventTeamCommentsForRealm(r.Context(), eventKey, teamKey, realmID)
 
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)

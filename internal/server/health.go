@@ -11,7 +11,7 @@ import (
 func openAPIHandler(openAPI []byte) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/x-yaml")
-		w.Write(openAPI)
+		_, _ = w.Write(openAPI)
 	}
 }
 

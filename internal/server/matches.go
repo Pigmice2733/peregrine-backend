@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,7 +31,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 		teams := r.URL.Query()["team"]
-		tbaDeleted := r.URL.Query().Get("tbaDeleted") == "true"
+		tbaDeleted, _ := strconv.ParseBool(r.URL.Query().Get("tbaDeleted"))
 
 		// event, err := s.Store.GetEvent(r.Context(), eventKey)
 		// if _, ok := err.(store.ErrNoResults); ok {

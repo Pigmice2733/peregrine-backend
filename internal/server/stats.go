@@ -43,14 +43,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		var reports []store.Report
-
-		if ihttp.GetRoles(r).IsSuperAdmin {
-			reports, err = s.Store.GetEventReports(r.Context(), eventKey)
-		} else {
-			reports, err = s.Store.GetEventReportsForRealm(r.Context(), eventKey, realmID)
-		}
-
+		reports, err := s.Store.GetEventReportsForRealm(r.Context(), eventKey, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving reports")
@@ -140,14 +133,7 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 			return
 		}
 
-		var reports []store.Report
-
-		if ihttp.GetRoles(r).IsSuperAdmin {
-			reports, err = s.Store.GetMatchTeamReports(r.Context(), eventKey, teamKey)
-		} else {
-			reports, err = s.Store.GetMatchTeamReportsForRealm(r.Context(), eventKey, teamKey, realmID)
-		}
-
+		reports, err := s.Store.GetMatchTeamReportsForRealm(r.Context(), eventKey, teamKey, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving reports")

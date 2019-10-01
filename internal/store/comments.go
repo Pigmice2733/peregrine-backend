@@ -58,20 +58,6 @@ func (s *Service) UpsertMatchTeamComment(ctx context.Context, c Comment) (create
 	return !existed, err
 }
 
-// GetMatchTeamComments gets all comments for a given team in a match. This returns all comments without
-// filtering for a realm, so it should only be used for super-admins.
-func (s *Service) GetMatchTeamComments(ctx context.Context, matchKey, teamKey string) (comments []Comment, err error) {
-	const query = `
-	SELECT *
-	FROM comments
-	WHERE
-		match_key = $1 AND
-		team_key = $2`
-
-	comments = make([]Comment, 0)
-	return comments, s.db.SelectContext(ctx, &comments, query, matchKey, teamKey)
-}
-
 // GetMatchTeamCommentsForRealm gets all comments for a given team in a match, filtering to only retrieve comments for realms
 // that are sharing reports or have a matching realm ID.
 func (s *Service) GetMatchTeamCommentsForRealm(ctx context.Context, matchKey, teamKey string, realmID *int64) (comments []Comment, err error) {
@@ -87,20 +73,6 @@ func (s *Service) GetMatchTeamCommentsForRealm(ctx context.Context, matchKey, te
 
 	comments = make([]Comment, 0)
 	return comments, s.db.SelectContext(ctx, &comments, query, matchKey, teamKey, realmID)
-}
-
-// GetEventTeamComments gets all comments for a given team in a match. This returns all comments without
-// filtering for a realm, so it should only be used for super-admins.
-func (s *Service) GetEventTeamComments(ctx context.Context, matchKey, teamKey string) (comments []Comment, err error) {
-	const query = `
-	SELECT *
-	FROM comments
-	WHERE
-		match_key = $1 AND
-		team_key = $2`
-
-	comments = make([]Comment, 0)
-	return comments, s.db.SelectContext(ctx, &comments, query, matchKey, teamKey)
 }
 
 // GetEventTeamCommentsForRealm gets all comments for a given team in an event, filtering to only retrieve comments for realms

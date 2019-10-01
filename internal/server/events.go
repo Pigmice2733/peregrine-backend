@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -14,9 +15,7 @@ import (
 // eventsHandler returns a handler to get all events in a given year.
 func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tbaDeleted := r.URL.Query().Get("tbaDeleted") == "true"
-
-		roles := ihttp.GetRoles(r)
+		tbaDeleted, _ := strconv.ParseBool(r.URL.Query().Get("tbaDeleted"))
 
 		var realmID *int64
 		userRealmID, err := ihttp.GetRealmID(r)
@@ -24,13 +23,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 			realmID = &userRealmID
 		}
 
-		var events []store.Event
-		if roles.IsSuperAdmin {
-			events, err = s.Store.GetEvents(r.Context(), tbaDeleted)
-		} else {
-			events, err = s.Store.GetEventsForRealm(r.Context(), tbaDeleted, realmID)
-		}
-
+		events, err := s.Store.GetEventsForRealm(r.Context(), tbaDeleted, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving event data")
@@ -107,9 +100,9 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 			if realmID == nil && !roles.IsSuperAdmin {
 				ihttp.Error(w, http.StatusForbidden)
 				return errors.New("only super-admins can edit events with no realm ID")
-			} else if realmID != nil && *realmID != creatorRealm && !roles.IsSuperAdmin {
+			} else if realmID != nil && *realmID != creatorRealm {
 				ihttp.Error(w, http.StatusForbidden)
-				return errors.New("only super-admins or realm admins with matching realm IDs can edit events with a specified realm ID")
+				return errors.New("only realm admins with matching realm IDs can edit events with a specified realm ID")
 			}
 
 			if err := s.Store.UpsertEventTx(r.Context(), tx, event); err != nil {

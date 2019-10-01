@@ -581,7 +581,6 @@ func TestGetTeams(t *testing.T) {
 					}
 				]
 				`))
-					break
 				case 1:
 					_, err = w.Write([]byte(`
 				[
@@ -611,7 +610,6 @@ func TestGetTeams(t *testing.T) {
 					}
 				]
 				`))
-					break
 				default:
 					_, err = w.Write([]byte(`
 				[

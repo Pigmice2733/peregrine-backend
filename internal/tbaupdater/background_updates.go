@@ -40,8 +40,10 @@ func (s *Service) End() {
 
 // run periodically updates all TBA data in background
 func (s *Service) run(ctx context.Context) {
-	inactiveUpdates := time.Tick(15 * time.Minute)
-	activeUpdates := time.Tick(1 * time.Minute)
+	inactiveUpdates := time.NewTicker(15 * time.Minute)
+	activeUpdates := time.NewTicker(1 * time.Minute)
+	defer inactiveUpdates.Stop()
+	defer activeUpdates.Stop()
 
 	s.Logger.Info("seeding TBA data")
 	go s.updateEvents(ctx)
@@ -52,11 +54,11 @@ func (s *Service) run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-inactiveUpdates:
+		case <-inactiveUpdates.C:
 			go s.updateEvents(ctx)
 			go s.updateTeams(ctx)
 			go s.updatePerEventData(ctx, false)
-		case <-activeUpdates:
+		case <-activeUpdates.C:
 			go s.updatePerEventData(ctx, true)
 		}
 	}
