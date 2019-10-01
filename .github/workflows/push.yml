@@ -1,0 +1,18 @@
+on: push
+name: Build and Test
+jobs:
+  goBuild:
+    name: go build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: go build
+      uses: docker://golang:1.12.7
+      with:
+        entrypoint: go
+        args: build ./...
+    - name: go test
+      uses: docker://golang:1.12.7
+      with:
+        entrypoint: go
+        args: test -cover -race ./...

@@ -209,7 +209,8 @@ func selectTeamMatches(storeMatches []store.Match, reports []store.Report) map[s
 }
 
 func storeSummaryToSummarySchema(storeSchema store.Schema) summary.Schema {
-	var schema summary.Schema
+	schema := make(summary.Schema, 0)
+
 	for _, statDescription := range storeSchema.Schema {
 		field := summary.SchemaField{
 			FieldDescriptor: summary.FieldDescriptor{Name: statDescription.FieldDescriptor.Name},
@@ -230,6 +231,7 @@ func storeSummaryToSummarySchema(storeSchema store.Schema) summary.Schema {
 
 		schema = append(schema, field)
 	}
+
 	return schema
 }
 
@@ -245,7 +247,7 @@ type summaryStat struct {
 }
 
 func teamAnalysisFromSummary(summary summary.Summary, team string) teamAnalysis {
-	var stats []summaryStat
+	stats := make([]summaryStat, 0)
 	for _, stat := range summary {
 		stats = append(stats, summaryStat{
 			Name:    stat.Name,

@@ -96,7 +96,7 @@ func SummarizeTeam(schema Schema, matches []Match) (Summary, error) {
 		}
 	}
 
-	var summary Summary
+	summary := make(Summary, 0)
 	for statName, record := range records {
 		stat := SummaryStat{
 			FieldDescriptor: FieldDescriptor{Name: statName},
@@ -243,7 +243,10 @@ func summarizeSum(statDescription SchemaField, match Match, records rawRecords) 
 
 func summarizeAnyOf(statDescription SchemaField, match Match, records rawRecords) error {
 	for _, ref := range statDescription.AnyOf {
-		refRecords := records[ref.Name]
+		refRecords, ok := records[ref.Name]
+		if !ok {
+			return nil
+		}
 
 		for _, reportGroup := range refRecords {
 			for _, record := range reportGroup {
