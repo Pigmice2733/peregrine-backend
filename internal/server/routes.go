@@ -52,7 +52,7 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/leaderboard", s.leaderboardHandler()).Methods("GET")
 
 	r.Handle("/realms", s.realmsHandler()).Methods("GET")
-	r.Handle("/realms", ihttp.ACL(s.createRealmHandler(), true, true, true)).Methods("POST")
+	r.Handle("/realms", s.createRealmHandler()).Methods("POST")
 	r.Handle("/realms/{id}", s.realmHandler()).Methods("GET")
 	r.Handle("/realms/{id}", ihttp.ACL(s.updateRealmHandler(), true, true, true)).Methods("POST")
 	r.Handle("/realms/{id}", ihttp.ACL(s.deleteRealmHandler(), true, true, true)).Methods("DELETE")

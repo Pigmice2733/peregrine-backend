@@ -58,7 +58,7 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 
 	err = s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		var existed bool
-		err = tx.QueryRow(`
+		err = tx.QueryRowContext(ctx, `
 			SELECT EXISTS(
 				SELECT FROM reports
 				WHERE

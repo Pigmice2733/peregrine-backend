@@ -204,7 +204,7 @@ func (s *Service) MarkEventsDeleted(ctx context.Context, events []Event) error {
 
 // ExclusiveLockEventsTx acquires an exclusive lock on the events table.
 func (s *Service) ExclusiveLockEventsTx(ctx context.Context, tx *sqlx.Tx) error {
-	_, err := tx.Exec("LOCK TABLE events IN EXCLUSIVE MODE")
+	_, err := tx.ExecContext(ctx, "LOCK TABLE events IN EXCLUSIVE MODE")
 	return errors.Wrap(err, "unable to lock events")
 }
 

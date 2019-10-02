@@ -2,8 +2,9 @@ package store
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
+	"errors"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // Register lib/pq PostreSQL driver
@@ -24,6 +25,12 @@ func (err ErrNoResults) Is(target error) bool {
 // ErrExists is returned if a unique record already exists.
 type ErrExists struct {
 	error
+}
+
+// Is returns whether the target is an ErrExists.
+func (err ErrExists) Is(target error) bool {
+	_, ok := target.(ErrExists)
+	return ok
 }
 
 // ErrFKeyViolation is returned if inserting a record causes a foreign key violation.
@@ -83,16 +90,20 @@ func (s *Service) logErr(err error) {
 func (s *Service) DoTransaction(ctx context.Context, txWrapper func(*sqlx.Tx) error) error {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return errors.Wrap(err, "unable to begin transaction")
+		return fmt.Errorf("unable to begin transaction: %w", err)
 	}
 
 	if err := txWrapper(tx); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil && ctx.Err() != context.Canceled {
-			s.logErr(errors.Wrap(err, "unable to rollback transaction"))
+			s.logErr(fmt.Errorf("unable to rollback transaction: %w", err))
 		}
 
-		return errors.Wrap(err, "error in transaction wrapper")
+		return fmt.Errorf("error in transaction wrapper: %w", err)
 	}
 
-	return errors.Wrap(tx.Commit(), "unable to commit transaction")
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("unable to commit transaction: %w", err)
+	}
+
+	return nil
 }
