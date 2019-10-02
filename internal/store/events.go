@@ -210,7 +210,7 @@ func (s *Service) ExclusiveLockEventsTx(ctx context.Context, tx *sqlx.Tx) error 
 
 // GetEventRealmIDTx returns the realm ID of an event by key.
 func (s *Service) GetEventRealmIDTx(ctx context.Context, tx *sqlx.Tx, eventKey string) (realmID *int64, err error) {
-	err = tx.QueryRow("SELECT realm_id FROM events WHERE key = $1", eventKey).Scan(&realmID)
+	err = tx.QueryRowContext(ctx, "SELECT realm_id FROM events WHERE key = $1", eventKey).Scan(&realmID)
 	if err == sql.ErrNoRows {
 		return nil, ErrNoResults{errors.Wrap(err, "couldn't find event by key")}
 	}

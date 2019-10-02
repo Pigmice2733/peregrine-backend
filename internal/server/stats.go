@@ -32,12 +32,6 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		// TODO: handle this better by crafting a better query
-		// if !s.checkEventAccess(event.RealmID, r) {
-		// 	ihttp.Error(w, http.StatusForbidden)
-		// 	return
-		// }
-
 		if event.SchemaID == nil {
 			ihttp.Respond(w, fmt.Errorf("no schema found"), http.StatusBadRequest)
 			return
@@ -109,12 +103,6 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 			return
 		}
 
-		// TODO: handle this by crafting a better query
-		// if !s.checkEventAccess(event.RealmID, r) {
-		// 	ihttp.Error(w, http.StatusForbidden)
-		// 	return
-		// }
-
 		if event.SchemaID == nil {
 			ihttp.Respond(w, fmt.Errorf("no schema found"), http.StatusBadRequest)
 			return
@@ -123,7 +111,7 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
-		match, err := s.Store.GetMatch(r.Context(), matchKey)
+		match, err := s.Store.GetMatchForRealm(r.Context(), matchKey, realmID)
 		if _, ok := err.(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)
 			return

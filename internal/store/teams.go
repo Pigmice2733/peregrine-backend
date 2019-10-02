@@ -117,42 +117,40 @@ func (s *Service) TeamsUpsert(ctx context.Context, teams []Team) error {
 	})
 }
 
-// EventTeamKeysUpsert upserts multiple team keys from a single event into the database.
-func (s *Service) EventTeamKeysUpsert(ctx context.Context, eventKey string, keys []string) error {
-	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
-		allTeamsStmt, err := tx.PrepareContext(ctx, `
+// EventTeamKeysUpsertTx upserts multiple team keys from a single event into the database in the given transaction.
+func (s *Service) EventTeamKeysUpsertTx(ctx context.Context, tx *sqlx.Tx, eventKey string, keys []string) error {
+	allTeamsStmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO all_teams (key)
 		VALUES ($1)
 		ON CONFLICT
 			DO NOTHING
 		`)
-		if err != nil {
-			return errors.Wrap(err, "unable to prepare all teams key upsert statement")
-		}
-		defer allTeamsStmt.Close()
+	if err != nil {
+		return errors.Wrap(err, "unable to prepare all teams key upsert statement")
+	}
+	defer allTeamsStmt.Close()
 
-		for _, team := range keys {
-			if _, err = allTeamsStmt.ExecContext(ctx, team); err != nil {
-				return errors.Wrap(err, "unable to upsert all team key")
-			}
+	for _, team := range keys {
+		if _, err = allTeamsStmt.ExecContext(ctx, team); err != nil {
+			return errors.Wrap(err, "unable to upsert all team key")
 		}
+	}
 
-		stmt, err := tx.PrepareContext(ctx, `
+	stmt, err := tx.PrepareContext(ctx, `
 			INSERT INTO teams (key, event_key)
 			VALUES ($1, $2)
 			ON CONFLICT (key, event_key) DO NOTHING
 		`)
-		if err != nil {
-			return errors.Wrap(err, "unable to prepare teams key upsert statement")
-		}
-		defer stmt.Close()
+	if err != nil {
+		return errors.Wrap(err, "unable to prepare teams key upsert statement")
+	}
+	defer stmt.Close()
 
-		for _, key := range keys {
-			if _, err = stmt.ExecContext(ctx, key, eventKey); err != nil {
-				return errors.Wrap(err, "unable to upsert team key")
-			}
+	for _, key := range keys {
+		if _, err = stmt.ExecContext(ctx, key, eventKey); err != nil {
+			return errors.Wrap(err, "unable to upsert team key")
 		}
+	}
 
-		return nil
-	})
+	return nil
 }

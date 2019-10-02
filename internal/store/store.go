@@ -15,6 +15,12 @@ type ErrNoResults struct {
 	error
 }
 
+// Is returns whether the target is an ErrNoResults.
+func (err ErrNoResults) Is(target error) bool {
+	_, ok := target.(ErrNoResults)
+	return ok
+}
+
 // ErrExists is returned if a unique record already exists.
 type ErrExists struct {
 	error
