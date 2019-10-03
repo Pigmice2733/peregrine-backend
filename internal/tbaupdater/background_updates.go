@@ -2,11 +2,11 @@ package tbaupdater
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,7 +22,7 @@ type Service struct {
 // Begin starts periodic updates of TBA data
 func (s *Service) Begin() {
 	if s.cancel == nil {
-		s.Logger.Info("Beginning background TBA updates")
+		s.Logger.Info("beginning background TBA updates")
 		ctx, cancel := context.WithCancel(context.Background())
 		s.cancel = &cancel
 		go s.run(ctx)
@@ -32,7 +32,7 @@ func (s *Service) Begin() {
 // End stops periodic updates of TBA data, if running
 func (s *Service) End() {
 	if s.cancel != nil {
-		s.Logger.Info("Ending background TBA updates")
+		s.Logger.Info("ending background TBA updates")
 		(*s.cancel)()
 		s.cancel = nil
 	}
@@ -40,10 +40,12 @@ func (s *Service) End() {
 
 // run periodically updates all TBA data in background
 func (s *Service) run(ctx context.Context) {
-	inactiveUpdates := time.Tick(15 * time.Minute)
-	activeUpdates := time.Tick(1 * time.Minute)
+	inactiveUpdates := time.NewTicker(15 * time.Minute)
+	activeUpdates := time.NewTicker(1 * time.Minute)
+	defer inactiveUpdates.Stop()
+	defer activeUpdates.Stop()
 
-	s.Logger.Info("Seeding TBA data")
+	s.Logger.Info("seeding TBA data")
 	go s.updateEvents(ctx)
 	go s.updateTeams(ctx)
 	go s.updatePerEventData(ctx, false)
@@ -52,11 +54,11 @@ func (s *Service) run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-inactiveUpdates:
+		case <-inactiveUpdates.C:
 			go s.updateEvents(ctx)
 			go s.updateTeams(ctx)
 			go s.updatePerEventData(ctx, false)
-		case <-activeUpdates:
+		case <-activeUpdates.C:
 			go s.updatePerEventData(ctx, true)
 		}
 	}
@@ -94,7 +96,7 @@ func (s *Service) updatePerEventData(ctx context.Context, activeOnly bool) {
 // updateEvents gets new event data from TBA and upserts that event data into the database.
 func (s *Service) updateEvents(ctx context.Context) {
 	events, err := s.TBA.GetEvents(ctx, s.Year)
-	if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
+	if errors.Is(err, tba.ErrNotModified{}) {
 		return
 	} else if err != nil {
 		if ctx.Err() != context.Canceled {
@@ -130,7 +132,7 @@ func (s *Service) updateEvents(ctx context.Context) {
 // updateTeams gets new team data from TBA and upserts that team data into the database.
 func (s *Service) updateTeams(ctx context.Context) {
 	teams, err := s.TBA.GetTeams(ctx)
-	if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
+	if errors.Is(err, tba.ErrNotModified{}) {
 		return
 	} else if err != nil {
 		if ctx.Err() != context.Canceled {
@@ -158,7 +160,7 @@ func (s *Service) updateMatches(ctx context.Context, events []store.Event) {
 
 		if !event.TBADeleted {
 			fullMatches, err = s.TBA.GetMatches(ctx, event.Key)
-			if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
+			if errors.Is(err, tba.ErrNotModified{}) {
 				continue
 			} else if err != nil {
 				if ctx.Err() != context.Canceled {
@@ -207,7 +209,7 @@ func (s *Service) updateMatches(ctx context.Context, events []store.Event) {
 func (s *Service) updateEventTeamRankings(ctx context.Context, events []store.Event) {
 	for _, event := range events {
 		teams, err := s.TBA.GetTeamRankings(ctx, event.Key)
-		if _, ok := errors.Cause(err).(tba.ErrNotModified); ok {
+		if errors.Is(err, tba.ErrNotModified{}) {
 			continue
 		} else if err != nil {
 			if ctx.Err() != context.Canceled {

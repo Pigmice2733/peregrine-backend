@@ -28,6 +28,6 @@ func Respond(w http.ResponseWriter, data interface{}, httpCode int) {
 	w.WriteHeader(httpCode)
 
 	if resp != nil {
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}
 }

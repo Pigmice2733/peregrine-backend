@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -16,8 +17,14 @@ func (s *Server) eventStats() http.HandlerFunc {
 		vars := mux.Vars(r)
 		eventKey := vars["eventKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := err.(store.ErrNoResults); ok {
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
+		}
+
+		event, err := s.Store.GetEventForRealm(r.Context(), eventKey, realmID)
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -26,37 +33,20 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
 		if event.SchemaID == nil {
 			ihttp.Respond(w, fmt.Errorf("no schema found"), http.StatusBadRequest)
 			return
 		}
 
-		var reports []store.Report
-
-		realmID, err := ihttp.GetRealmID(r)
-
+		reports, err := s.Store.GetEventReportsForRealm(r.Context(), eventKey, realmID)
 		if err != nil {
-			reports, err = s.Store.GetEventReports(r.Context(), eventKey, nil)
-		} else {
-			reports, err = s.Store.GetEventReports(r.Context(), eventKey, &realmID)
-		}
-
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving reports")
 			return
 		}
 
 		storeSchema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
-		if _, ok := err.(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -65,7 +55,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		storeMatches, err := s.Store.GetAnalysisInfo(r.Context(), eventKey)
+		storeMatches, err := s.Store.GetAnalysisInfoForRealm(r.Context(), eventKey, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving match analysis info")
@@ -98,18 +88,19 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := err.(store.ErrNoResults); ok {
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
+		}
+
+		event, err := s.Store.GetEventForRealm(r.Context(), eventKey, realmID)
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
-
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
@@ -121,8 +112,8 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
-		match, err := s.Store.GetMatch(r.Context(), matchKey)
-		if _, ok := err.(store.ErrNoResults); ok {
+		match, err := s.Store.GetMatchForRealm(r.Context(), matchKey, realmID)
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -131,18 +122,15 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 			return
 		}
 
-		reports, err := s.Store.GetTeamMatchReports(r.Context(), matchKey, teamKey)
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
+		reports, err := s.Store.GetMatchTeamReportsForRealm(r.Context(), eventKey, teamKey, realmID)
+		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving reports")
 			return
 		}
 
 		storeSchema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
-		if _, ok := err.(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {

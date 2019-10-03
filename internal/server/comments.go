@@ -28,27 +28,21 @@ func (s *Server) getMatchTeamComments() http.HandlerFunc {
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
-		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		}
-
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
 
-		exists, err := s.Store.CheckMatchKeyExists(matchKey)
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("checking that match exists")
-			return
-		}
-		if !exists {
-			ihttp.Error(w, http.StatusNotFound)
-			return
+		var comments []store.Comment
+		var err error
+
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
 		}
 
-		comments, err := s.Store.GetMatchTeamComments(r.Context(), matchKey, teamKey)
+		comments, err = s.Store.GetMatchTeamCommentsForRealm(r.Context(), matchKey, teamKey, realmID)
+
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("getting comments")
@@ -70,12 +64,17 @@ func (s *Server) getEventComments() http.HandlerFunc {
 		eventKey := vars["eventKey"]
 		teamKey := vars["teamKey"]
 
-		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
-			ihttp.Error(w, http.StatusNotFound)
-			return
+		var comments []store.Comment
+		var err error
+
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
 		}
 
-		comments, err := s.Store.GetEventComments(r.Context(), eventKey, teamKey)
+		comments, err = s.Store.GetEventTeamCommentsForRealm(r.Context(), eventKey, teamKey, realmID)
+
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("getting comments")
@@ -98,24 +97,9 @@ func (s *Server) putMatchTeamComment() http.HandlerFunc {
 		partialMatchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
-		if _, err := s.Store.CheckTBAEventKeyExists(r.Context(), eventKey); err != nil {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		}
-
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
-
-		exists, err := s.Store.CheckMatchKeyExists(matchKey)
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("checking that match exists")
-			return
-		} else if !exists {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		}
 
 		var comment store.Comment
 		if err := json.NewDecoder(r.Body).Decode(&comment); err != nil {

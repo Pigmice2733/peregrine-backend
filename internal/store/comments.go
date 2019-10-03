@@ -2,9 +2,9 @@ package store
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 )
 
 // Comment defines a comment on a robots performance during a match. It is the
@@ -24,34 +24,30 @@ type Comment struct {
 func (s *Service) UpsertMatchTeamComment(ctx context.Context, c Comment) (created bool, err error) {
 	var existed bool
 
-	err = s.doTransaction(ctx, func(tx *sqlx.Tx) error {
-		if _, err := tx.Exec("LOCK TABLE comments IN EXCLUSIVE MODE"); err != nil {
-			return errors.Wrap(err, "unable to lock comments table")
-		}
-
+	err = s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		err = tx.QueryRow(`
 			SELECT EXISTS(
 				SELECT FROM comments
 					WHERE
-						match_key = $1 AND
-						team_key = $2
+						event_key = $1 AND
+						match_key = $2 AND
+						team_key = $3 AND
+						reporter_id = $4
 			)
-			`, c.MatchKey, c.TeamKey).Scan(&existed)
+			`, c.EventKey, c.MatchKey, c.TeamKey, c.ReporterID).Scan(&existed)
 		if err != nil {
-			return errors.Wrap(err, "unable to check if comment exists")
+			return fmt.Errorf("unable to check if comment exists: %w", err)
 		}
 
 		_, err = tx.NamedExecContext(ctx, `
-		INSERT
-			INTO
-				comments (event_key, match_key, team_key, reporter_id, realm_id, comment)
-			VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :comment)
-			ON CONFLICT (event_key, match_key, team_key, reporter_id) DO
-				UPDATE
-					SET
-						comment = :comment`, c)
+		INSERT INTO
+			comments (event_key, match_key, team_key, reporter_id, realm_id, comment)
+		VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :comment)
+		ON CONFLICT (event_key, match_key, team_key, reporter_id)
+			DO UPDATE SET comment = :comment, realm_id = :realm_id
+		`, c)
 		if err != nil {
-			return errors.Wrap(err, "unable to upsert comment")
+			return fmt.Errorf("unable to upsert comment: %w", err)
 		}
 
 		return nil
@@ -60,14 +56,36 @@ func (s *Service) UpsertMatchTeamComment(ctx context.Context, c Comment) (create
 	return !existed, err
 }
 
-// GetMatchTeamComments gets all comments for a given team in a match.
-func (s *Service) GetMatchTeamComments(ctx context.Context, matchKey, teamKey string) (comments []Comment, err error) {
-	comments = []Comment{}
-	return comments, s.db.SelectContext(ctx, &comments, "SELECT * FROM comments WHERE match_key = $1 AND team_key = $2", matchKey, teamKey)
+// GetMatchTeamCommentsForRealm gets all comments for a given team in a match, filtering to only retrieve comments for realms
+// that are sharing reports or have a matching realm ID.
+func (s *Service) GetMatchTeamCommentsForRealm(ctx context.Context, matchKey, teamKey string, realmID *int64) (comments []Comment, err error) {
+	const query = `
+	SELECT comments.*
+	FROM comments
+	INNER JOIN realms
+		ON realms.id = comments.realm_id
+	WHERE
+		comments.match_key = $1 AND
+		comments.team_key = $2 AND
+		(realms.share_reports = true OR realms.id = $3)`
+
+	comments = make([]Comment, 0)
+	return comments, s.db.SelectContext(ctx, &comments, query, matchKey, teamKey, realmID)
 }
 
-// GetEventComments gets all comments for a given team in an event.
-func (s *Service) GetEventComments(ctx context.Context, eventKey, teamKey string) (comments []Comment, err error) {
+// GetEventTeamCommentsForRealm gets all comments for a given team in an event, filtering to only retrieve comments for realms
+// that are sharing reports or have a matching realm ID.
+func (s *Service) GetEventTeamCommentsForRealm(ctx context.Context, eventKey, teamKey string, realmID *int64) (comments []Comment, err error) {
+	const query = `
+	SELECT comments.*
+	FROM comments
+	INNER JOIN realms
+		ON realms.id = comments.realm_id
+	WHERE
+		comments.event_key = $1 AND
+		comments.team_key = $2 AND
+		(realms.share_reports = true OR realms.id = $3)`
+
 	comments = []Comment{}
-	return comments, s.db.SelectContext(ctx, &comments, "SELECT * FROM comments WHERE event_key = $1 AND team_key = $2", eventKey, teamKey)
+	return comments, s.db.SelectContext(ctx, &comments, query, eventKey, teamKey, realmID)
 }

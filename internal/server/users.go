@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -12,7 +13,6 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	validator "gopkg.in/go-playground/validator.v9"
@@ -76,7 +76,7 @@ func authenticateHandler(logger *logrus.Logger, now func() time.Time, userStore 
 		}
 
 		user, err := userStore.GetUserByUsername(r.Context(), ru.Username)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
@@ -166,7 +166,7 @@ func refreshHandler(logger *logrus.Logger, now func() time.Time, userStore UserB
 		}
 
 		user, err := userStore.GetUserByID(r.Context(), userID)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		} else if err != nil {
@@ -225,7 +225,7 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 		}
 
 		err := s.Store.CheckSimilarUsernameExists(r.Context(), ru.Username, nil)
-		if _, ok := errors.Cause(err).(store.ErrExists); ok {
+		if errors.Is(err, store.ErrExists{}) {
 			ihttp.Error(w, http.StatusConflict)
 			return
 		} else if err != nil {
@@ -247,17 +247,15 @@ func (s *Server) createUserHandler() http.HandlerFunc {
 
 		err = s.Store.CreateUser(r.Context(), u)
 
-		if err != nil {
-			switch errors.Cause(err).(type) {
-			case store.ErrExists:
-				ihttp.Error(w, http.StatusConflict)
-			case store.ErrFKeyViolation:
-				ihttp.Error(w, http.StatusUnprocessableEntity)
-			default:
-				s.Logger.WithError(err).Error("creating new user")
-				ihttp.Error(w, http.StatusInternalServerError)
-			}
-
+		if errors.Is(err, store.ErrExists{}) {
+			ihttp.Error(w, http.StatusConflict)
+			return
+		} else if errors.Is(err, store.ErrFKeyViolation{}) {
+			ihttp.Error(w, http.StatusUnprocessableEntity)
+			return
+		} else if err != nil {
+			s.Logger.WithError(err).Error("creating new user")
+			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -302,22 +300,16 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 			return
 		}
 
-		sub, err := ihttp.GetSubject(r)
+		realmID, err := ihttp.GetSubject(r)
 		if err != nil {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
+
 		roles := ihttp.GetRoles(r)
 
-		// If the user is not an admin and their ID does not equal the ID they
-		// are trying to get, they are forbidden
-		if !roles.IsAdmin && !roles.IsSuperAdmin && sub != id {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
 		user, err := s.Store.GetUserByID(r.Context(), id)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -326,9 +318,11 @@ func (s *Server) getUserByIDHandler() http.HandlerFunc {
 			return
 		}
 
-		if !roles.IsSuperAdmin && sub != id {
+		// only allow users to get other users within their realm if they aren't a super
+		// admin
+		if !roles.IsSuperAdmin && realmID != user.RealmID {
 			if realmID, err := ihttp.GetRealmID(r); err != nil || realmID != user.RealmID {
-				ihttp.Error(w, http.StatusForbidden)
+				ihttp.Error(w, http.StatusNotFound)
 				return
 			}
 		}
@@ -403,7 +397,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 
 		if ru.Username != nil {
 			err := s.Store.CheckSimilarUsernameExists(r.Context(), *ru.Username, &targetID)
-			if _, ok := errors.Cause(err).(store.ErrExists); ok {
+			if errors.Is(err, store.ErrExists{}) {
 				ihttp.Respond(w, err, http.StatusConflict)
 				return
 			} else if err != nil {
@@ -428,18 +422,15 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 		}
 
 		err = s.Store.PatchUser(r.Context(), u)
-
-		if err != nil {
-			switch errors.Cause(err).(type) {
-			case store.ErrNoResults:
-				ihttp.Error(w, http.StatusNotFound)
-			case store.ErrFKeyViolation:
-				ihttp.Error(w, http.StatusUnprocessableEntity)
-			default:
-				s.Logger.WithError(err).Error("patching user")
-				ihttp.Error(w, http.StatusInternalServerError)
-			}
-
+		if errors.Is(err, store.ErrNoResults{}) {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if errors.Is(err, store.ErrFKeyViolation{}) {
+			ihttp.Error(w, http.StatusUnprocessableEntity)
+			return
+		} else if err != nil {
+			s.Logger.WithError(err).Error("patching user")
+			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -455,34 +446,37 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 			return
 		}
 
-		requestID, err := ihttp.GetSubject(r)
+		requesterSubject, err := ihttp.GetSubject(r)
 		if err != nil {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
+
 		roles := ihttp.GetRoles(r)
 
-		if id != requestID && !roles.IsAdmin && !roles.IsSuperAdmin {
+		// only allow people to delete themselves if they're not an admin or super admin
+		if id != requesterSubject && !roles.IsAdmin && !roles.IsSuperAdmin {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
-		// Admins can only delete users in the same realm
-		if id != requestID && !roles.IsSuperAdmin {
-			targetUser, err := s.Store.GetUserByID(r.Context(), id)
+		if roles.IsSuperAdmin {
+			err = s.Store.DeleteUserByID(r.Context(), id)
+		} else {
+			var realmID int64
+			realmID, err = ihttp.GetRealmID(r)
 			if err != nil {
-				s.Logger.WithError(err).Error("getting user")
-				ihttp.Error(w, http.StatusInternalServerError)
-				return
-			}
-			if realmID, err := ihttp.GetRealmID(r); err != nil || realmID != targetUser.RealmID {
 				ihttp.Error(w, http.StatusForbidden)
 				return
 			}
+
+			err = s.Store.DeleteUserByIDRealm(r.Context(), id, realmID)
 		}
 
-		err = s.Store.DeleteUser(r.Context(), id)
-		if err != nil {
+		if errors.Is(err, store.ErrNoResults{}) {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			s.Logger.WithError(err).Error("deleting user")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return

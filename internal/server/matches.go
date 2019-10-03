@@ -1,16 +1,20 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
+
+	"errors"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
+	"github.com/jmoiron/sqlx"
 )
 
 type match struct {
@@ -30,24 +34,15 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 		teams := r.URL.Query()["team"]
-		tbaDeleted := r.URL.Query().Get("tbaDeleted") == "true"
+		tbaDeleted, _ := strconv.ParseBool(r.URL.Query().Get("tbaDeleted"))
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
 		}
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
-		fullMatches, err := s.Store.GetMatches(r.Context(), eventKey, teams, tbaDeleted)
+		fullMatches, err := s.Store.GetMatchesForRealm(r.Context(), eventKey, teams, tbaDeleted, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving event matches")
@@ -82,31 +77,21 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		vars := mux.Vars(r)
 		eventKey, matchKey := vars["eventKey"], vars["matchKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
-
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
 
-		fullMatch, err := s.Store.GetMatch(r.Context(), matchKey)
-		if err != nil {
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
+		}
+
+		fullMatch, err := s.Store.GetMatchForRealm(r.Context(), matchKey, realmID)
+		if errors.Is(err, store.ErrNoResults{}) {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving match")
 			return
@@ -147,21 +132,6 @@ func (s *Server) upsertMatchHandler() http.HandlerFunc {
 		eventKey := vars["eventKey"]
 		matchKey := vars["matchKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
-
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
@@ -178,13 +148,35 @@ func (s *Server) upsertMatchHandler() http.HandlerFunc {
 			TBAURL:        m.TBAURL,
 		}
 
-		if err := s.Store.UpsertMatch(r.Context(), sm); err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("upserting match")
+		roles := ihttp.GetRoles(r)
+
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err != nil {
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
 
-		ihttp.Respond(w, m, http.StatusOK)
+		existed, err := editMatch(r.Context(), s.Store, roles, userRealmID, sm.Key, func(tx *sqlx.Tx) error {
+			if err := s.Store.UpsertMatchTx(r.Context(), tx, sm); err != nil {
+				return fmt.Errorf("unable to upsert match: %w", err)
+			}
+
+			return nil
+		})
+		if errors.Is(err, forbiddenError{}) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		} else if err != nil {
+			s.Logger.WithError(err).Error("unable to upsert match")
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		if existed {
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			w.WriteHeader(http.StatusCreated)
+		}
 	}
 }
 
@@ -194,18 +186,11 @@ func (s *Server) deleteMatchHandler() http.HandlerFunc {
 		eventKey := vars["eventKey"]
 		matchKey := vars["matchKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := err.(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
+		roles := ihttp.GetRoles(r)
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err != nil {
+			ihttp.Error(w, http.StatusUnauthorized)
 			return
 		}
 
@@ -213,16 +198,74 @@ func (s *Server) deleteMatchHandler() http.HandlerFunc {
 		// unique and consistent with TBA match keys.
 		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
 
-		err = s.Store.DeleteMatch(r.Context(), matchKey)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
+		existed, err := editMatch(r.Context(), s.Store, roles, userRealmID, matchKey, func(tx *sqlx.Tx) error {
+			if err := s.Store.DeleteMatchTx(r.Context(), tx, matchKey); err != nil {
+				return fmt.Errorf("unable to delete match: %w", err)
+			}
+
+			return nil
+		})
+		if errors.Is(err, forbiddenError{}) {
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		} else if err != nil {
+			s.Logger.WithError(err).Error("unable to delete match")
 			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("upserting match")
 			return
 		}
 
-		w.WriteHeader(http.StatusNoContent)
+		if existed {
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			ihttp.Error(w, http.StatusNotFound)
+		}
 	}
+}
+
+func editMatch(ctx context.Context, sto *store.Service, roles store.Roles, userRealmID int64, matchKey string, editFunc func(tx *sqlx.Tx) error) (existed bool, err error) {
+	existed = true
+
+	err = sto.DoTransaction(ctx, func(tx *sqlx.Tx) error {
+		if err := sto.ExclusiveLockMatchesTx(ctx, tx); err != nil {
+			return err
+		}
+
+		realmID, err := sto.GetEventRealmIDByMatchKeyTx(ctx, tx, matchKey)
+		if errors.Is(err, store.ErrNoResults{}) {
+			existed = false
+		} else if err != nil {
+			return fmt.Errorf("unable to get matches: %w", err)
+		}
+
+		if realmID == nil && !roles.IsSuperAdmin {
+			return forbiddenError{errors.New("only super-admins can edit matches with no realm ID")}
+		} else if realmID != nil && *realmID != userRealmID {
+			return forbiddenError{errors.New("only realm admins with matching realm IDs can edit matches with a specified realm ID")}
+		}
+
+		if err := editFunc(tx); err != nil {
+			return fmt.Errorf("unable to edit match: %w", err)
+		}
+
+		return nil
+	})
+
+	return existed, err
+}
+
+type forbiddenError struct {
+	err error
+}
+
+func (f forbiddenError) Unwrap() error {
+	return f.err
+}
+
+func (f forbiddenError) Error() string {
+	return f.err.Error()
+}
+
+func (f forbiddenError) Is(target error) bool {
+	_, ok := target.(forbiddenError)
+	return ok
 }

@@ -3,11 +3,11 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 )
 
 // Event holds information about an FRC event such as webcast associated with
@@ -32,57 +32,68 @@ type Event struct {
 
 const eventsQuery = `
 SELECT
-	    key,
-		name,
-		district,
-		full_district,
-		week,
-		start_date,
-		end_date,
-		webcasts,
-		location_name,
-		gmaps_url,
-		lat,
-		lon,
-		tba_deleted,
-		events.realm_id,
-		COALESCE(schema_id, s.id) AS schema_id
-	FROM
-		events
-	LEFT JOIN
-		schemas s
-	ON
-	    s.year = EXTRACT(YEAR FROM start_date)`
+	key,
+	name,
+	district,
+	full_district,
+	week,
+	start_date,
+	end_date,
+	webcasts,
+	location_name,
+	gmaps_url,
+	lat,
+	lon,
+	tba_deleted,
+	events.realm_id,
+	COALESCE(schema_id, s.id) AS schema_id
+FROM
+	events
+LEFT JOIN
+	schemas s
+ON
+	s.year = EXTRACT(YEAR FROM start_date)`
 
 // GetEvents returns all events from the database. event.Webcasts and schemaID will be nil for every event.
 // If tbaDeleted is true, events that have been deleted from TBA will be returned in addition to events that
 // have not been deleted. Otherwise, only events that have not been deleted will be returned.
-func (s *Service) GetEvents(ctx context.Context, tbaDeleted bool) ([]Event, error) {
+func (s *Service) GetEvents(ctx context.Context, tbaDeleted bool) (events []Event, err error) {
 	query := eventsQuery
+
 	if !tbaDeleted {
 		query += " WHERE NOT tba_deleted"
 	}
 
-	events := []Event{}
+	events = make([]Event, 0)
 	return events, s.db.SelectContext(ctx, &events, query)
 }
 
-// GetEventsFromRealm returns all events from a specific realm. Additionally all
+const eventsRealmQuery = eventsQuery + `WHERE (events.realm_id IS NULL OR events.realm_id = $1)`
+
+// GetEventsForRealm returns all events from a specific realm. Additionally all
 // TBA events will be retrieved. If no realm is specified (nil) then just the TBA
 // events will be retrieved. event.Webcasts and schemaID will be nil for every event.
 // If tbaDeleted is true, events that have been deleted from TBA will be returned in addition to events that
 // have not been deleted. Otherwise, only events that have not been deleted will be returned.
-func (s *Service) GetEventsFromRealm(ctx context.Context, realm *int64, tbaDeleted bool) ([]Event, error) {
-	query := eventsQuery
+func (s *Service) GetEventsForRealm(ctx context.Context, tbaDeleted bool, realmID *int64) (events []Event, err error) {
+	query := eventsRealmQuery
+
 	if !tbaDeleted {
-		query += " WHERE NOT tba_deleted"
+		query += " AND NOT tba_deleted"
 	}
 
-	events := []Event{}
-	if realm == nil {
-		return events, s.db.SelectContext(ctx, &events, query+" AND events.realm_id IS NULL")
+	events = make([]Event, 0)
+	return events, s.db.SelectContext(ctx, &events, query, realmID)
+}
+
+// GetEventForRealm retrieves a specific event in a specific realm (or no realm for TBA events).
+func (s *Service) GetEventForRealm(ctx context.Context, eventKey string, realmID *int64) (event Event, err error) {
+	err = s.db.GetContext(ctx, &event, eventsRealmQuery+" AND key = $2", realmID, eventKey)
+	if err == sql.ErrNoRows {
+		return event, ErrNoResults{fmt.Errorf("event %s does not exist: %w", eventKey, err)}
 	}
-	return events, s.db.SelectContext(ctx, &events, query+" AND events.realm_id IS NULL OR events.realm_id = $1", *realm)
+
+	return event, err
 }
 
 // GetActiveEvents returns all events that are currently happening. If tbaDeleted is true,
@@ -123,37 +134,10 @@ func (s *Service) GetActiveEvents(ctx context.Context, tbaDeleted bool) ([]Event
 	return events, s.db.SelectContext(ctx, &events, query)
 }
 
-// CheckTBAEventKeyExists checks whether a specific event key exists and is from
-// TBA rather than manually added. Returns ErrNoResults if event does not exist.
-func (s *Service) CheckTBAEventKeyExists(ctx context.Context, eventKey string) (bool, error) {
-	var realmID *int64
-
-	err := s.db.GetContext(ctx, &realmID, "SELECT realm_id FROM events WHERE key = $1", eventKey)
-	if err == sql.ErrNoRows {
-		return false, ErrNoResults{errors.Wrapf(err, "event key %s not found", eventKey)}
-	} else if err != nil {
-		return false, err
-	}
-
-	return realmID == nil, nil
-}
-
-// GetEvent retrieves a specific event.
-func (s *Service) GetEvent(ctx context.Context, eventKey string) (Event, error) {
-	var event Event
-
-	err := s.db.GetContext(ctx, &event, eventsQuery+" WHERE key = $1", eventKey)
-
-	if err == sql.ErrNoRows {
-		return event, ErrNoResults{errors.Wrapf(err, "event %s does not exist", eventKey)}
-	}
-	return event, err
-}
-
 // EventsUpsert upserts multiple events into the database. It will set tba_deleted
 // to false for all updated events. schema_id will only be updated if null.
 func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		eventStmt, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, gmaps_url, lat, lon, realm_id, schema_id, tba_deleted)
 		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :gmaps_url, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
@@ -177,7 +161,7 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 					tba_deleted = false
 		`)
 		if err != nil {
-			return errors.Wrap(err, "unable to prepare events upsert statemant")
+			return fmt.Errorf("unable to prepare events upsert statemant: %w", err)
 		}
 		defer eventStmt.Close()
 
@@ -185,12 +169,13 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 			if _, err = eventStmt.ExecContext(ctx, event); err != nil {
 				if err, ok := err.(*pq.Error); ok {
 					if err.Code == pgExists {
-						return ErrExists{errors.Wrapf(err, "event with key %s already exists", event.Key)}
+						return ErrExists{fmt.Errorf("event with key %s already exists: %w", event.Key, err)}
 					} else if err.Code == pgFKeyViolation {
-						return ErrFKeyViolation{errors.Wrap(err, "foreign key violation")}
+						return ErrFKeyViolation{fmt.Errorf("foreign key violation: %w", err)}
 					}
 				}
-				return errors.Wrap(err, "unable to upsert events")
+
+				return fmt.Errorf("unable to upsert events: %w", err)
 			}
 		}
 
@@ -214,26 +199,39 @@ func (s *Service) MarkEventsDeleted(ctx context.Context, events []Event) error {
 				key != ALL($1) AND
 				realm_id IS NULL
 	`, keys)
+	if err != nil {
+		return fmt.Errorf("unable to mark tba_deleted on missing events: %w", err)
+	}
 
-	return errors.Wrap(err, "unable to mark tba_deleted on missing events")
+	return nil
 }
 
-// UpsertEvent upserts a single event into the database and returns whether
+// ExclusiveLockEventsTx acquires an exclusive lock on the events table.
+func (s *Service) ExclusiveLockEventsTx(ctx context.Context, tx *sqlx.Tx) error {
+	_, err := tx.ExecContext(ctx, "LOCK TABLE events IN EXCLUSIVE MODE")
+	if err != nil {
+		return fmt.Errorf("unable to lock events: %w", err)
+	}
+
+	return nil
+}
+
+// GetEventRealmIDTx returns the realm ID of an event by key.
+func (s *Service) GetEventRealmIDTx(ctx context.Context, tx *sqlx.Tx, eventKey string) (realmID *int64, err error) {
+	err = tx.QueryRowContext(ctx, "SELECT realm_id FROM events WHERE key = $1", eventKey).Scan(&realmID)
+	if err == sql.ErrNoRows {
+		return nil, ErrNoResults{fmt.Errorf("couldn't find event by key")}
+	} else if err != nil {
+		return nil, fmt.Errorf("unable to determine event realm ID")
+	}
+
+	return realmID, nil
+}
+
+// UpsertEventTx upserts a single event into the database and returns whether
 // the event was created or updated.
-func (s *Service) UpsertEvent(ctx context.Context, event Event) (created bool, err error) {
-	var existed bool
-
-	err = s.doTransaction(ctx, func(tx *sqlx.Tx) error {
-		if _, err := tx.Exec("LOCK TABLE events IN EXCLUSIVE MODE"); err != nil {
-			return errors.Wrap(err, "unable to lock events")
-		}
-
-		err = tx.QueryRow("SELECT EXISTS(SELECT FROM events WHERE key = $1)", event.Key).Scan(&existed)
-		if err != nil {
-			return errors.Wrap(err, "unable to determine if event exists")
-		}
-
-		_, err = tx.NamedExecContext(ctx, `
+func (s *Service) UpsertEventTx(ctx context.Context, tx *sqlx.Tx, event Event) error {
+	_, err := tx.NamedExecContext(ctx, `
 			INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, gmaps_url, lat, lon, realm_id, schema_id, tba_deleted)
 				VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :gmaps_url, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
 			ON CONFLICT (key) DO
@@ -254,11 +252,9 @@ func (s *Service) UpsertEvent(ctx context.Context, event Event) (created bool, e
 						schema_id = :schema_id,
 						tba_deleted = :tba_deleted
 		`, event)
-		if err != nil {
-			return errors.Wrap(err, "unable to upsert event")
-		}
-		return nil
-	})
+	if err != nil {
+		return fmt.Errorf("unable to upsert event: %w", err)
+	}
 
-	return !existed, err
+	return nil
 }

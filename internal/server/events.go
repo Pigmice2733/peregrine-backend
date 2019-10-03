@@ -1,35 +1,32 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
+
+	"errors"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
+	"github.com/jmoiron/sqlx"
 )
 
 // eventsHandler returns a handler to get all events in a given year.
 func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tbaDeleted := r.URL.Query().Get("tbaDeleted") == "true"
+		tbaDeleted, _ := strconv.ParseBool(r.URL.Query().Get("tbaDeleted"))
 
-		roles := ihttp.GetRoles(r)
-		userRealm, getRealmErr := ihttp.GetRealmID(r)
-
-		var events []store.Event
-		var err error
-		if roles.IsSuperAdmin {
-			events, err = s.Store.GetEvents(r.Context(), tbaDeleted)
-		} else {
-			if getRealmErr != nil {
-				events, err = s.Store.GetEventsFromRealm(r.Context(), nil, tbaDeleted)
-			} else {
-				events, err = s.Store.GetEventsFromRealm(r.Context(), &userRealm, tbaDeleted)
-			}
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
 		}
 
+		events, err := s.Store.GetEventsForRealm(r.Context(), tbaDeleted, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving event data")
@@ -45,19 +42,19 @@ func (s *Server) eventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if err != nil {
-			if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			}
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("unable to retrieve event data")
-			return
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
 		}
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
+		event, err := s.Store.GetEventForRealm(r.Context(), eventKey, realmID)
+		if errors.Is(err, store.ErrNoResults{}) {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.Logger.WithError(err).Error("unable to retrieve event data")
 			return
 		}
 
@@ -69,8 +66,8 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 
-		var e store.Event
-		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+		var event store.Event
+		if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
 			return
 		}
@@ -80,46 +77,62 @@ func (s *Server) upsertEventHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
+		roles := ihttp.GetRoles(r)
 
-		e.Key = eventKey
-		e.RealmID = &creatorRealm
+		event.Key = eventKey
+		event.RealmID = &creatorRealm
 
-		created, err := s.Store.UpsertEvent(r.Context(), e)
-		if err != nil {
-			switch errors.Cause(err).(type) {
-			case store.ErrFKeyViolation:
-				ihttp.Error(w, http.StatusUnprocessableEntity)
-			default:
-				s.Logger.WithError(err).Error("unable to upsert event data")
-				ihttp.Error(w, http.StatusInternalServerError)
+		existed, err := editEvent(r.Context(), s.Store, roles, creatorRealm, event.Key, func(tx *sqlx.Tx) error {
+			if err := s.Store.UpsertEventTx(r.Context(), tx, event); err != nil {
+				return fmt.Errorf("unable to upsert event: %w", err)
 			}
 
+			return nil
+		})
+		if errors.Is(err, forbiddenError{}) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		} else if err != nil {
+			s.Logger.WithError(err).Error("unable to upsert event")
+			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
 
-		if created {
-			w.WriteHeader(http.StatusCreated)
-		} else {
+		if existed {
 			w.WriteHeader(http.StatusNoContent)
+		} else {
+			w.WriteHeader(http.StatusCreated)
 		}
 	}
 }
 
-// Returns whether a user can access an event or its matches
-func (s *Server) checkEventAccess(eventRealm *int64, r *http.Request) bool {
-	if eventRealm == nil {
-		return true
-	}
+func editEvent(ctx context.Context, sto *store.Service, roles store.Roles, userRealmID int64, eventKey string, editFunc func(tx *sqlx.Tx) error) (existed bool, err error) {
+	existed = true
 
-	roles := ihttp.GetRoles(r)
+	err = sto.DoTransaction(ctx, func(tx *sqlx.Tx) error {
+		if err := sto.ExclusiveLockEventsTx(ctx, tx); err != nil {
+			return err
+		}
 
-	if roles.IsSuperAdmin {
-		return true
-	}
+		realmID, err := sto.GetEventRealmIDTx(ctx, tx, eventKey)
+		if errors.Is(err, store.ErrNoResults{}) {
+			existed = false
+		} else if err != nil {
+			return fmt.Errorf("unable to get events: %w", err)
+		}
 
-	userRealm, err := ihttp.GetRealmID(r)
-	if err != nil {
-		return false
-	}
-	return *eventRealm != userRealm
+		if realmID == nil && !roles.IsSuperAdmin {
+			return forbiddenError{errors.New("only super-admins can edit events with no realm ID")}
+		} else if realmID != nil && *realmID != userRealmID {
+			return forbiddenError{errors.New("only realm admins with matching realm IDs can edit events with a specified realm ID")}
+		}
+
+		if err := editFunc(tx); err != nil {
+			return fmt.Errorf("unable to edit event: %w", err)
+		}
+
+		return nil
+	})
+
+	return existed, err
 }

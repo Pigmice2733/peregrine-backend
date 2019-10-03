@@ -543,8 +543,6 @@ paths:
           $ref: "#/components/responses/unauthorizedError"
         "403":
           $ref: "#/components/responses/forbiddenError"
-        "404":
-          $ref: "#/components/responses/notFoundError"
         "500":
           $ref: "#/components/responses/internalServerError"
     post:
@@ -571,8 +569,6 @@ paths:
           $ref: "#/components/responses/unauthorizedError"
         "403":
           $ref: "#/components/responses/forbiddenError"
-        "404":
-          $ref: "#/components/responses/notFoundError"
         "422":
           $ref: "#/components/responses/unprocessableEntityError"
         "500":
@@ -628,8 +624,6 @@ paths:
           $ref: "#/components/responses/unauthorizedError"
         "403":
           $ref: "#/components/responses/forbiddenError"
-        "404":
-          $ref: "#/components/responses/notFoundError"
         "500":
           $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/teams/{teamKey}:
@@ -678,8 +672,6 @@ paths:
                   $ref: "#/components/schemas/comment"
         "401":
           $ref: "#/components/responses/unauthorizedError"
-        "404":
-          $ref: "#/components/responses/notFoundError"
         "500":
           $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/matches/{matchKey}/reports/{teamKey}:
@@ -729,8 +721,6 @@ paths:
           $ref: "#/components/responses/unauthorizedError"
         "403":
           $ref: "#/components/responses/forbiddenError"
-        "404":
-          $ref: "#/components/responses/notFoundError"
         "422":
           $ref: "#/components/responses/unprocessableEntityError"
         "500":
@@ -782,8 +772,6 @@ paths:
           $ref: "#/components/responses/unauthorizedError"
         "403":
           $ref: "#/components/responses/forbiddenError"
-        "404":
-          $ref: "#/components/responses/notFoundError"
         "422":
           $ref: "#/components/responses/unprocessableEntityError"
         "500":
@@ -795,7 +783,7 @@ paths:
       summary: Get general info for a specific team
       operationId: getTeam
       tags:
-       - teams
+        - teams
       responses:
         "200":
           content:
@@ -1251,9 +1239,9 @@ components:
             type: string
             example: endgameRobot{{.RobotPosition}}
           anyOf:
-            $ref: '#/components/schemas/anyOf'
+            $ref: "#/components/schemas/anyOf"
           sum:
-            $ref: '#/components/schemas/sum'
+            $ref: "#/components/schemas/sum"
           hide:
             type: boolean
             example: true

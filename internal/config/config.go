@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/go-playground/validator.v9"
 )
@@ -34,15 +33,19 @@ type Config struct {
 func Open(path string) (Config, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return Config{}, errors.Wrap(err, "unable to open file")
+		return Config{}, fmt.Errorf("unable to open file: %w", err)
 	}
 	defer f.Close()
 
 	var c Config
 	if err := json.NewDecoder(f).Decode(&c); err != nil {
-		return Config{}, errors.Wrap(err, "unable to unmarshal file")
+		return Config{}, fmt.Errorf("unable to unmarshal file: %w", err)
 	}
 
 	validate := validator.New()
-	return c, errors.Wrap(validate.Struct(c), fmt.Sprintf("config loaded from %s fails to validate", path))
+	if err := validate.Struct(c); err != nil {
+		return Config{}, fmt.Errorf("config loaded from %q fails to validate: %w", path, err)
+	}
+
+	return c, nil
 }

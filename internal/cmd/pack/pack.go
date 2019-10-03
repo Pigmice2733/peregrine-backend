@@ -2,12 +2,11 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"text/template"
-
-	"github.com/pkg/errors"
 )
 
 const rawTemplate = `// Code generated with {{ .Command }}; DO NOT EDIT.
@@ -37,14 +36,14 @@ func main() {
 
 	value, err := ioutil.ReadFile(*in)
 	if err != nil {
-		panic(errors.Wrap(err, "reading input file"))
+		panic(fmt.Errorf("reading input file: %w", err))
 	}
 
 	tmpl, _ := template.New("pack").Parse(rawTemplate)
 
 	outFile, err := os.Create(*out)
 	if err != nil {
-		panic(errors.Wrap(err, "creating output file"))
+		panic(fmt.Errorf("creating output file: %w", err))
 	}
 
 	if err := tmpl.Execute(outFile, templateData{
@@ -53,6 +52,6 @@ func main() {
 		Name:        *name,
 		Value:       value,
 	}); err != nil {
-		panic(errors.Wrap(err, "executing template"))
+		panic(fmt.Errorf("executing template: %w", err))
 	}
 }

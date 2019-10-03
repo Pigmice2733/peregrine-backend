@@ -2,10 +2,9 @@ package summary
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html/template"
-
-	"github.com/pkg/errors"
 )
 
 // Report defines a report for a single team in a single match at a single event, which is
@@ -79,7 +78,7 @@ func SummarizeTeam(schema Schema, matches []Match) (Summary, error) {
 	for _, match := range matches {
 		matchRecords, err := summarizeMatch(schema, match)
 		if err != nil {
-			return Summary{}, errors.Wrap(err, "unable to summarize match")
+			return Summary{}, fmt.Errorf("unable to summarize match: %w", err)
 		}
 
 		for statName, matchRecord := range matchRecords {
@@ -153,22 +152,22 @@ func summarizeMatch(schema Schema, match Match) (rawRecords, error) {
 	for _, statDescription := range schema {
 		if statDescription.ReportReference != "" {
 			if err := summarizeReportReference(statDescription, match, records); err != nil {
-				return nil, errors.Wrap(err, "unable to summarize report reference")
+				return nil, fmt.Errorf("unable to summarize report reference: %w", err)
 			}
 		} else if statDescription.TBAReference != "" {
 			if err := summarizeTBAReference(statDescription, match, records); err != nil {
-				return nil, errors.Wrap(err, "unable to summarize TBA reference")
+				return nil, fmt.Errorf("unable to summarize TBA reference: %w", err)
 			}
 		} else if len(statDescription.Sum) != 0 {
 			if err := summarizeSum(statDescription, match, records); err != nil {
-				return nil, errors.Wrap(err, "unable to summarize sum stat")
+				return nil, fmt.Errorf("unable to summarize sum stat: %w", err)
 			}
 		} else if len(statDescription.AnyOf) != 0 {
 			if err := summarizeAnyOf(statDescription, match, records); err != nil {
-				return nil, errors.Wrap(err, "unable to summarize any of stat")
+				return nil, fmt.Errorf("unable to summarize any of stat: %w", err)
 			}
 		} else {
-			return nil, fmt.Errorf("got invalid stat description: no ReportReference, TBAReference, Sum, or AnyOf")
+			return nil, errors.New("got invalid stat description: no ReportReference, TBAReference, Sum, or AnyOf")
 		}
 	}
 
@@ -196,12 +195,12 @@ type templateData struct {
 func summarizeTBAReference(statDescription SchemaField, match Match, records rawRecords) error {
 	tmpl, err := template.New("key").Parse(statDescription.TBAReference)
 	if err != nil {
-		return errors.Wrap(err, "unable to parse tba reference template")
+		return fmt.Errorf("unable to parse tba reference template: %w", err)
 	}
 
 	buf := new(bytes.Buffer)
 	if err := tmpl.Execute(buf, templateData{RobotPosition: match.RobotPosition}); err != nil {
-		return errors.Wrap(err, "unable to execute template")
+		return fmt.Errorf("unable to execute template: %w", err)
 	}
 
 	value, ok := match.ScoreBreakdown[buf.String()]
@@ -269,8 +268,8 @@ func compareRecords(a, b interface{}) bool {
 		return aString == bString
 	}
 
-	aFloat, aOk := a.(float64)
-	bFloat, bOk := b.(float64)
+	aFloat, _ := a.(float64)
+	bFloat, _ := b.(float64)
 
 	if aBool, aOk := a.(bool); aOk && aBool {
 		aFloat = 1.0

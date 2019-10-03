@@ -17,7 +17,7 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/refresh", refreshHandler(s.Logger, time.Now, s.Store, s.JWTSecret)).Methods("POST")
 
 	r.Handle("/users", s.createUserHandler()).Methods("POST")
-	r.Handle("/users", ihttp.ACL(s.getUsersHandler(), true, true, true)).Methods("GET")
+	r.Handle("/users", ihttp.ACL(s.getUsersHandler(), false, false, true)).Methods("GET")
 	r.Handle("/users/{id}", ihttp.ACL(s.getUserByIDHandler(), false, false, true)).Methods("GET")
 	r.Handle("/users/{id}", ihttp.ACL(s.patchUserHandler(), false, false, true)).Methods("PATCH")
 	r.Handle("/users/{id}", ihttp.ACL(s.deleteUserHandler(), false, false, true)).Methods("DELETE")
@@ -52,7 +52,7 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/leaderboard", s.leaderboardHandler()).Methods("GET")
 
 	r.Handle("/realms", s.realmsHandler()).Methods("GET")
-	r.Handle("/realms", ihttp.ACL(s.createRealmHandler(), true, true, true)).Methods("POST")
+	r.Handle("/realms", s.createRealmHandler()).Methods("POST")
 	r.Handle("/realms/{id}", s.realmHandler()).Methods("GET")
 	r.Handle("/realms/{id}", ihttp.ACL(s.updateRealmHandler(), true, true, true)).Methods("POST")
 	r.Handle("/realms/{id}", ihttp.ACL(s.deleteRealmHandler(), true, true, true)).Methods("DELETE")

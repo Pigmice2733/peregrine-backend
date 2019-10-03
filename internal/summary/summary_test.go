@@ -15,19 +15,11 @@ func TestSummarizeTeam(t *testing.T) {
 	}
 
 	sort.Slice(actualSummary, func(i, j int) bool {
-		if actualSummary[i].Name < actualSummary[j].Name {
-			return true
-		}
-
-		return false
+		return actualSummary[i].Name < actualSummary[j].Name
 	})
 
 	sort.Slice(testSummary, func(i, j int) bool {
-		if testSummary[i].Name < testSummary[j].Name {
-			return true
-		}
-
-		return false
+		return testSummary[i].Name < testSummary[j].Name
 	})
 
 	if !cmp.Equal(actualSummary, testSummary) {

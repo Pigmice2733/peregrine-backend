@@ -1,12 +1,12 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 )
 
 // teamHandler returns a handler to get general info for a specific team
@@ -16,7 +16,7 @@ func (s *Server) teamHandler() http.HandlerFunc {
 		teamKey := vars["teamKey"]
 
 		team, err := s.Store.GetTeam(r.Context(), teamKey)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -35,23 +35,14 @@ func (s *Server) eventTeamHandler() http.HandlerFunc {
 		vars := mux.Vars(r)
 		eventKey, teamKey := vars["eventKey"], vars["teamKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
 		}
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
-		team, err := s.Store.GetEventTeam(r.Context(), teamKey, eventKey)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+		team, err := s.Store.GetEventTeamForRealm(r.Context(), teamKey, eventKey, realmID)
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -69,23 +60,13 @@ func (s *Server) eventTeamsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventKey := mux.Vars(r)["eventKey"]
 
-		event, err := s.Store.GetEvent(r.Context(), eventKey)
-
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
 		}
 
-		if !s.checkEventAccess(event.RealmID, r) {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
-		teams, err := s.Store.GetEventTeams(r.Context(), eventKey)
+		teams, err := s.Store.GetEventTeamsForRealm(r.Context(), eventKey, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving teams data")

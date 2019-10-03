@@ -1,25 +1,24 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+
+	"errors"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
+	"github.com/jmoiron/sqlx"
 	validator "gopkg.in/go-playground/validator.v9"
 )
 
 // createRealmHandler returns a handler to create a new realm.
 func (s *Server) createRealmHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if roles := ihttp.GetRoles(r); !roles.IsSuperAdmin {
-			ihttp.Error(w, http.StatusForbidden)
-			return
-		}
-
 		var realm store.Realm
 		if err := json.NewDecoder(r.Body).Decode(&realm); err != nil {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
@@ -32,7 +31,7 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 		}
 
 		id, err := s.Store.InsertRealm(r.Context(), realm)
-		if _, ok := errors.Cause(err).(store.ErrExists); ok {
+		if errors.Is(err, store.ErrExists{}) {
 			ihttp.Error(w, http.StatusConflict)
 			return
 		} else if err != nil {
@@ -42,6 +41,7 @@ func (s *Server) createRealmHandler() http.HandlerFunc {
 		}
 
 		realm.ID = id
+
 		ihttp.Respond(w, realm, http.StatusCreated)
 	}
 }
@@ -70,26 +70,13 @@ func (s *Server) realmHandler() http.HandlerFunc {
 		}
 
 		realm, err := s.Store.GetRealm(r.Context(), id)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving realms")
 			return
-		}
-
-		roles := ihttp.GetRoles(r)
-		if !roles.IsSuperAdmin && !realm.ShareReports {
-			userRealm, err := ihttp.GetRealmID(r)
-			if err != nil {
-				ihttp.Error(w, http.StatusForbidden)
-				return
-			}
-			if userRealm != id {
-				ihttp.Error(w, http.StatusForbidden)
-				return
-			}
 		}
 
 		ihttp.Respond(w, realm, http.StatusOK)
@@ -105,24 +92,6 @@ func (s *Server) updateRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		roles := ihttp.GetRoles(r)
-		if !roles.IsSuperAdmin {
-			if roles.IsAdmin {
-				userRealm, err := ihttp.GetRealmID(r)
-				if err != nil {
-					ihttp.Error(w, http.StatusForbidden)
-					return
-				}
-				if userRealm != id {
-					ihttp.Error(w, http.StatusForbidden)
-					return
-				}
-			} else {
-				ihttp.Error(w, http.StatusForbidden)
-				return
-			}
-		}
-
 		var realm store.Realm
 		if err := json.NewDecoder(r.Body).Decode(&realm); err != nil {
 			ihttp.Error(w, http.StatusUnprocessableEntity)
@@ -134,17 +103,34 @@ func (s *Server) updateRealmHandler() http.HandlerFunc {
 			return
 		}
 
-		err = s.Store.UpdateRealm(r.Context(), realm)
-		if _, ok := errors.Cause(err).(store.ErrNoResults); ok {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("updating realms")
+		roles := ihttp.GetRoles(r)
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err != nil {
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
-		w.WriteHeader(http.StatusNoContent)
+		existed, err := editRealm(r.Context(), s.Store, roles, userRealmID, id, func(tx *sqlx.Tx) error {
+			if err := s.Store.UpdateRealmTx(r.Context(), tx, realm); err != nil {
+				return fmt.Errorf("unable to update realm %d: %w", realm.ID, err)
+			}
+
+			return nil
+		})
+		if errors.Is(err, forbiddenError{}) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		} else if err != nil {
+			s.Logger.WithError(err).Error("unable to upsert realm")
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		if existed {
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			w.WriteHeader(http.StatusCreated)
+		}
 	}
 }
 
@@ -158,30 +144,65 @@ func (s *Server) deleteRealmHandler() http.HandlerFunc {
 		}
 
 		roles := ihttp.GetRoles(r)
-		if !roles.IsSuperAdmin {
-			if roles.IsAdmin {
-				userRealm, err := ihttp.GetRealmID(r)
-				if err != nil {
-					ihttp.Error(w, http.StatusForbidden)
-					return
-				}
-				if userRealm != id {
-					ihttp.Error(w, http.StatusForbidden)
-					return
-				}
-			} else {
-				ihttp.Error(w, http.StatusForbidden)
-				return
-			}
-		}
-
-		err = s.Store.DeleteRealm(r.Context(), id)
+		userRealmID, err := ihttp.GetRealmID(r)
 		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("deleting realms")
+			ihttp.Error(w, http.StatusForbidden)
 			return
 		}
 
-		w.WriteHeader(http.StatusNoContent)
+		existed, err := editRealm(r.Context(), s.Store, roles, userRealmID, id, func(tx *sqlx.Tx) error {
+			if err := s.Store.DeleteRealmTx(r.Context(), tx, id); err != nil {
+				return fmt.Errorf("unable to delete realm %d: %w", id, err)
+			}
+
+			return nil
+		})
+		if errors.Is(err, forbiddenError{}) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		} else if err != nil {
+			s.Logger.WithError(err).Error("unable to delete match")
+			ihttp.Error(w, http.StatusInternalServerError)
+			return
+		}
+
+		if existed {
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			ihttp.Error(w, http.StatusNotFound)
+		}
 	}
+}
+
+func editRealm(ctx context.Context, sto *store.Service, roles store.Roles, userRealmID, realmID int64, editFunc func(tx *sqlx.Tx) error) (existed bool, err error) {
+	existed = true
+
+	err = sto.DoTransaction(ctx, func(tx *sqlx.Tx) error {
+		if err := sto.ExclusiveLockRealmsTx(ctx, tx); err != nil {
+			return fmt.Errorf("unable to lock realms for edit: %w", err)
+		}
+
+		exists, err := sto.GetRealmExistsTx(ctx, tx, realmID)
+		if err != nil {
+			return fmt.Errorf("unable to get whether realm exists: %w", err)
+		}
+
+		existed = exists
+
+		if !roles.IsAdmin && !roles.IsSuperAdmin {
+			return forbiddenError{errors.New("only super-admins and admins can edit realms")}
+		}
+
+		if !roles.IsSuperAdmin && userRealmID != realmID {
+			return forbiddenError{errors.New("realm admins can only edit realms they belong to")}
+		}
+
+		if err := editFunc(tx); err != nil {
+			return fmt.Errorf("unable to edit realm: %w", err)
+		}
+
+		return nil
+	})
+
+	return existed, err
 }

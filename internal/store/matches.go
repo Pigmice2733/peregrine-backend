@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 )
 
 // Match holds information about an FRC match at a specific event
@@ -62,57 +62,54 @@ func (m *Match) GetTime() *time.Time {
 	return m.ScheduledTime
 }
 
-// CheckMatchKeyExists returns whether the match key exists in the database.
-func (s *Service) CheckMatchKeyExists(matchKey string) (bool, error) {
-	var exists bool
-	return exists, s.db.Get(&exists, "SELECT EXISTS(SELECT true FROM matches WHERE key = $1)", matchKey)
-}
-
 const matchesQuery = `
 SELECT
-	key,
-	predicted_time,
-	scheduled_time,
-	actual_time,
-	blue_score,
-	red_score,
-	tba_deleted,
+	matches.key,
+	matches.predicted_time,
+	matches.scheduled_time,
+	matches.actual_time,
+	matches.blue_score,
+	matches.red_score,
+	matches.tba_deleted,
 	r.team_keys AS red_alliance,
 	b.team_keys AS blue_alliance,
-	red_score_breakdown,
-	blue_score_breakdown,
-	tba_url
+	matches.red_score_breakdown,
+	matches.blue_score_breakdown,
+	matches.tba_url
 FROM
 	matches
 INNER JOIN
 	alliances r
-ON
-	matches.key = r.match_key AND r.is_blue = false
+	ON
+		matches.key = r.match_key AND r.is_blue = false
 INNER JOIN
 	alliances b
-ON
-	matches.key = b.match_key AND b.is_blue = true
+	ON
+		matches.key = b.match_key AND b.is_blue = true
+INNER JOIN
+	events
+	ON
+		matches.event_key = events.key
 WHERE
-	matches.event_key = $1 AND
-	(r.team_keys || b.team_keys) @> $2`
+	(events.realm_id = $1 OR events.realm_id IS NULL)`
 
-// GetMatches returns all matches from a specific event that include the given
+// GetMatchesForRealm returns all matches for a realm from a specific event that include the given
 // teams. If teams is nil or empty a list of all the matches for that event are
 // returned. // If tbaDeleted is true, matches that have been deleted from TBA
 // will be returned in addition to matches that have not been deleted. Otherwise,
 // only matches that have not been deleted will be returned.
-func (s *Service) GetMatches(ctx context.Context, eventKey string, teamKeys []string, tbaDeleted bool) ([]Match, error) {
+func (s *Service) GetMatchesForRealm(ctx context.Context, eventKey string, teamKeys []string, tbaDeleted bool, realmID *int64) ([]Match, error) {
 	if teamKeys == nil {
 		teamKeys = []string{}
 	}
 
-	query := matchesQuery
+	query := matchesQuery + " AND matches.event_key = $2 AND (r.team_keys || b.team_keys) @> $3"
 	if !tbaDeleted {
 		query += " AND NOT matches.tba_deleted"
 	}
 
-	matches := []Match{}
-	err := s.db.SelectContext(ctx, &matches, query, eventKey, pq.Array(teamKeys))
+	matches := make([]Match, 0)
+	err := s.db.SelectContext(ctx, &matches, query, realmID, eventKey, pq.Array(teamKeys))
 	if err != nil {
 		return nil, err
 	}
@@ -120,65 +117,64 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string, teamKeys []st
 	return matches, nil
 }
 
-// GetMatch returns a specific match.
-func (s *Service) GetMatch(ctx context.Context, matchKey string) (Match, error) {
-	var m Match
-	err := s.db.GetContext(ctx, &m, `
-	SELECT
-		key,
-		predicted_time,
-		scheduled_time,
-		actual_time,
-		blue_score,
-		red_score,
-		tba_deleted,
-		r.team_keys AS red_alliance,
-		b.team_keys AS blue_alliance,
-		red_score_breakdown,
-		blue_score_breakdown,
-		tba_url
-	FROM
-		matches
-	INNER JOIN
-		alliances r
-	ON
-		matches.key = r.match_key AND r.is_blue = false
-	INNER JOIN
-		alliances b
-	ON
-		matches.key = b.match_key AND b.is_blue = true
-	WHERE
-		matches.key = $1`, matchKey)
+// GetEventRealmIDByMatchKeyTx returns the realm ID for the event that the match associated
+// identified by the given key is associated with.
+func (s *Service) GetEventRealmIDByMatchKeyTx(ctx context.Context, tx *sqlx.Tx, matchKey string) (realmID *int64, err error) {
+	err = tx.QueryRowContext(ctx, `
+	SELECT events.realm_id
+	FROM matches
+	LEFT JOIN events
+		ON events.key = matches.event_key
+	WHERE matches.key = $1
+	`, matchKey).Scan(&realmID)
 	if err == sql.ErrNoRows {
-		return m, ErrNoResults{errors.Wrap(err, "unable to get match")}
+		return nil, ErrNoResults{fmt.Errorf("couldn't find match by key: %w", err)}
+	} else if err != nil {
+		return realmID, fmt.Errorf("unable to determine event realm ID for match: %w", err)
 	}
 
-	return m, err
+	return realmID, nil
 }
 
-// DeleteMatch deletes a specific match.
-func (s *Service) DeleteMatch(ctx context.Context, matchKey string) error {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM matches WHERE key = $1`, matchKey)
-	if err != nil {
-		return err
+// GetMatchForRealm returns a specific match by key in the given realm.
+func (s *Service) GetMatchForRealm(ctx context.Context, matchKey string, realmID *int64) (Match, error) {
+	query := matchesQuery + " AND matches.key = $2"
+
+	var m Match
+	err := s.db.GetContext(ctx, &m, query, realmID, matchKey)
+	if err == sql.ErrNoRows {
+		return m, ErrNoResults{fmt.Errorf("unable to get match: %w", err)}
+	} else if err != nil {
+		return m, fmt.Errorf("unable to get match: %w", err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
+	return m, nil
+}
 
-	if rowsAffected != 1 {
-		return ErrNoResults{errors.New(fmt.Sprintf("Can't delete match %s, no such match found", matchKey))}
+// ExclusiveLockMatchesTx locks the matches table so no changes can be made to it by anything other
+// than the given transaction.
+func (s *Service) ExclusiveLockMatchesTx(ctx context.Context, tx *sqlx.Tx) error {
+	_, err := tx.ExecContext(ctx, "LOCK TABLE matches IN EXCLUSIVE MODE")
+	if err != nil {
+		return fmt.Errorf("unable to lock matches: %w", err)
 	}
 
 	return nil
 }
 
-// UpsertMatch upserts a match and its alliances into the database.
-func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
-		_, err := tx.NamedExecContext(ctx, `
+// DeleteMatchTx deletes a specific match using the given transaction.
+func (s *Service) DeleteMatchTx(ctx context.Context, tx *sqlx.Tx, matchKey string) error {
+	_, err := tx.ExecContext(ctx, `DELETE FROM matches WHERE key = $1`, matchKey)
+	if err != nil {
+		return fmt.Errorf("unable to delete match: %w", err)
+	}
+
+	return nil
+}
+
+// UpsertMatchTx upserts a match and its alliances into the database in the given transaction.
+func (s *Service) UpsertMatchTx(ctx context.Context, tx *sqlx.Tx, match Match) error {
+	_, err := tx.NamedExecContext(ctx, `
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url)
 		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url)
 		ON CONFLICT (key)
@@ -196,16 +192,19 @@ func (s *Service) UpsertMatch(ctx context.Context, match Match) error {
 					blue_score_breakdown = :blue_score_breakdown,
 					tba_url = :tba_url
 		`, match)
-		if err != nil {
-			return errors.Wrap(err, "unable to upsert matches")
-		}
+	if err != nil {
+		return fmt.Errorf("unable to upsert matches: %w", err)
+	}
 
-		if err = s.AlliancesUpsert(ctx, match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
-			return err
-		}
+	if err = s.AlliancesUpsertTx(ctx, tx, match.Key, match.BlueAlliance, match.RedAlliance); err != nil {
+		return fmt.Errorf("unable to upsert alliances: %w", err)
+	}
 
-		return s.EventTeamKeysUpsert(ctx, match.EventKey, append(match.BlueAlliance, match.RedAlliance...))
-	})
+	if err := s.EventTeamKeysUpsertTx(ctx, tx, match.EventKey, append(match.BlueAlliance, match.RedAlliance...)); err != nil {
+		return fmt.Errorf("unable to upsert event team keys: %w", err)
+	}
+
+	return nil
 }
 
 // MarkMatchesDeleted will set tba_deleted to true on all matches for an event
@@ -224,8 +223,11 @@ func (s *Service) MarkMatchesDeleted(ctx context.Context, eventKey string, match
 				event_key = $1 AND
 				key != ALL($2)
 	`, eventKey, keys)
+	if err != nil {
+		return fmt.Errorf("unable to mark tba_deleted on missing matches: %w", err)
+	}
 
-	return errors.Wrap(err, "unable to mark tba_deleted on missing matches")
+	return nil
 }
 
 // UpdateTBAMatches puts a set of multiple matches and their alliances from TBA
@@ -234,7 +236,7 @@ func (s *Service) MarkMatchesDeleted(ctx context.Context, eventKey string, match
 // matches will be unaffected. If eventKey is specified, only matches from that
 // event will be affected. It will set tba_deleted to false for all updated matches.
 func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches []Match) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		upsert, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url)
 		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url)
@@ -254,15 +256,16 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches
 					tba_url = :tba_url
 	`)
 		if err != nil {
-			return errors.Wrap(err, "unable to prepare query to upsert matches")
+			return fmt.Errorf("unable to prepare query to upsert matches: %w", err)
 		}
 
 		for _, match := range matches {
 			if _, err = upsert.ExecContext(ctx, match); err != nil {
-				return errors.Wrap(err, "unable to upsert match")
+				return fmt.Errorf("unable to upsert match: %w", err)
 			}
-			if err = s.AlliancesUpsert(ctx, match.Key, match.BlueAlliance, match.RedAlliance, tx); err != nil {
-				return errors.Wrap(err, "unable to upsert alliances")
+
+			if err = s.AlliancesUpsertTx(ctx, tx, match.Key, match.BlueAlliance, match.RedAlliance); err != nil {
+				return fmt.Errorf("unable to upsert alliances: %w", err)
 			}
 		}
 
@@ -270,17 +273,18 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches
 	})
 }
 
-// GetAnalysisInfo returns match information that's pertinent to doing analysis.
-func (s *Service) GetAnalysisInfo(ctx context.Context, eventKey string) ([]Match, error) {
+// GetAnalysisInfoForRealm returns match information that's pertinent to doing analysis by getting
+// all the matches with the given event key and either null or matching realm IDs.
+func (s *Service) GetAnalysisInfoForRealm(ctx context.Context, eventKey string, realmID *int64) ([]Match, error) {
 	matches := make([]Match, 0)
 
 	err := s.db.SelectContext(ctx, &matches, `
 	SELECT
-		key,
+		matches.key,
 		r.team_keys AS red_alliance,
 		b.team_keys AS blue_alliance,
-		red_score_breakdown,
-		blue_score_breakdown
+		matches.red_score_breakdown,
+		matches.blue_score_breakdown
 	FROM
 		matches
 	INNER JOIN
@@ -291,9 +295,17 @@ func (s *Service) GetAnalysisInfo(ctx context.Context, eventKey string) ([]Match
 		alliances b
 	ON
 		matches.key = b.match_key AND b.is_blue = true
+	INNER JOIN
+		events
+		ON
+			matches.event_key = events.key	
 	WHERE
-		matches.event_key = $1
-	`, eventKey)
+		(events.realm_id = $1 OR events.realm_id IS NULL) AND
+		matches.event_key = $2
+	`, realmID, eventKey)
+	if err != nil {
+		return matches, fmt.Errorf("unable to get analysis info: %w", err)
+	}
 
-	return matches, errors.Wrap(err, "unable to get analysis info")
+	return matches, nil
 }

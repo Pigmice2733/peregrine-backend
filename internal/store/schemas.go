@@ -7,9 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"errors"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 )
 
 // Schema describes the statistics that reports should include
@@ -65,7 +66,7 @@ func (sd *SchemaFields) Scan(src interface{}) error {
 
 // CreateSchema creates a new schema
 func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
-	return s.doTransaction(ctx, func(tx *sqlx.Tx) error {
+	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		_, err := tx.NamedExecContext(ctx, `
 		INSERT
 			INTO
@@ -73,11 +74,13 @@ func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
 			VALUES (:year, :realm_id, :schema)
 		`, schema)
 
-		if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
+		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == pgExists {
 			return &ErrExists{fmt.Errorf("schema already exists: %v", err.Error())}
+		} else if err != nil {
+			return fmt.Errorf("unable to insert schema: %w", err)
 		}
 
-		return errors.Wrap(err, "unable to insert schema")
+		return nil
 	})
 }
 
@@ -88,9 +91,11 @@ func (s *Service) GetSchemaByID(ctx context.Context, id int64) (Schema, error) {
 	err := s.db.GetContext(ctx, &schema, "SELECT * FROM schemas WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		return schema, ErrNoResults{fmt.Errorf("schema %d does not exist", schema.ID)}
+	} else if err != nil {
+		return schema, fmt.Errorf("unable to retrieve schema: %w", err)
 	}
 
-	return schema, errors.Wrap(err, "unable to retrieve schema")
+	return schema, nil
 }
 
 // GetSchemaByYear retrieves the schema for a given year
@@ -100,44 +105,32 @@ func (s *Service) GetSchemaByYear(ctx context.Context, year int) (Schema, error)
 	err := s.db.GetContext(ctx, &schema, "SELECT * FROM schemas WHERE year = $1", year)
 	if err == sql.ErrNoRows {
 		return schema, ErrNoResults{fmt.Errorf("no schema for year %d exists", year)}
+	} else if err != nil {
+		return schema, fmt.Errorf("unable to retrieve schema: %w", err)
 	}
 
-	return schema, errors.Wrap(err, "unable to retrieve schema")
+	return schema, nil
 }
 
-// GetVisibleSchemas retrieves schemas from the database frm a specific realm,
+// GetSchemasForRealm retrieves schemas from the database frm a specific realm,
 // from realms with public events, and standard FRC schemas. If the realm ID is
 // nil, no private realms' schemas will be retrieved.
-func (s *Service) GetVisibleSchemas(ctx context.Context, realmID *int64) ([]Schema, error) {
+func (s *Service) GetSchemasForRealm(ctx context.Context, realmID *int64) ([]Schema, error) {
 	schemas := []Schema{}
-	var err error
 
-	if realmID == nil {
-		err = s.db.SelectContext(ctx, &schemas, `
-		WITH public_realms AS (
-			SELECT id FROM realms WHERE share_reports = true
-		)
-		SELECT *
-			FROM schemas
-				WHERE year IS NULL OR realm_id IN (SELECT id FROM public_realms)
-		`)
-	} else {
-		err = s.db.SelectContext(ctx, &schemas, `
-		WITH public_realms AS (
-			SELECT id FROM realms WHERE share_reports = true
-		)
-		SELECT *
-			FROM schemas
-			    WHERE year IS NULL OR realm_id = $1 OR (SELECT id FROM public_realms)
-		`, *realmID)
+	err := s.db.SelectContext(ctx, &schemas, `
+	SELECT schemas.*
+	FROM schemas
+	LEFT JOIN realms
+		ON realms.id = schemas.realm_id
+	WHERE
+		schemas.year IS NULL OR
+		realms.id = NULL OR
+		(realms.share_reports = true OR realms.id = $1)
+	`, realmID)
+	if err != nil {
+		return schemas, fmt.Errorf("unable to retrieve schemas: %w", err)
 	}
 
-	return schemas, errors.Wrap(err, "unable to retrieve schemas")
-}
-
-// GetSchemas retrieves all schemas from the database.
-func (s *Service) GetSchemas(ctx context.Context) ([]Schema, error) {
-	schemas := []Schema{}
-	err := s.db.SelectContext(ctx, &schemas, "SELECT * FROM schemas")
-	return schemas, errors.Wrap(err, "unable to retrieve schemas")
+	return schemas, nil
 }
