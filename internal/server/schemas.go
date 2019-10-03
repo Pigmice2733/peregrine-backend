@@ -31,6 +31,7 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 				ihttp.Error(w, http.StatusInternalServerError)
 				return
 			}
+
 			schema.RealmID = &realmID
 		} else {
 			schema.RealmID = nil
@@ -109,12 +110,11 @@ func (s *Server) getSchemaByIDHandler() http.HandlerFunc {
 		}
 
 		roles := ihttp.GetRoles(r)
+
 		var realmID *int64
-		realm, err := ihttp.GetRealmID(r)
-		if err != nil {
-			realmID = nil
-		} else {
-			realmID = &realm
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
 		}
 
 		if schema.Year == nil && !roles.IsSuperAdmin && schema.RealmID != realmID {

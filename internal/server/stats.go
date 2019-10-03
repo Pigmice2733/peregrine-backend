@@ -17,8 +17,8 @@ func (s *Server) eventStats() http.HandlerFunc {
 		eventKey := vars["eventKey"]
 
 		var realmID *int64
-		userRealmID, realmErr := ihttp.GetRealmID(r)
-		if realmErr != nil {
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
 			realmID = &userRealmID
 		}
 
@@ -54,7 +54,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		storeMatches, err := s.Store.GetAnalysisInfo(r.Context(), eventKey)
+		storeMatches, err := s.Store.GetAnalysisInfoForRealm(r.Context(), eventKey, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving match analysis info")
@@ -88,8 +88,8 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 		teamKey := vars["teamKey"]
 
 		var realmID *int64
-		userRealmID, realmErr := ihttp.GetRealmID(r)
-		if realmErr != nil {
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
 			realmID = &userRealmID
 		}
 

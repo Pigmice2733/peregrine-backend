@@ -257,17 +257,18 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches
 	})
 }
 
-// GetAnalysisInfo returns match information that's pertinent to doing analysis.
-func (s *Service) GetAnalysisInfo(ctx context.Context, eventKey string) ([]Match, error) {
+// GetAnalysisInfoForRealm returns match information that's pertinent to doing analysis by getting
+// all the matches with the given event key and either null or matching realm IDs.
+func (s *Service) GetAnalysisInfoForRealm(ctx context.Context, eventKey string, realmID *int64) ([]Match, error) {
 	matches := make([]Match, 0)
 
 	err := s.db.SelectContext(ctx, &matches, `
 	SELECT
-		key,
+		matches.key,
 		r.team_keys AS red_alliance,
 		b.team_keys AS blue_alliance,
-		red_score_breakdown,
-		blue_score_breakdown
+		matches.red_score_breakdown,
+		matches.blue_score_breakdown
 	FROM
 		matches
 	INNER JOIN
@@ -278,9 +279,14 @@ func (s *Service) GetAnalysisInfo(ctx context.Context, eventKey string) ([]Match
 		alliances b
 	ON
 		matches.key = b.match_key AND b.is_blue = true
+	INNER JOIN
+		events
+		ON
+			matches.event_key = events.key	
 	WHERE
-		matches.event_key = $1
-	`, eventKey)
+		(events.realm_id = $1 OR events.realm_id IS NULL) AND
+		matches.event_key = $2
+	`, realmID, eventKey)
 
 	return matches, errors.Wrap(err, "unable to get analysis info")
 }

@@ -22,7 +22,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 
 		var realmID *int64
 		userRealmID, err := ihttp.GetRealmID(r)
-		if err != nil {
+		if err == nil {
 			realmID = &userRealmID
 		}
 
