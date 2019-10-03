@@ -29,20 +29,37 @@ INSERT INTO all_teams (key)
 		DO NOTHING
 `
 
-// GetEventTeam retrieves a team specified by teamKey from an event specified by eventKey.
-func (s *Service) GetEventTeam(ctx context.Context, teamKey string, eventKey string) (EventTeam, error) {
+// GetEventTeamForRealm retrieves a team specified by teamKey from an event specified by eventKey with a null
+// or matching realm ID.
+func (s *Service) GetEventTeamForRealm(ctx context.Context, teamKey string, eventKey string, realmID *int64) (EventTeam, error) {
 	var t EventTeam
-	err := s.db.GetContext(ctx, &t, "SELECT * FROM teams WHERE key = $1 AND event_key = $2", teamKey, eventKey)
+	err := s.db.GetContext(ctx, &t, `
+	SELECT teams.*
+	FROM teams
+	LEFT JOIN
+		events
+			ON events.key = teams.event_key
+	WHERE
+		teams.key = $1 AND
+		event_key = $2 AND
+		(events.realm_id IS NULL OR events.realm_id = $3)`, teamKey, eventKey, realmID)
 	if err == sql.ErrNoRows {
 		return t, ErrNoResults{errors.Wrapf(err, "team %s at event %s does not exist", teamKey, eventKey)}
 	}
 	return t, err
 }
 
-// GetEventTeams retrieves all teams from an event specified by eventKey.
-func (s *Service) GetEventTeams(ctx context.Context, eventKey string) ([]EventTeam, error) {
+// GetEventTeamsForRealm retrieves all teams from an event specified by eventKey with a null or matching realm ID.
+func (s *Service) GetEventTeamsForRealm(ctx context.Context, eventKey string, realmID *int64) ([]EventTeam, error) {
 	teams := []EventTeam{}
-	return teams, s.db.SelectContext(ctx, &teams, "SELECT * FROM teams WHERE event_key = $1", eventKey)
+	return teams, s.db.SelectContext(ctx, &teams, `SELECT teams.*
+	FROM teams
+	LEFT JOIN
+		events
+			ON events.key = teams.event_key
+	WHERE
+		event_key = $1 AND
+		(events.realm_id IS NULL OR events.realm_id = $2)`, eventKey, realmID)
 }
 
 // GetTeam retrieves general team info for a specific team
