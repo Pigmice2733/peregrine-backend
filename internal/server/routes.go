@@ -17,7 +17,7 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/refresh", refreshHandler(s.Logger, time.Now, s.Store, s.JWTSecret)).Methods("POST")
 
 	r.Handle("/users", s.createUserHandler()).Methods("POST")
-	r.Handle("/users", ihttp.ACL(s.getUsersHandler(), true, true, true)).Methods("GET")
+	r.Handle("/users", ihttp.ACL(s.getUsersHandler(), false, false, true)).Methods("GET")
 	r.Handle("/users/{id}", ihttp.ACL(s.getUserByIDHandler(), false, false, true)).Methods("GET")
 	r.Handle("/users/{id}", ihttp.ACL(s.patchUserHandler(), false, false, true)).Methods("PATCH")
 	r.Handle("/users/{id}", ihttp.ACL(s.deleteUserHandler(), false, false, true)).Methods("DELETE")
