@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -257,25 +258,32 @@ func (s *Service) PatchUser(ctx context.Context, pu PatchUser) error {
 	})
 }
 
-// DeleteUser deletes a specific user from the database.
-func (s *Service) DeleteUser(ctx context.Context, id int64) error {
-	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
-		_, err := tx.ExecContext(ctx, `
-	    DELETE FROM stars
-	        WHERE user_id = $1
-		`, id)
+// DeleteUserByID deletes a specific user from the database.
+func (s *Service) DeleteUserByID(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
+	if err != nil {
+		return fmt.Errorf("unable to delete user %d: %w", id, err)
+	}
 
-		if err != nil {
-			return errors.Wrap(err, "unable to delete user's stars")
-		}
+	if n, err := res.RowsAffected(); err == nil && n == 0 {
+		return ErrNoResults{errors.New("got 0 affected rows")}
+	}
 
-		_, err = tx.ExecContext(ctx, `
-			DELETE FROM users
-				WHERE id = $1
-		`, id)
+	return nil
+}
 
-		return errors.Wrap(err, "unable to delete user")
-	})
+// DeleteUserByIDRealm deletes a specific user from the database.
+func (s *Service) DeleteUserByIDRealm(ctx context.Context, id, realmID int64) error {
+	res, err := s.db.ExecContext(ctx, "DELETE FROM users WHERE id = $1 AND realm_id = $2", id, realmID)
+	if err != nil {
+		return fmt.Errorf("unable to delete user %d: %w", id, err)
+	}
+
+	if n, err := res.RowsAffected(); err == nil && n == 0 {
+		return ErrNoResults{errors.New("got 0 affected rows")}
+	}
+
+	return nil
 }
 
 // CheckSimilarUsernameExists checks whether a user with (case insensitive) the

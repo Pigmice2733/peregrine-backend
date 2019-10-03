@@ -38,6 +38,12 @@ type ErrFKeyViolation struct {
 	error
 }
 
+// Is returns whether the target is an ErrFKeyViolation.
+func (err ErrFKeyViolation) Is(target error) bool {
+	_, ok := target.(ErrFKeyViolation)
+	return ok
+}
+
 const pgExists = "23505"
 const pgFKeyViolation = "23503"
 
