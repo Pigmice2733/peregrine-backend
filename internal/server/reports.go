@@ -56,6 +56,7 @@ func (s *Server) putReport() http.HandlerFunc {
 			return
 		}
 
+		report.EventKey = eventKey
 		report.MatchKey = matchKey
 		report.TeamKey = teamKey
 

@@ -40,14 +40,12 @@ func (s *Service) UpsertMatchTeamComment(ctx context.Context, c Comment) (create
 		}
 
 		_, err = tx.NamedExecContext(ctx, `
-		INSERT
-			INTO
-				comments (event_key, match_key, team_key, reporter_id, realm_id, comment)
-			VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :comment)
-			ON CONFLICT (event_key, match_key, team_key, reporter_id) DO
-				UPDATE
-					SET
-						comment = :comment`, c)
+		INSERT INTO
+			comments (event_key, match_key, team_key, reporter_id, realm_id, comment)
+		VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :comment)
+		ON CONFLICT (event_key, match_key, team_key, reporter_id)
+			DO UPDATE SET comment = :comment, realm_id = :realm_id
+		`, c)
 		if err != nil {
 			return errors.Wrap(err, "unable to upsert comment")
 		}

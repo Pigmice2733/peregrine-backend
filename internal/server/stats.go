@@ -127,6 +127,7 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 			s.Logger.WithError(err).Error("retrieving reports")
 			return
 		}
+
 		storeSchema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
 		if _, ok := err.(store.ErrNoResults); ok {
 			ihttp.Error(w, http.StatusNotFound)

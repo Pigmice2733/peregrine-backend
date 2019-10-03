@@ -62,24 +62,22 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 			SELECT EXISTS(
 				SELECT FROM reports
 				WHERE
-					match_key = $1 AND
-					team_key = $2 AND
-					reporter_id = $3
+					event_key = $1 AND
+					match_key = $2 AND
+					team_key = $3 AND
+					reporter_id = $4
 			)
-			`, r.MatchKey, r.TeamKey, r.ReporterID).Scan(&existed)
+			`, r.EventKey, r.MatchKey, r.TeamKey, r.ReporterID).Scan(&existed)
 		if err != nil {
 			return errors.Wrap(err, "unable to determine if report exists")
 		}
 
 		_, err = tx.NamedExecContext(ctx, `
-		INSERT
-			INTO
-				reports (match_key, team_key, reporter_id, realm_id, data)
-			VALUES (:match_key, :team_key, :reporter_id, :realm_id, :data)
-			ON CONFLICT (match_key, team_key, reporter_id) DO
-				UPDATE
-					SET
-						data = :data
+			INSERT INTO
+				reports (event_key, match_key, team_key, reporter_id, realm_id, data)
+			VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :data)
+			ON CONFLICT (event_key, match_key, team_key, reporter_id)
+				DO UPDATE SET data = :data, realm_id = :realm_id
 		`, r)
 
 		return errors.Wrap(err, "unable to upsert report")
