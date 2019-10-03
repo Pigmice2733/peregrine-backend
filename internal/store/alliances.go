@@ -2,10 +2,10 @@ package store
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 )
 
 // AlliancesUpsertTx upserts the red and blue alliances for a specific match.
@@ -21,15 +21,19 @@ func (s *Service) AlliancesUpsertTx(ctx context.Context, tx *sqlx.Tx, matchKey s
 				SET team_keys = $1
 	`)
 	if err != nil {
-		return errors.Wrap(err, "unable to prepare alliances upsert statement")
+		return fmt.Errorf("unable to prepare alliances upsert statement: %w", err)
 	}
 	defer stmt.Close()
 
 	_, err = stmt.ExecContext(ctx, pq.Array(&blueAlliance), matchKey, true)
 	if err != nil {
-		return errors.Wrap(err, "unable to upsert blue alliance")
+		return fmt.Errorf("unable to upsert blue alliance: %w", err)
 	}
 
 	_, err = stmt.ExecContext(ctx, pq.Array(&redAlliance), matchKey, false)
-	return errors.Wrap(err, "unable to upsert red alliance")
+	if err != nil {
+		return fmt.Errorf("unable to upsert red alliance: %w", err)
+	}
+
+	return nil
 }

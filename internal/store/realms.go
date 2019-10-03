@@ -27,6 +27,8 @@ func (s *Service) GetRealm(ctx context.Context, id int64) (realm Realm, err erro
 	err = s.db.GetContext(ctx, &realm, "SELECT * FROM realms WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		return realm, ErrNoResults{fmt.Errorf("realm with id %d not found: %w", id, err)}
+	} else if err != nil {
+		return realm, fmt.Errorf("unable to get realm: %w", err)
 	}
 
 	return realm, err

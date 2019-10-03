@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -23,7 +24,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 		}
 
 		event, err := s.Store.GetEventForRealm(r.Context(), eventKey, realmID)
-		if _, ok := err.(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -45,7 +46,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 		}
 
 		storeSchema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
-		if _, ok := err.(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -94,7 +95,7 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 		}
 
 		event, err := s.Store.GetEventForRealm(r.Context(), eventKey, realmID)
-		if _, ok := err.(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -112,7 +113,7 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 		// unique and consistent with TBA match keys.
 		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
 		match, err := s.Store.GetMatchForRealm(r.Context(), matchKey, realmID)
-		if _, ok := err.(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {
@@ -129,7 +130,7 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 		}
 
 		storeSchema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
-		if _, ok := err.(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {

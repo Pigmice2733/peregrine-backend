@@ -11,7 +11,6 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	"github.com/Pigmice2733/peregrine-backend/internal/tba"
 	"github.com/Pigmice2733/peregrine-backend/internal/tbaupdater"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,7 +36,7 @@ func main() {
 func run(configPath string) error {
 	c, err := config.Open(configPath)
 	if err != nil {
-		return errors.Wrap(err, "unable to open config")
+		return fmt.Errorf("unable to open config: %w", err)
 	}
 
 	tba := &tba.Service{
@@ -54,7 +53,7 @@ func run(configPath string) error {
 	logger.Info("connecting to postgres")
 	sto, err := store.New(context.Background(), c.DSN, logger)
 	if err != nil {
-		return errors.Wrap(err, "opening postgres server")
+		return fmt.Errorf("opening postgres server: %w", err)
 	}
 	defer sto.Close()
 	logger.Info("connected to postgres")
@@ -74,7 +73,9 @@ func run(configPath string) error {
 	}
 
 	tbaUpdates.Begin()
-	err = errors.Wrap(s.Run(), "running server")
+	if err := s.Run(); err != nil {
+		err = fmt.Errorf("error running server: %w", err)
+	}
 	tbaUpdates.End()
 
 	return err

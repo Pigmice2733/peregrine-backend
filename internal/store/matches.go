@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 )
 
 // Match holds information about an FRC match at a specific event
@@ -128,10 +128,12 @@ func (s *Service) GetEventRealmIDByMatchKeyTx(ctx context.Context, tx *sqlx.Tx, 
 	WHERE matches.key = $1
 	`, matchKey).Scan(&realmID)
 	if err == sql.ErrNoRows {
-		return nil, ErrNoResults{errors.Wrap(err, "couldn't find match by key")}
+		return nil, ErrNoResults{fmt.Errorf("couldn't find match by key: %w", err)}
+	} else if err != nil {
+		return realmID, fmt.Errorf("unable to determine event realm ID for match: %w", err)
 	}
 
-	return realmID, errors.Wrap(err, "unable to determine event realm ID for match")
+	return realmID, nil
 }
 
 // GetMatchForRealm returns a specific match by key in the given realm.
@@ -141,17 +143,23 @@ func (s *Service) GetMatchForRealm(ctx context.Context, matchKey string, realmID
 	var m Match
 	err := s.db.GetContext(ctx, &m, query, realmID, matchKey)
 	if err == sql.ErrNoRows {
-		return m, ErrNoResults{errors.Wrap(err, "unable to get match")}
+		return m, ErrNoResults{fmt.Errorf("unable to get match: %w", err)}
+	} else if err != nil {
+		return m, fmt.Errorf("unable to get match: %w", err)
 	}
 
-	return m, err
+	return m, nil
 }
 
 // ExclusiveLockMatchesTx locks the matches table so no changes can be made to it by anything other
 // than the given transaction.
 func (s *Service) ExclusiveLockMatchesTx(ctx context.Context, tx *sqlx.Tx) error {
 	_, err := tx.ExecContext(ctx, "LOCK TABLE matches IN EXCLUSIVE MODE")
-	return errors.Wrap(err, "unable to lock matches")
+	if err != nil {
+		return fmt.Errorf("unable to lock matches: %w", err)
+	}
+
+	return nil
 }
 
 // DeleteMatchTx deletes a specific match using the given transaction.
@@ -185,14 +193,18 @@ func (s *Service) UpsertMatchTx(ctx context.Context, tx *sqlx.Tx, match Match) e
 					tba_url = :tba_url
 		`, match)
 	if err != nil {
-		return errors.Wrap(err, "unable to upsert matches")
+		return fmt.Errorf("unable to upsert matches: %w", err)
 	}
 
 	if err = s.AlliancesUpsertTx(ctx, tx, match.Key, match.BlueAlliance, match.RedAlliance); err != nil {
-		return err
+		return fmt.Errorf("unable to upsert alliances: %w", err)
 	}
 
-	return s.EventTeamKeysUpsertTx(ctx, tx, match.EventKey, append(match.BlueAlliance, match.RedAlliance...))
+	if err := s.EventTeamKeysUpsertTx(ctx, tx, match.EventKey, append(match.BlueAlliance, match.RedAlliance...)); err != nil {
+		return fmt.Errorf("unable to upsert event team keys: %w", err)
+	}
+
+	return nil
 }
 
 // MarkMatchesDeleted will set tba_deleted to true on all matches for an event
@@ -211,8 +223,11 @@ func (s *Service) MarkMatchesDeleted(ctx context.Context, eventKey string, match
 				event_key = $1 AND
 				key != ALL($2)
 	`, eventKey, keys)
+	if err != nil {
+		return fmt.Errorf("unable to mark tba_deleted on missing matches: %w", err)
+	}
 
-	return errors.Wrap(err, "unable to mark tba_deleted on missing matches")
+	return nil
 }
 
 // UpdateTBAMatches puts a set of multiple matches and their alliances from TBA
@@ -241,15 +256,16 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches
 					tba_url = :tba_url
 	`)
 		if err != nil {
-			return errors.Wrap(err, "unable to prepare query to upsert matches")
+			return fmt.Errorf("unable to prepare query to upsert matches: %w", err)
 		}
 
 		for _, match := range matches {
 			if _, err = upsert.ExecContext(ctx, match); err != nil {
-				return errors.Wrap(err, "unable to upsert match")
+				return fmt.Errorf("unable to upsert match: %w", err)
 			}
+
 			if err = s.AlliancesUpsertTx(ctx, tx, match.Key, match.BlueAlliance, match.RedAlliance); err != nil {
-				return errors.Wrap(err, "unable to upsert alliances")
+				return fmt.Errorf("unable to upsert alliances: %w", err)
 			}
 		}
 
@@ -287,6 +303,9 @@ func (s *Service) GetAnalysisInfoForRealm(ctx context.Context, eventKey string, 
 		(events.realm_id = $1 OR events.realm_id IS NULL) AND
 		matches.event_key = $2
 	`, realmID, eventKey)
+	if err != nil {
+		return matches, fmt.Errorf("unable to get analysis info: %w", err)
+	}
 
-	return matches, errors.Wrap(err, "unable to get analysis info")
+	return matches, nil
 }

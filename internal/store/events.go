@@ -3,11 +3,11 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 )
 
 // Event holds information about an FRC event such as webcast associated with
@@ -90,7 +90,7 @@ func (s *Service) GetEventsForRealm(ctx context.Context, tbaDeleted bool, realmI
 func (s *Service) GetEventForRealm(ctx context.Context, eventKey string, realmID *int64) (event Event, err error) {
 	err = s.db.GetContext(ctx, &event, eventsRealmQuery+" AND key = $2", realmID, eventKey)
 	if err == sql.ErrNoRows {
-		return event, ErrNoResults{errors.Wrapf(err, "event %s does not exist", eventKey)}
+		return event, ErrNoResults{fmt.Errorf("event %s does not exist: %w", eventKey, err)}
 	}
 
 	return event, err
@@ -161,7 +161,7 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 					tba_deleted = false
 		`)
 		if err != nil {
-			return errors.Wrap(err, "unable to prepare events upsert statemant")
+			return fmt.Errorf("unable to prepare events upsert statemant: %w", err)
 		}
 		defer eventStmt.Close()
 
@@ -169,12 +169,13 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 			if _, err = eventStmt.ExecContext(ctx, event); err != nil {
 				if err, ok := err.(*pq.Error); ok {
 					if err.Code == pgExists {
-						return ErrExists{errors.Wrapf(err, "event with key %s already exists", event.Key)}
+						return ErrExists{fmt.Errorf("event with key %s already exists: %w", event.Key, err)}
 					} else if err.Code == pgFKeyViolation {
-						return ErrFKeyViolation{errors.Wrap(err, "foreign key violation")}
+						return ErrFKeyViolation{fmt.Errorf("foreign key violation: %w", err)}
 					}
 				}
-				return errors.Wrap(err, "unable to upsert events")
+
+				return fmt.Errorf("unable to upsert events: %w", err)
 			}
 		}
 
@@ -198,24 +199,33 @@ func (s *Service) MarkEventsDeleted(ctx context.Context, events []Event) error {
 				key != ALL($1) AND
 				realm_id IS NULL
 	`, keys)
+	if err != nil {
+		return fmt.Errorf("unable to mark tba_deleted on missing events: %w", err)
+	}
 
-	return errors.Wrap(err, "unable to mark tba_deleted on missing events")
+	return nil
 }
 
 // ExclusiveLockEventsTx acquires an exclusive lock on the events table.
 func (s *Service) ExclusiveLockEventsTx(ctx context.Context, tx *sqlx.Tx) error {
 	_, err := tx.ExecContext(ctx, "LOCK TABLE events IN EXCLUSIVE MODE")
-	return errors.Wrap(err, "unable to lock events")
+	if err != nil {
+		return fmt.Errorf("unable to lock events: %w", err)
+	}
+
+	return nil
 }
 
 // GetEventRealmIDTx returns the realm ID of an event by key.
 func (s *Service) GetEventRealmIDTx(ctx context.Context, tx *sqlx.Tx, eventKey string) (realmID *int64, err error) {
 	err = tx.QueryRowContext(ctx, "SELECT realm_id FROM events WHERE key = $1", eventKey).Scan(&realmID)
 	if err == sql.ErrNoRows {
-		return nil, ErrNoResults{errors.Wrap(err, "couldn't find event by key")}
+		return nil, ErrNoResults{fmt.Errorf("couldn't find event by key")}
+	} else if err != nil {
+		return nil, fmt.Errorf("unable to determine event realm ID")
 	}
 
-	return realmID, errors.Wrap(err, "unable to determine event realm ID")
+	return realmID, nil
 }
 
 // UpsertEventTx upserts a single event into the database and returns whether
@@ -242,6 +252,9 @@ func (s *Service) UpsertEventTx(ctx context.Context, tx *sqlx.Tx, event Event) e
 						schema_id = :schema_id,
 						tba_deleted = :tba_deleted
 		`, event)
+	if err != nil {
+		return fmt.Errorf("unable to upsert event: %w", err)
+	}
 
-	return errors.Wrap(err, "unable to upsert event")
+	return nil
 }

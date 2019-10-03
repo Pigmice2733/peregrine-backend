@@ -3,6 +3,7 @@ package tba
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
-	"github.com/pkg/errors"
 )
 
 // Service provides methods for retrieving data from
@@ -98,6 +98,12 @@ type ErrNotModified struct {
 	error
 }
 
+// Is returns whether the given target error is an ErrNotModified error.
+func (nm ErrNotModified) Is(target error) bool {
+	_, ok := target.(ErrNotModified)
+	return ok
+}
+
 func (s *Service) makeRequest(ctx context.Context, path string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", s.URL+path, nil)
 	if err != nil {
@@ -146,12 +152,16 @@ func webcastURL(webcastType, channel string) (string, error) {
 func (s *Service) Ping(ctx context.Context) error {
 	req, err := http.NewRequest(http.MethodGet, s.URL+"/status", nil)
 	if err != nil {
-		return errors.Wrap(err, "making new request")
+		return fmt.Errorf("making new request: %w", err)
 	}
 	req = req.WithContext(ctx)
 
 	_, err = tbaClient.Do(req)
-	return errors.Wrap(err, "doing request")
+	if err != nil {
+		return fmt.Errorf("doing request: %w", err)
+	}
+
+	return nil
 }
 
 // GetEvents retrieves all events from the given year (e.g. 2018).
@@ -160,7 +170,7 @@ func (s *Service) GetEvents(ctx context.Context, year int) ([]store.Event, error
 
 	response, err := s.makeRequest(ctx, path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to make request")
+		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 
 	if response.StatusCode != http.StatusOK {
@@ -232,7 +242,7 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 
 	response, err := s.makeRequest(ctx, path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to make request")
+		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 
 	if response.StatusCode != http.StatusOK {
@@ -304,7 +314,7 @@ func (s *Service) GetTeams(ctx context.Context) ([]store.Team, error) {
 
 		response, err := s.makeRequest(ctx, path)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to make request")
+			return nil, fmt.Errorf("failed to make request: %w", err)
 		}
 
 		if response.StatusCode != http.StatusOK {
@@ -332,7 +342,7 @@ func (s *Service) GetTeamRankings(ctx context.Context, eventKey string) ([]store
 
 	response, err := s.makeRequest(ctx, path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to make request")
+		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 
 	if response.StatusCode != http.StatusOK {

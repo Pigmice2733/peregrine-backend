@@ -3,9 +3,9 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 )
 
 // EventTeam holds data about a single FRC team at a specific event.
@@ -44,7 +44,7 @@ func (s *Service) GetEventTeamForRealm(ctx context.Context, teamKey string, even
 		event_key = $2 AND
 		(events.realm_id IS NULL OR events.realm_id = $3)`, teamKey, eventKey, realmID)
 	if err == sql.ErrNoRows {
-		return t, ErrNoResults{errors.Wrapf(err, "team %s at event %s does not exist", teamKey, eventKey)}
+		return t, ErrNoResults{fmt.Errorf("team %s at event %s does not exist: %w", teamKey, eventKey, err)}
 	}
 	return t, err
 }
@@ -67,9 +67,12 @@ func (s *Service) GetTeam(ctx context.Context, teamKey string) (Team, error) {
 	var t Team
 	err := s.db.GetContext(ctx, &t, "SELECT * FROM all_teams WHERE key = $1", teamKey)
 	if err == sql.ErrNoRows {
-		return t, ErrNoResults{errors.Wrapf(err, "team %s does not exist", teamKey)}
+		return t, ErrNoResults{fmt.Errorf("team %s does not exist: %w", teamKey, err)}
+	} else if err != nil {
+		return t, fmt.Errorf("unable to get team: %w", err)
 	}
-	return t, err
+
+	return t, nil
 }
 
 // EventTeamsUpsert upserts multiple teams for a specific event into the database.
@@ -77,13 +80,13 @@ func (s *Service) EventTeamsUpsert(ctx context.Context, teams []EventTeam) error
 	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		allTeamsStmt, err := tx.PrepareNamedContext(ctx, allTeamsKeyUpsert)
 		if err != nil {
-			return errors.Wrap(err, "unable to prepare all_teams upsert statement")
+			return fmt.Errorf("unable to prepare all_teams upsert statement: %w", err)
 		}
 		defer allTeamsStmt.Close()
 
 		for _, team := range teams {
 			if _, err = allTeamsStmt.ExecContext(ctx, team); err != nil {
-				return errors.Wrap(err, "unable to upsert into all_teams")
+				return fmt.Errorf("unable to upsert into all_teams: %w", err)
 			}
 		}
 
@@ -95,13 +98,13 @@ func (s *Service) EventTeamsUpsert(ctx context.Context, teams []EventTeam) error
 				SET rank = $3, ranking_score = $4
 		`)
 		if err != nil {
-			return errors.Wrap(err, "unable to prepare teams upsert statement")
+			return fmt.Errorf("unable to prepare teams upsert statement: %w", err)
 		}
 		defer stmt.Close()
 
 		for _, team := range teams {
 			if _, err = stmt.ExecContext(ctx, team); err != nil {
-				return errors.Wrap(err, "unable to upsert into teams")
+				return fmt.Errorf("unable to upsert into teams: %w", err)
 			}
 		}
 
@@ -121,13 +124,13 @@ func (s *Service) TeamsUpsert(ctx context.Context, teams []Team) error {
 				SET nickname = $2
 		`)
 		if err != nil {
-			return errors.Wrap(err, "unable to prepare all_teams upsert statement")
+			return fmt.Errorf("unable to prepare all_teams upsert statement: %w", err)
 		}
 		defer stmt.Close()
 
 		for _, team := range teams {
 			if _, err = stmt.ExecContext(ctx, team); err != nil {
-				return errors.Wrap(err, "")
+				return fmt.Errorf("unable to upsert team %q: %w", team.Key, err)
 			}
 		}
 		return nil
@@ -143,13 +146,13 @@ func (s *Service) EventTeamKeysUpsertTx(ctx context.Context, tx *sqlx.Tx, eventK
 			DO NOTHING
 		`)
 	if err != nil {
-		return errors.Wrap(err, "unable to prepare all teams key upsert statement")
+		return fmt.Errorf("unable to prepare all teams key upsert statement: %w", err)
 	}
 	defer allTeamsStmt.Close()
 
 	for _, team := range keys {
 		if _, err = allTeamsStmt.ExecContext(ctx, team); err != nil {
-			return errors.Wrap(err, "unable to upsert all team key")
+			return fmt.Errorf("unable to upsert all team key: %w", err)
 		}
 	}
 
@@ -159,13 +162,13 @@ func (s *Service) EventTeamKeysUpsertTx(ctx context.Context, tx *sqlx.Tx, eventK
 			ON CONFLICT (key, event_key) DO NOTHING
 		`)
 	if err != nil {
-		return errors.Wrap(err, "unable to prepare teams key upsert statement")
+		return fmt.Errorf("unable to prepare teams key upsert statement: %w", err)
 	}
 	defer stmt.Close()
 
 	for _, key := range keys {
 		if _, err = stmt.ExecContext(ctx, key, eventKey); err != nil {
-			return errors.Wrap(err, "unable to upsert team key")
+			return fmt.Errorf("unable to upsert team key: %w", err)
 		}
 	}
 

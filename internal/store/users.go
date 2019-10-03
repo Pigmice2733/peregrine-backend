@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 )
 
 // Roles holds information about a users roles and permissions such as whether
@@ -70,10 +70,12 @@ func (s *Service) GetUserByUsername(ctx context.Context, username string) (User,
 
 	err := s.db.GetContext(ctx, &u, "SELECT * FROM users WHERE username = $1", username)
 	if err == sql.ErrNoRows {
-		return u, ErrNoResults{errors.Wrapf(err, "user %d does not exist", u.ID)}
+		return u, ErrNoResults{fmt.Errorf("user %d does not exist: %w", u.ID, err)}
+	} else if err != nil {
+		return u, fmt.Errorf("unable to select user: %w", err)
 	}
 
-	return u, errors.Wrap(err, "unable to select user")
+	return u, nil
 }
 
 // CreateUser creates a given user.
@@ -89,33 +91,33 @@ func (s *Service) CreateUser(ctx context.Context, u User) error {
 			RETURNING id
 		`)
 		if err != nil {
-			return errors.Wrap(err, "unable to prepare user insert statement")
+			return fmt.Errorf("unable to prepare user insert statement: %w", err)
 		}
 
 		err = userStmt.GetContext(ctx, &u.ID, u)
 		if err != nil {
 			if err, ok := err.(*pq.Error); ok {
 				if err.Code == pgExists {
-					return ErrExists{errors.Wrapf(err, "username %s already exists", u.Username)}
+					return ErrExists{fmt.Errorf("username %q already exists: %w", u.Username, err)}
 				}
 				if err.Code == pgFKeyViolation {
-					return ErrFKeyViolation{errors.Wrapf(err, "user fk violation on realm ID %d: %v", u.RealmID, err)}
+					return ErrFKeyViolation{fmt.Errorf("user fk violation on realm ID %d: %w", u.RealmID, err)}
 				}
 			}
-			return errors.Wrap(err, "unable to insert user")
+			return fmt.Errorf("unable to insert user: %w", err)
 		}
 
 		starsStmt, err := tx.PrepareContext(ctx, "INSERT INTO stars (user_id, event_key) VALUES ($1, $2)")
 		if err != nil {
-			return errors.Wrap(err, "unable to prepare stars insert statement")
+			return fmt.Errorf("unable to prepare stars insert statement: %w", err)
 		}
 
 		for _, star := range u.Stars {
 			if _, err := starsStmt.ExecContext(ctx, u.ID, star); err != nil {
 				if err, ok := err.(*pq.Error); ok && err.Code == pgFKeyViolation {
-					return ErrFKeyViolation{errors.Wrapf(err, "user stars event key fk violation: %v", err)}
+					return ErrFKeyViolation{fmt.Errorf("user stars event key fk violation: %v", err)}
 				}
-				return errors.Wrap(err, "unable to insert star for user")
+				return fmt.Errorf("unable to insert star for user: %w", err)
 			}
 		}
 
@@ -145,8 +147,11 @@ func (s *Service) GetUsers(ctx context.Context) ([]User, error) {
 		stars.user_id = users.id
 	GROUP BY users.id
 	`)
+	if err != nil {
+		return users, fmt.Errorf("unable to fetch users: %w", err)
+	}
 
-	return users, errors.Wrap(err, "unable to fetch users")
+	return users, nil
 }
 
 // GetUsersByRealm retrieves all users in a specific realm.
@@ -172,8 +177,11 @@ func (s *Service) GetUsersByRealm(ctx context.Context, realmID int64) ([]User, e
 	WHERE realm_id = $1
 	GROUP BY users.id
 	`, realmID)
+	if err != nil {
+		return users, fmt.Errorf("unable to fetch users: %w", err)
+	}
 
-	return users, errors.Wrap(err, "unable to fetch users")
+	return users, nil
 }
 
 // GetUserByID retrieves a user from the database by id.
@@ -200,10 +208,12 @@ func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 	GROUP BY users.id
 	`, id)
 	if err == sql.ErrNoRows {
-		return u, ErrNoResults{errors.Wrapf(err, "user %d does not exist", u.ID)}
+		return u, ErrNoResults{fmt.Errorf("user %d does not exist: %w", u.ID, err)}
+	} else if err != nil {
+		return u, fmt.Errorf("unable to select user: %w", err)
 	}
 
-	return u, errors.Wrap(err, "unable to select user")
+	return u, nil
 }
 
 // PatchUser updates a user by their ID.
@@ -227,29 +237,30 @@ func (s *Service) PatchUser(ctx context.Context, pu PatchUser) error {
 				id = :id
 		`, pu)
 		if err != nil {
-			return errors.Wrap(err, "unable to patch user")
+			return fmt.Errorf("unable to patch user: %w", err)
 		}
 
 		if count, err := result.RowsAffected(); err != nil || count == 0 {
-			return ErrNoResults{errors.Wrapf(err, "user ID %d not found", pu.ID)}
+			return ErrNoResults{fmt.Errorf("user ID %d not found", pu.ID, err)}
 		}
 
 		if pu.Stars != nil {
 			if _, err := tx.ExecContext(ctx, "DELETE FROM stars WHERE user_id = $1", pu.ID); err != nil {
-				return errors.Wrap(err, "unable to remove user stars")
+				return fmt.Errorf("unable to remove user stars: %w", err)
 			}
 
 			starsStmt, err := tx.PrepareContext(ctx, "INSERT INTO stars (user_id, event_key) VALUES ($1, $2)")
 			if err != nil {
-				return errors.Wrap(err, "unable to prepare stars insert statement")
+				return fmt.Errorf("unable to prepare stars insert statement: %w", err)
 			}
 
 			for _, star := range pu.Stars {
 				if _, err := starsStmt.ExecContext(ctx, pu.ID, star); err != nil {
 					if err, ok := err.(*pq.Error); ok && err.Code == pgFKeyViolation {
-						return ErrFKeyViolation{errors.Wrapf(err, "user stars event key fk violation: %v", err)}
+						return ErrFKeyViolation{fmt.Errorf("user stars event key fk violation: %w", err)}
 					}
-					return errors.Wrap(err, "unable to insert star for user")
+
+					return fmt.Errorf("unable to insert star for user")
 				}
 			}
 		}
@@ -304,7 +315,7 @@ func (s *Service) CheckSimilarUsernameExists(ctx context.Context, username strin
 	}
 
 	if err != nil {
-		return errors.Wrap(err, "unable to select whether user exists")
+		return fmt.Errorf("unable to select whether user exists: %w", err)
 	}
 
 	if ok {

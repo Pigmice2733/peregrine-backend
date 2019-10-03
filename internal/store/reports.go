@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 )
 
 // A Stat holds a single statistic from a single match, and could be either a
@@ -69,7 +70,7 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 			)
 			`, r.EventKey, r.MatchKey, r.TeamKey, r.ReporterID).Scan(&existed)
 		if err != nil {
-			return errors.Wrap(err, "unable to determine if report exists")
+			return fmt.Errorf("unable to determine if report exists: %w", err)
 		}
 
 		_, err = tx.NamedExecContext(ctx, `
@@ -79,8 +80,11 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 			ON CONFLICT (event_key, match_key, team_key, reporter_id)
 				DO UPDATE SET data = :data, realm_id = :realm_id
 		`, r)
+		if err != nil {
+			return fmt.Errorf("unable to upsert report: %w", err)
+		}
 
-		return errors.Wrap(err, "unable to upsert report")
+		return nil
 	})
 
 	return !existed, err

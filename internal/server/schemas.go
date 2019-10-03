@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -38,7 +39,7 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 		}
 
 		err := s.Store.CreateSchema(r.Context(), schema)
-		if _, ok := err.(store.ErrExists); ok {
+		if errors.Is(err, store.ErrExists{}) {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
 		} else if err != nil {
@@ -61,7 +62,7 @@ func (s *Server) getSchemasHandler() http.HandlerFunc {
 			}
 
 			schema, err := s.Store.GetSchemaByYear(r.Context(), year)
-			if _, ok := err.(store.ErrNoResults); ok {
+			if errors.Is(err, store.ErrNoResults{}) {
 				ihttp.Error(w, http.StatusNotFound)
 				return
 			} else if err != nil {
@@ -100,7 +101,7 @@ func (s *Server) getSchemaByIDHandler() http.HandlerFunc {
 		}
 
 		schema, err := s.Store.GetSchemaByID(r.Context(), id)
-		if _, ok := err.(store.ErrNoResults); ok {
+		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if err != nil {

@@ -2,9 +2,9 @@ package store
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 )
 
 // Comment defines a comment on a robots performance during a match. It is the
@@ -36,7 +36,7 @@ func (s *Service) UpsertMatchTeamComment(ctx context.Context, c Comment) (create
 			)
 			`, c.EventKey, c.MatchKey, c.TeamKey, c.ReporterID).Scan(&existed)
 		if err != nil {
-			return errors.Wrap(err, "unable to check if comment exists")
+			return fmt.Errorf("unable to check if comment exists: %w", err)
 		}
 
 		_, err = tx.NamedExecContext(ctx, `
@@ -47,7 +47,7 @@ func (s *Service) UpsertMatchTeamComment(ctx context.Context, c Comment) (create
 			DO UPDATE SET comment = :comment, realm_id = :realm_id
 		`, c)
 		if err != nil {
-			return errors.Wrap(err, "unable to upsert comment")
+			return fmt.Errorf("unable to upsert comment: %w", err)
 		}
 
 		return nil

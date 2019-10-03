@@ -7,9 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"errors"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 )
 
 // Schema describes the statistics that reports should include
@@ -73,11 +74,13 @@ func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
 			VALUES (:year, :realm_id, :schema)
 		`, schema)
 
-		if err, ok := err.(*pq.Error); ok && err.Code == pgExists {
+		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == pgExists {
 			return &ErrExists{fmt.Errorf("schema already exists: %v", err.Error())}
+		} else if err != nil {
+			return fmt.Errorf("unable to insert schema: %w", err)
 		}
 
-		return errors.Wrap(err, "unable to insert schema")
+		return nil
 	})
 }
 
@@ -88,9 +91,11 @@ func (s *Service) GetSchemaByID(ctx context.Context, id int64) (Schema, error) {
 	err := s.db.GetContext(ctx, &schema, "SELECT * FROM schemas WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		return schema, ErrNoResults{fmt.Errorf("schema %d does not exist", schema.ID)}
+	} else if err != nil {
+		return schema, fmt.Errorf("unable to retrieve schema: %w", err)
 	}
 
-	return schema, errors.Wrap(err, "unable to retrieve schema")
+	return schema, nil
 }
 
 // GetSchemaByYear retrieves the schema for a given year
@@ -100,9 +105,11 @@ func (s *Service) GetSchemaByYear(ctx context.Context, year int) (Schema, error)
 	err := s.db.GetContext(ctx, &schema, "SELECT * FROM schemas WHERE year = $1", year)
 	if err == sql.ErrNoRows {
 		return schema, ErrNoResults{fmt.Errorf("no schema for year %d exists", year)}
+	} else if err != nil {
+		return schema, fmt.Errorf("unable to retrieve schema: %w", err)
 	}
 
-	return schema, errors.Wrap(err, "unable to retrieve schema")
+	return schema, nil
 }
 
 // GetSchemasForRealm retrieves schemas from the database frm a specific realm,
@@ -121,6 +128,9 @@ func (s *Service) GetSchemasForRealm(ctx context.Context, realmID *int64) ([]Sch
 		realms.id = NULL OR
 		(realms.share_reports = true OR realms.id = $1)
 	`, realmID)
+	if err != nil {
+		return schemas, fmt.Errorf("unable to retrieve schemas: %w", err)
+	}
 
-	return schemas, errors.Wrap(err, "unable to retrieve schemas")
+	return schemas, nil
 }
