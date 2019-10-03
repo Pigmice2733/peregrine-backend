@@ -241,7 +241,7 @@ func (s *Service) PatchUser(ctx context.Context, pu PatchUser) error {
 		}
 
 		if count, err := result.RowsAffected(); err != nil || count == 0 {
-			return ErrNoResults{fmt.Errorf("user ID %d not found", pu.ID, err)}
+			return ErrNoResults{fmt.Errorf("user ID %d not found: %w", pu.ID, err)}
 		}
 
 		if pu.Stars != nil {
