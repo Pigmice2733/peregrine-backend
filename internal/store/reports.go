@@ -139,9 +139,10 @@ func (s *Service) GetMatchTeamReportsForRealm(ctx context.Context, matchKey stri
 	return reports, s.db.SelectContext(ctx, &reports, query, matchKey, teamKey, realmID)
 }
 
-// GetLeaderboard retrieves leaderboard information from the reports and users table.
-func (s *Service) GetLeaderboard(ctx context.Context) (Leaderboard, error) {
-	leaderboard := Leaderboard{}
+// GetLeaderboardForRealm retrieves leaderboard information from the reports and users table for users
+// in the given realm.
+func (s *Service) GetLeaderboardForRealm(ctx context.Context, realmID int64) (Leaderboard, error) {
+	leaderboard := make(Leaderboard, 0)
 
 	return leaderboard, s.db.SelectContext(ctx, &leaderboard, `
 	SELECT
@@ -149,7 +150,9 @@ func (s *Service) GetLeaderboard(ctx context.Context) (Leaderboard, error) {
 	FROM users
 	LEFT JOIN reports
 		ON (users.id = reports.reporter_id)
+	WHERE
+		users.realm_id = $1
 	GROUP BY users.id
 	ORDER BY num_reports DESC;
-	`)
+	`, realmID)
 }

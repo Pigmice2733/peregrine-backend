@@ -92,7 +92,13 @@ func (s *Server) putReport() http.HandlerFunc {
 
 func (s *Server) leaderboardHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		leaderboard, err := s.Store.GetLeaderboard(r.Context())
+		realmID, err := ihttp.GetRealmID(r)
+		if err != nil {
+			ihttp.Error(w, http.StatusForbidden)
+			return
+		}
+
+		leaderboard, err := s.Store.GetLeaderboardForRealm(r.Context(), realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("getting leaderboard")
