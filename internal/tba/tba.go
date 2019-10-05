@@ -236,6 +236,8 @@ func (s *Service) GetEvents(ctx context.Context, year int) ([]store.Event, error
 	return events, nil
 }
 
+const tbaURL = "https://www.thebluealliance.com"
+
 // GetMatches retrieves all matches from a specific event.
 func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Match, error) {
 	path := fmt.Sprintf("/event/%s/matches", eventKey)
@@ -283,7 +285,7 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 			blueScore = tbaMatch.Alliances.Blue.Score
 		}
 
-		matchURL := fmt.Sprintf("https://www.thebluealliance.com/match/%s", tbaMatch.Key)
+		matchURL := fmt.Sprintf(tbaURL+"/match/%s", tbaMatch.Key)
 
 		match := store.Match{
 			Key:                tbaMatch.Key,
