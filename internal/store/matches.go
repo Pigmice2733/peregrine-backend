@@ -138,7 +138,7 @@ func (s *Service) GetEventRealmIDByMatchKeyTx(ctx context.Context, tx *sqlx.Tx, 
 
 // GetMatchForRealm returns a specific match by key in the given realm.
 func (s *Service) GetMatchForRealm(ctx context.Context, matchKey string, realmID *int64) (Match, error) {
-	query := matchesQuery + " AND matches.key = $2"
+	const query = matchesQuery + " AND matches.key = $2"
 
 	var m Match
 	err := s.db.GetContext(ctx, &m, query, realmID, matchKey)
@@ -273,39 +273,55 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches
 	})
 }
 
-// GetAnalysisInfoForRealm returns match information that's pertinent to doing analysis by getting
+const analysisInfoQuery = `
+SELECT
+	matches.key,
+	r.team_keys AS red_alliance,
+	b.team_keys AS blue_alliance,
+	matches.red_score_breakdown,
+	matches.blue_score_breakdown
+FROM
+	matches
+INNER JOIN
+	alliances r
+ON
+	matches.key = r.match_key AND r.is_blue = false
+INNER JOIN
+	alliances b
+ON
+	matches.key = b.match_key AND b.is_blue = true
+INNER JOIN
+	events
+	ON
+		matches.event_key = events.key	
+WHERE
+	(events.realm_id = $1 OR events.realm_id IS NULL) AND
+	matches.event_key = $2`
+
+// GetEventAnalysisInfoForRealm returns match information that's pertinent to doing analysis by getting
 // all the matches with the given event key and either null or matching realm IDs.
-func (s *Service) GetAnalysisInfoForRealm(ctx context.Context, eventKey string, realmID *int64) ([]Match, error) {
+func (s *Service) GetEventAnalysisInfoForRealm(ctx context.Context, eventKey string, realmID *int64) ([]Match, error) {
 	matches := make([]Match, 0)
 
-	err := s.db.SelectContext(ctx, &matches, `
-	SELECT
-		matches.key,
-		r.team_keys AS red_alliance,
-		b.team_keys AS blue_alliance,
-		matches.red_score_breakdown,
-		matches.blue_score_breakdown
-	FROM
-		matches
-	INNER JOIN
-		alliances r
-	ON
-		matches.key = r.match_key AND r.is_blue = false
-	INNER JOIN
-		alliances b
-	ON
-		matches.key = b.match_key AND b.is_blue = true
-	INNER JOIN
-		events
-		ON
-			matches.event_key = events.key	
-	WHERE
-		(events.realm_id = $1 OR events.realm_id IS NULL) AND
-		matches.event_key = $2
-	`, realmID, eventKey)
+	err := s.db.SelectContext(ctx, &matches, analysisInfoQuery, realmID, eventKey)
 	if err != nil {
 		return matches, fmt.Errorf("unable to get analysis info: %w", err)
 	}
 
 	return matches, nil
+}
+
+// GetMatchAnalysisInfoForRealm returns match information that's pertinent to doing analysis by getting
+// all the matches with the given event key and either null or matching realm IDs.
+func (s *Service) GetMatchAnalysisInfoForRealm(ctx context.Context, eventKey, matchKey string, realmID *int64) (match Match, err error) {
+	const query = analysisInfoQuery + "AND matches.key = $3"
+
+	err = s.db.GetContext(ctx, &match, query, realmID, eventKey, matchKey)
+	if err == sql.ErrNoRows {
+		return match, ErrNoResults{fmt.Errorf("unable to find match: %w", err)}
+	} else if err != nil {
+		return match, fmt.Errorf("unable to get analysis info: %w", err)
+	}
+
+	return match, nil
 }
