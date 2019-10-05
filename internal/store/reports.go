@@ -124,19 +124,20 @@ func (s *Service) GetEventTeamReportsForRealm(ctx context.Context, eventKey stri
 
 // GetMatchTeamReportsForRealm retrieves all reports for a specific team and event, filtering to only retrieve reports for realms
 // that are sharing reports or have a matching realm ID.
-func (s *Service) GetMatchTeamReportsForRealm(ctx context.Context, matchKey string, teamKey string, realmID *int64) (reports []Report, err error) {
+func (s *Service) GetMatchTeamReportsForRealm(ctx context.Context, eventKey, matchKey string, teamKey string, realmID *int64) (reports []Report, err error) {
 	const query = `
 	SELECT reports.*
 	FROM reports
 	INNER JOIN realms
 		ON realms.id = reports.realm_id
 	WHERE
-		reports.match_key = $1 AND
-		reports.team_key = $2 AND
-		(realms.share_reports = true OR realms.id = $3)`
+		reports.event_key = $1 AND
+		reports.match_key = $2 AND
+		reports.team_key = $3 AND
+		(realms.share_reports = true OR realms.id = $4)`
 
 	reports = make([]Report, 0)
-	return reports, s.db.SelectContext(ctx, &reports, query, matchKey, teamKey, realmID)
+	return reports, s.db.SelectContext(ctx, &reports, query, eventKey, matchKey, teamKey, realmID)
 }
 
 // GetLeaderboardForRealm retrieves leaderboard information from the reports and users table for users

@@ -28,7 +28,7 @@ func (s *Server) getReports() http.HandlerFunc {
 			realmID = &userRealmID
 		}
 
-		reports, err := s.Store.GetMatchTeamReportsForRealm(r.Context(), matchKey, teamKey, realmID)
+		reports, err := s.Store.GetMatchTeamReportsForRealm(r.Context(), eventKey, matchKey, teamKey, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("getting reports")

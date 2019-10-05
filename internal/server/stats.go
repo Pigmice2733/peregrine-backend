@@ -55,7 +55,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		storeMatches, err := s.Store.GetAnalysisInfoForRealm(r.Context(), eventKey, realmID)
+		storeMatches, err := s.Store.GetEventAnalysisInfoForRealm(r.Context(), eventKey, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving match analysis info")
@@ -112,7 +112,7 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 		// Add eventKey as prefix to matchKey so that matchKey is globally
 		// unique and consistent with TBA match keys.
 		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
-		match, err := s.Store.GetMatchForRealm(r.Context(), matchKey, realmID)
+		match, err := s.Store.GetMatchAnalysisInfoForRealm(r.Context(), eventKey, matchKey, realmID)
 		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
@@ -122,7 +122,7 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 			return
 		}
 
-		reports, err := s.Store.GetMatchTeamReportsForRealm(r.Context(), eventKey, teamKey, realmID)
+		reports, err := s.Store.GetMatchTeamReportsForRealm(r.Context(), eventKey, matchKey, teamKey, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving reports")
