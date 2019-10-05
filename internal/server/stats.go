@@ -34,7 +34,7 @@ func (s *Server) eventStats() http.HandlerFunc {
 		}
 
 		if event.SchemaID == nil {
-			ihttp.Respond(w, fmt.Errorf("no schema found"), http.StatusBadRequest)
+			ihttp.Respond(w, errors.New("no schema found"), http.StatusBadRequest)
 			return
 		}
 
@@ -105,7 +105,7 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 		}
 
 		if event.SchemaID == nil {
-			ihttp.Respond(w, fmt.Errorf("no schema found"), http.StatusBadRequest)
+			ihttp.Respond(w, errors.New("no schema found"), http.StatusBadRequest)
 			return
 		}
 
