@@ -10,7 +10,7 @@ For a description of what scouting is, please view the [SCOUTING.md](SCOUTING.md
 
 ## Setup
 
-1. Install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and [Go](https://golang.org/doc/install) (>=1.11)
+1. Install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and [Go](https://golang.org/doc/install) (>=1.13)
 
 2. Clone the repo:
 
@@ -64,8 +64,7 @@ peregrine config.json
 ## API Documentation
 
 Peregrine's entire API is documented with OpenAPI 3.0.0 (previously known as Swagger). You can
-view the documentation [here](http://petstore.swagger.io/?url=http://edge.api.peregrine.ga:8080/openapi.yaml#/),
-or by running peregrine locally and going [here](http://petstore.swagger.io/?url=http://localhost:8080/openapi.yaml#/).
+view the documentation [here](https://github.com/Pigmice2733/peregrine-backend/blob/develop/internal/server/openapi.yaml).
 If you notice any inaccuracies please let us know so the documentation can be corrected.
 
 ## Testing
