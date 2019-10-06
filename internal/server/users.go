@@ -35,7 +35,7 @@ type requestUser struct {
 const (
 	accessTokenDuration  = time.Minute * 5        // 5 minutes
 	refreshTokenDuration = time.Hour * 24 * 7 * 4 // 4 weeks
-	bcryptCost           = 12                     // ~236ms per hash on my i7-8550U
+	bcryptCost           = 13
 )
 
 func generateAccessToken(user store.User, expires time.Time, secret string) (string, error) {
