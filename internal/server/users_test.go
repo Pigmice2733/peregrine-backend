@@ -153,7 +153,7 @@ func TestAuthenticateHandler(t *testing.T) {
 			expectedUsername:   "franklin",
 			expectedStatusCode: http.StatusOK,
 			expectedResponse: map[string]interface{}{
-				"accessToken":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJlZ3JpbmVSb2xlcyI6eyJpc1N1cGVyQWRtaW4iOmZhbHNlLCJpc0FkbWluIjpmYWxzZSwiaXNWZXJpZmllZCI6ZmFsc2V9LCJwZXJlZ3JpbmVSZWFsbSI6MCwiZXhwIjoxNTU4MTM2OTI4LCJzdWIiOiIwIn0.X7O8HOHrhfPXpSwxIHLALZAe_y5TXxkEq7iXvUSQX0I",
+				"accessToken":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJlZ3JpbmVSb2xlcyI6eyJpc1N1cGVyQWRtaW4iOmZhbHNlLCJpc0FkbWluIjpmYWxzZSwiaXNWZXJpZmllZCI6ZmFsc2V9LCJwZXJlZ3JpbmVSZWFsbSI6MCwiZXhwIjoxNTU4MDUwODI4LCJzdWIiOiIwIn0.uGr484v1fV-4Th__BILUQaYNBQ5rpqx5EXcXfZDEjIY",
 				"refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJlZ3JpbmVQYXNzd29yZENoYW5nZWQiOjE1NTgwNTQ0NTksImV4cCI6MTU2MDQ2OTcyOCwic3ViIjoiMCJ9.vJGdYkRAU8tOaGnuywHSsDpW5UnypmE4BBhaP_MpjE0",
 			},
 		},
@@ -250,7 +250,7 @@ func TestRefreshHandler(t *testing.T) {
 			expectedID:         6,
 			expectedStatusCode: http.StatusOK,
 			expectedResponse: map[string]interface{}{
-				"accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJlZ3JpbmVSb2xlcyI6eyJpc1N1cGVyQWRtaW4iOmZhbHNlLCJpc0FkbWluIjpmYWxzZSwiaXNWZXJpZmllZCI6ZmFsc2V9LCJwZXJlZ3JpbmVSZWFsbSI6MCwiZXhwIjoxNTU4NDAxODEwLCJzdWIiOiI2In0.nMepjyDJQvKQiRPCfisXLTYS4lrQJlJJIxlDD2StrQY",
+				"accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwZXJlZ3JpbmVSb2xlcyI6eyJpc1N1cGVyQWRtaW4iOmZhbHNlLCJpc0FkbWluIjpmYWxzZSwiaXNWZXJpZmllZCI6ZmFsc2V9LCJwZXJlZ3JpbmVSZWFsbSI6MCwiZXhwIjoxNTU4MzE1NzEwLCJzdWIiOiI2In0.Xpr86FZ8zvaGLIgS5rMm53wIOfF8pJGa1IyigU_MmAU",
 			},
 		},
 		{

@@ -33,7 +33,7 @@ type requestUser struct {
 }
 
 const (
-	accessTokenDuration  = time.Hour * 24         // 1 day
+	accessTokenDuration  = time.Minute * 5        // 5 minutes
 	refreshTokenDuration = time.Hour * 24 * 7 * 4 // 4 weeks
 	bcryptCost           = 12                     // ~236ms per hash on my i7-8550U
 )
