@@ -105,7 +105,7 @@ func (nm ErrNotModified) Is(target error) bool {
 }
 
 func (s *Service) makeRequest(ctx context.Context, path string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", s.URL+path, nil)
+	req, err := http.NewRequest(http.MethodGet, s.URL+path, nil)
 	if err != nil {
 		return nil, err
 	}

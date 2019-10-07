@@ -177,7 +177,7 @@ func TestAuthenticateHandler(t *testing.T) {
 			}
 
 			rr := httptest.NewRecorder()
-			req, err := http.NewRequest("GET", "/", requestBuffer)
+			req, err := http.NewRequest(http.MethodGet, "/", requestBuffer)
 			if err != nil {
 				t.Errorf("did not expect error %v setting up test", err)
 				t.FailNow()
@@ -330,7 +330,7 @@ func TestRefreshHandler(t *testing.T) {
 			}
 
 			rr := httptest.NewRecorder()
-			req, err := http.NewRequest("GET", "/", requestBuffer)
+			req, err := http.NewRequest(http.MethodGet, "/", requestBuffer)
 			if err != nil {
 				t.Errorf("did not expect error %v setting up test", err)
 				t.FailNow()
