@@ -1,6 +1,7 @@
 package server
 
 import (
+	"net/http"
 	"time"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
@@ -10,54 +11,54 @@ import (
 func (s *Server) registerRoutes() *mux.Router {
 	r := mux.NewRouter()
 
-	r.Handle("/", healthHandler(s.uptime, s.TBA, s.Store)).Methods("GET")
-	r.Handle("/openapi.yaml", openAPIHandler(openAPI)).Methods("GET")
+	r.Handle("/", healthHandler(s.uptime, s.TBA, s.Store)).Methods(http.MethodGet)
+	r.Handle("/openapi.yaml", openAPIHandler(openAPI)).Methods(http.MethodGet)
 
-	r.Handle("/authenticate", authenticateHandler(s.Logger, time.Now, s.Store, s.JWTSecret)).Methods("POST")
-	r.Handle("/refresh", refreshHandler(s.Logger, time.Now, s.Store, s.JWTSecret)).Methods("POST")
+	r.Handle("/authenticate", authenticateHandler(s.Logger, time.Now, s.Store, s.JWTSecret)).Methods(http.MethodPost)
+	r.Handle("/refresh", refreshHandler(s.Logger, time.Now, s.Store, s.JWTSecret)).Methods(http.MethodPost)
 
-	r.Handle("/users", s.createUserHandler()).Methods("POST")
-	r.Handle("/users", ihttp.ACL(s.getUsersHandler(), false, false, true)).Methods("GET")
-	r.Handle("/users/{id}", ihttp.ACL(s.getUserByIDHandler(), false, false, true)).Methods("GET")
-	r.Handle("/users/{id}", ihttp.ACL(s.patchUserHandler(), false, false, true)).Methods("PATCH")
-	r.Handle("/users/{id}", ihttp.ACL(s.deleteUserHandler(), false, false, true)).Methods("DELETE")
+	r.Handle("/users", s.createUserHandler()).Methods(http.MethodPost)
+	r.Handle("/users", ihttp.ACL(s.getUsersHandler(), false, false, true)).Methods(http.MethodGet)
+	r.Handle("/users/{id}", ihttp.ACL(s.getUserByIDHandler(), false, false, true)).Methods(http.MethodGet)
+	r.Handle("/users/{id}", ihttp.ACL(s.patchUserHandler(), false, false, true)).Methods(http.MethodPatch)
+	r.Handle("/users/{id}", ihttp.ACL(s.deleteUserHandler(), false, false, true)).Methods(http.MethodDelete)
 
-	r.Handle("/schemas", ihttp.ACL(s.getSchemasHandler(), false, false, false)).Methods("GET")
-	r.Handle("/schemas", ihttp.ACL(s.createSchemaHandler(), true, true, true)).Methods("POST")
-	r.Handle("/schemas/{id}", ihttp.ACL(s.getSchemaByIDHandler(), false, false, false)).Methods("GET")
+	r.Handle("/schemas", ihttp.ACL(s.getSchemasHandler(), false, false, false)).Methods(http.MethodGet)
+	r.Handle("/schemas", ihttp.ACL(s.createSchemaHandler(), true, true, true)).Methods(http.MethodPost)
+	r.Handle("/schemas/{id}", ihttp.ACL(s.getSchemaByIDHandler(), false, false, false)).Methods(http.MethodGet)
 
-	r.Handle("/events", s.eventsHandler()).Methods("GET")
-	r.Handle("/events/{eventKey}", ihttp.ACL(s.upsertEventHandler(), true, true, true)).Methods("PUT")
-	r.Handle("/events/{eventKey}", s.eventHandler()).Methods("GET")
+	r.Handle("/events", s.eventsHandler()).Methods(http.MethodGet)
+	r.Handle("/events/{eventKey}", ihttp.ACL(s.upsertEventHandler(), true, true, true)).Methods(http.MethodPut)
+	r.Handle("/events/{eventKey}", s.eventHandler()).Methods(http.MethodGet)
 
-	r.Handle("/events/{eventKey}/stats", s.eventStats()).Methods("GET")
+	r.Handle("/events/{eventKey}/stats", s.eventStats()).Methods(http.MethodGet)
 
-	r.Handle("/events/{eventKey}/matches", s.matchesHandler()).Methods("GET")
-	r.Handle("/events/{eventKey}/matches/{matchKey}", s.matchHandler()).Methods("GET")
-	r.Handle("/events/{eventKey}/matches/{matchKey}", ihttp.ACL(s.upsertMatchHandler(), true, true, true)).Methods("PUT")
-	r.Handle("/events/{eventKey}/matches/{matchKey}", ihttp.ACL(s.deleteMatchHandler(), true, true, true)).Methods("DELETE")
+	r.Handle("/events/{eventKey}/matches", s.matchesHandler()).Methods(http.MethodGet)
+	r.Handle("/events/{eventKey}/matches/{matchKey}", s.matchHandler()).Methods(http.MethodGet)
+	r.Handle("/events/{eventKey}/matches/{matchKey}", ihttp.ACL(s.upsertMatchHandler(), true, true, true)).Methods(http.MethodPut)
+	r.Handle("/events/{eventKey}/matches/{matchKey}", ihttp.ACL(s.deleteMatchHandler(), true, true, true)).Methods(http.MethodDelete)
 
-	r.Handle("/events/{eventKey}/teams", s.eventTeamsHandler()).Methods("GET")
-	r.Handle("/events/{eventKey}/teams/{teamKey}", s.eventTeamHandler()).Methods("GET")
-	r.Handle("/events/{eventKey}/teams/{teamKey}/comments", ihttp.ACL(s.getEventComments(), false, false, false)).Methods("GET")
+	r.Handle("/events/{eventKey}/teams", s.eventTeamsHandler()).Methods(http.MethodGet)
+	r.Handle("/events/{eventKey}/teams/{teamKey}", s.eventTeamHandler()).Methods(http.MethodGet)
+	r.Handle("/events/{eventKey}/teams/{teamKey}/comments", ihttp.ACL(s.getEventComments(), false, false, false)).Methods(http.MethodGet)
 
-	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.getReports(), false, false, false)).Methods("GET")
-	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.putReport(), false, true, true)).Methods("PUT")
+	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.getReports(), false, false, false)).Methods(http.MethodGet)
+	r.Handle("/events/{eventKey}/matches/{matchKey}/reports/{teamKey}", ihttp.ACL(s.putReport(), false, true, true)).Methods(http.MethodPut)
 
-	r.Handle("/events/{eventKey}/matches/{matchKey}/teams/{teamKey}/stats", s.matchTeamStats()).Methods("GET")
+	r.Handle("/events/{eventKey}/matches/{matchKey}/teams/{teamKey}/stats", s.matchTeamStats()).Methods(http.MethodGet)
 
-	r.Handle("/events/{eventKey}/matches/{matchKey}/comments/{teamKey}", ihttp.ACL(s.getMatchTeamComments(), false, false, false)).Methods("GET")
-	r.Handle("/events/{eventKey}/matches/{matchKey}/comments/{teamKey}", ihttp.ACL(s.putMatchTeamComment(), false, true, true)).Methods("PUT")
+	r.Handle("/events/{eventKey}/matches/{matchKey}/comments/{teamKey}", ihttp.ACL(s.getMatchTeamComments(), false, false, false)).Methods(http.MethodGet)
+	r.Handle("/events/{eventKey}/matches/{matchKey}/comments/{teamKey}", ihttp.ACL(s.putMatchTeamComment(), false, true, true)).Methods(http.MethodPut)
 
-	r.Handle("/leaderboard", s.leaderboardHandler()).Methods("GET")
+	r.Handle("/leaderboard", s.leaderboardHandler()).Methods(http.MethodGet)
 
-	r.Handle("/realms", s.realmsHandler()).Methods("GET")
-	r.Handle("/realms", s.createRealmHandler()).Methods("POST")
-	r.Handle("/realms/{id}", s.realmHandler()).Methods("GET")
-	r.Handle("/realms/{id}", ihttp.ACL(s.updateRealmHandler(), true, true, true)).Methods("POST")
-	r.Handle("/realms/{id}", ihttp.ACL(s.deleteRealmHandler(), true, true, true)).Methods("DELETE")
+	r.Handle("/realms", s.realmsHandler()).Methods(http.MethodGet)
+	r.Handle("/realms", s.createRealmHandler()).Methods(http.MethodPost)
+	r.Handle("/realms/{id}", s.realmHandler()).Methods(http.MethodGet)
+	r.Handle("/realms/{id}", ihttp.ACL(s.updateRealmHandler(), true, true, true)).Methods(http.MethodPost)
+	r.Handle("/realms/{id}", ihttp.ACL(s.deleteRealmHandler(), true, true, true)).Methods(http.MethodDelete)
 
-	r.Handle("/teams/{teamKey}", s.teamHandler()).Methods("GET")
+	r.Handle("/teams/{teamKey}", s.teamHandler()).Methods(http.MethodGet)
 
 	return r
 }
