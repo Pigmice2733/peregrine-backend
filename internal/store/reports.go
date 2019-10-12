@@ -42,12 +42,31 @@ type Report struct {
 	ReporterID *int64     `json:"reporterId" db:"reporter_id"`
 	RealmID    *int64     `json:"-" db:"realm_id"`
 	Data       ReportData `json:"data" db:"data"`
+	Comment    string     `json:"comment" db:"comment"`
 }
 
 // Leaderboard holds information about how many reports each reporter submitted.
 type Leaderboard []struct {
 	ReporterID int64 `json:"reporterId" db:"reporter_id"`
 	Reports    int64 `json:"reports" db:"num_reports"`
+}
+
+// GetEventTeamComments gets all report comments for a specific team at a specific event.
+// Includes private comments from the specified realm.
+func (s *Service) GetEventTeamComments(ctx context.Context, eventKey, teamKey string, realmID *int64) ([]string, error) {
+    const query = `
+	SELECT reports.comment
+	FROM reports
+	LEFT JOIN realms
+		ON realms.id = reports.realm_id AND
+		(realms.share_reports = true OR realms.id = $3)
+	WHERE
+		reports.event_key = $1 AND
+		reports.team_key = $2 AND
+		reports.comment IS NOT NULL`
+
+	comments := []string{}
+	return comments, s.db.SelectContext(ctx, &comments, query, eventKey, teamKey, realmID)
 }
 
 // UpsertReport creates a new report in the db, or replaces the existing one if
@@ -75,10 +94,10 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 
 		_, err = tx.NamedExecContext(ctx, `
 			INSERT INTO
-				reports (event_key, match_key, team_key, reporter_id, realm_id, data)
-			VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :data)
+				reports (event_key, match_key, team_key, reporter_id, realm_id, data, comment)
+			VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :data, :comment)
 			ON CONFLICT (event_key, match_key, team_key, reporter_id)
-				DO UPDATE SET data = :data, realm_id = :realm_id
+				DO UPDATE SET data = :data, realm_id = :realm_id, comment = :comment
 		`, r)
 		if err != nil {
 			return fmt.Errorf("unable to upsert report: %w", err)

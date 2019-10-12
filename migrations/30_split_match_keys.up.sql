@@ -1,23 +1,12 @@
 BEGIN;
-ALTER TABLE comments DROP CONSTRAINT comments_event_key_fkey;
-ALTER TABLE comments DROP CONSTRAINT comments_match_key_fkey;
-ALTER TABLE comments DROP CONSTRAINT comments_realm_id_fkey;
-ALTER TABLE comments DROP CONSTRAINT comments_reporter_id_fkey;
-
-ALTER TABLE comments ADD COLUMN report_id INTEGER REFERENCES reports;
-UPDATE comments SET report_id = reports.id
-    FROM reports WHERE
+ALTER TABLE reports ADD COLUMN comment TEXT;
+UPDATE reports SET comment = comments.comment
+    FROM comments WHERE
         reports.match_key = comments.match_key
         AND reports.team_key = comments.team_key
         AND reports.reporter_id IS NOT DISTINCT FROM comments.reporter_id
         AND reports.realm_id IS NOT DISTINCT FROM comments.realm_id;
-
-ALTER TABLE comments DROP COLUMN event_key;
-ALTER TABLE comments DROP COLUMN match_key;
-ALTER TABLE comments DROP COLUMN team_key;
-ALTER TABLE comments DROP COLUMN reporter_id;
-ALTER TABLE comments DROP COLUMN realm_id;
-ALTER TABLE comments ALTER COLUMN report_id SET NOT NULL;
+DROP TABLE comments;
 
 ALTER TABLE alliances DROP CONSTRAINT alliances_match_key_fkey;
 ALTER TABLE alliances ADD COLUMN event_key TEXT;

@@ -16,24 +16,22 @@ ALTER TABLE reports ADD FOREIGN KEY(event_key) REFERENCES events(key);
 ALTER TABLE alliances ADD FOREIGN KEY(match_key) REFERENCES matches(key);
 ALTER TABLE alliances ADD PRIMARY KEY(match_key, is_blue);
 
-ALTER TABLE comments ADD COLUMN event_key TEXT REFERENCES events;
-ALTER TABLE comments ADD COLUMN match_key TEXT REFERENCES matches(key);
-ALTER TABLE comments ADD COLUMN team_key TEXT;
-ALTER TABLE comments ADD COLUMN reporter_id INTEGER REFERENCES users ON DELETE SET NULL;
-ALTER TABLE comments ADD COLUMN realm_id INTEGER REFERENCES realms ON DELETE SET NULL;
+CREATE TABLE IF NOT EXISTS comments (
+    id SERIAL PRIMARY KEY,
+    event_key TEXT NOT NULL REFERENCES events,
+    match_key TEXT NOT NULL REFERENCES matches,
+    team_key TEXT NOT NULL,
+    reporter_id INTEGER REFERENCES users ON DELETE SET NULL,
+    realm_id INTEGER REFERENCES realms ON DELETE SET NULL,
+    comment TEXT NOT NULL,
 
-UPDATE comments SET
-    event_key = reports.event_key,
-    match_key = reports.match_key,
-    team_key = reports.team_key,
-    reporter_id = reports.reporter_id,
-    realm_id = reports.realm_id
-    FROM reports WHERE
-        reports.id = comments.report_id;
+    UNIQUE(event_key, match_key, team_key, reporter_id)
+);
 
-ALTER TABLE comments DROP COLUMN report_id;
+INSERT INTO comments (event_key, match_key, team_key, reporter_id, realm_id, comment)
+    SELECT event_key, match_key, team_key, reporter_id, realm_id, comment
+    FROM reports WHERE comment IS NOT NULL;
 
-ALTER TABLE comments ALTER COLUMN event_key SET NOT NULL;
-ALTER TABLE comments ALTER COLUMN match_key SET NOT NULL;
-ALTER TABLE comments ALTER COLUMN team_key SET NOT NULL;
+ALTER TABLE reports DROP COLUMN comment;
+
 COMMIT;
