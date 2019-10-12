@@ -290,7 +290,7 @@ func TestGetMatches(t *testing.T) {
 				_, err := w.Write([]byte(`
 				[
                     {
-						"key": "key1",
+						"key": "event_key1",
 						"alliances": {
 							"red": {
 								"score": 220,
@@ -316,7 +316,7 @@ func TestGetMatches(t *testing.T) {
 						"actual_time": 1520274000
 					},
 					{
-						"key": "key2",
+						"key": "event_key2",
 						"alliances": {
 							"red": {
 								"score": 120,
@@ -361,7 +361,7 @@ func TestGetMatches(t *testing.T) {
 					BlueAlliance:       []string{"frc2733", "frc9876", "frc1"},
 					RedScoreBreakdown:  map[string]interface{}{"foobar": 3.0, "barbaz": true},
 					BlueScoreBreakdown: map[string]interface{}{"foobar": 1.0, "blabla": 3.212},
-					TBAURL:             newString(tbaURL + "/match/key1"),
+					TBAURL:             newString(tbaURL + "/match/event_key1"),
 				},
 				{
 					Key:                "key2",
@@ -375,7 +375,7 @@ func TestGetMatches(t *testing.T) {
 					BlueAlliance:       []string{"frc2", "frc7", "frc3"},
 					RedScoreBreakdown:  map[string]interface{}{"foobar": 90.2, "barbaz": false},
 					BlueScoreBreakdown: map[string]interface{}{"foobar": 4.2321, "blabla": 9.0},
-					TBAURL:             newString(tbaURL + "/match/key2"),
+					TBAURL:             newString(tbaURL + "/match/event_key2"),
 				},
 			},
 			expectErr: false,
@@ -398,7 +398,7 @@ func TestGetMatches(t *testing.T) {
 				_, err := w.Write([]byte(`
 				[
                     {
-						"key": "key1",
+						"key": "event_key1",
 						"alliances": {
 							"red": {
 								"score": -1,
@@ -414,7 +414,7 @@ func TestGetMatches(t *testing.T) {
 						"actual_time": 1520274000
 					},
 					{
-						"key": "key2",
+						"key": "event_key2",
 						"alliances": {
 							"red": {
 								"score": null,
@@ -447,7 +447,7 @@ func TestGetMatches(t *testing.T) {
 					BlueScore:     nil,
 					RedAlliance:   []string{"frc254", "frc1234", "frc00"},
 					BlueAlliance:  []string{"frc2733", "frc9876", "frc1"},
-					TBAURL:        newString(tbaURL + "/match/key1"),
+					TBAURL:        newString(tbaURL + "/match/event_key1"),
 				},
 				{
 					Key:           "key2",
@@ -459,7 +459,7 @@ func TestGetMatches(t *testing.T) {
 					BlueScore:     nil,
 					RedAlliance:   []string{"frc0", "frc1", "frc2"},
 					BlueAlliance:  []string{"frc2", "frc7", "frc3"},
-					TBAURL:        newString(tbaURL + "/match/key2"),
+					TBAURL:        newString(tbaURL + "/match/event_key2"),
 				},
 			},
 			expectErr: false,

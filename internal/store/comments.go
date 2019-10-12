@@ -10,42 +10,45 @@ import (
 // Comment defines a comment on a robots performance during a match. It is the
 // qualitative equivalent of a report.
 type Comment struct {
-	ID         int64  `json:"id" db:"id"`
-	EventKey   string `json:"-" db:"event_key"`
-	MatchKey   string `json:"matchKey" db:"match_key"`
-	TeamKey    string `json:"-" db:"team_key"`
-	ReporterID *int64 `json:"reporterId" db:"reporter_id"`
-	RealmID    *int64 `json:"-" db:"realm_id"`
-	Comment    string `json:"comment" db:"comment"`
+	ID       int64  `json:"id" db:"id"`
+	ReportID int64  `json:"report_id" db:"report_id"`
+	Comment  string `json:"comment" db:"comment"`
 }
 
 // UpsertMatchTeamComment will upsert a comment for a team in a match. There can only be one comment
 // per reporter per team per match per event.
-func (s *Service) UpsertMatchTeamComment(ctx context.Context, c Comment) (created bool, err error) {
+func (s *Service) UpsertMatchTeamComment(ctx context.Context, eventKey, matchKey, teamKey string, reporterID int64, comment string) (created bool, err error) {
 	var existed bool
 
 	err = s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		err = tx.QueryRow(`
 			SELECT EXISTS(
 				SELECT FROM comments
-					WHERE
-						event_key = $1 AND
-						match_key = $2 AND
-						team_key = $3 AND
-						reporter_id = $4
+				INNER JOIN reports
+					ON reports.id = comments.report_id
+				WHERE
+					reports.event_key = $1 AND
+					reports.match_key = $2 AND
+					reports.team_key = $3 AND
+					reports.reporter_id = $4
 			)
-			`, c.EventKey, c.MatchKey, c.TeamKey, c.ReporterID).Scan(&existed)
+			`, eventKey, matchKey, teamKey, reporterID).Scan(&existed)
 		if err != nil {
 			return fmt.Errorf("unable to check if comment exists: %w", err)
 		}
 
-		_, err = tx.NamedExecContext(ctx, `
-		INSERT INTO
-			comments (event_key, match_key, team_key, reporter_id, realm_id, comment)
-		VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :comment)
-		ON CONFLICT (event_key, match_key, team_key, reporter_id)
-			DO UPDATE SET comment = :comment, realm_id = :realm_id
-		`, c)
+		_, err = tx.ExecContext(ctx, `
+		INSERT INTO comments (report_id, comment)
+		SELECT reports.id, $1
+			FROM reports
+			WHERE
+				reports.event_key = $2 AND
+				reports.match_key = $3 AND
+				reports.team_key = $4 AND
+				reports.reporter_id = $5
+		ON CONFLICT (report_id)
+			DO UPDATE SET comment = $1
+		`, comment, eventKey, matchKey, teamKey, reporterID)
 		if err != nil {
 			return fmt.Errorf("unable to upsert comment: %w", err)
 		}
@@ -58,33 +61,36 @@ func (s *Service) UpsertMatchTeamComment(ctx context.Context, c Comment) (create
 
 // GetMatchTeamCommentsForRealm gets all comments for a given team in a match, filtering to only retrieve comments for realms
 // that are sharing reports or have a matching realm ID.
-func (s *Service) GetMatchTeamCommentsForRealm(ctx context.Context, matchKey, teamKey string, realmID *int64) (comments []Comment, err error) {
+func (s *Service) GetMatchTeamCommentsForRealm(ctx context.Context, eventKey, matchKey, teamKey string, realmID *int64) (comments []Comment, err error) {
 	const query = `
-	SELECT comments.*
-	FROM comments
-	INNER JOIN realms
-		ON realms.id = comments.realm_id
+	SELECT comments.* FROM comments
+	INNER JOIN reports
+	    ON reports.id = comments.report_id
+	LEFT JOIN realms
+		ON realms.id = reports.realm_id AND
+		(realms.share_reports = true OR realms.id = $4)
 	WHERE
-		comments.match_key = $1 AND
-		comments.team_key = $2 AND
-		(realms.share_reports = true OR realms.id = $3)`
+	    reports.event_key = $1 AND
+		reports.match_key = $2 AND
+		reports.team_key = $3`
 
 	comments = make([]Comment, 0)
-	return comments, s.db.SelectContext(ctx, &comments, query, matchKey, teamKey, realmID)
+	return comments, s.db.SelectContext(ctx, &comments, query, eventKey, matchKey, teamKey, realmID)
 }
 
 // GetEventTeamCommentsForRealm gets all comments for a given team in an event, filtering to only retrieve comments for realms
 // that are sharing reports or have a matching realm ID.
 func (s *Service) GetEventTeamCommentsForRealm(ctx context.Context, eventKey, teamKey string, realmID *int64) (comments []Comment, err error) {
 	const query = `
-	SELECT comments.*
-	FROM comments
-	INNER JOIN realms
-		ON realms.id = comments.realm_id
+	SELECT comments.* FROM comments
+	INNER JOIN reports
+	    ON reports.id = comments.report_id
+	LEFT JOIN realms
+		ON realms.id = reports.realm_id AND
+		(realms.share_reports = true OR realms.id = $3)
 	WHERE
-		comments.event_key = $1 AND
-		comments.team_key = $2 AND
-		(realms.share_reports = true OR realms.id = $3)`
+		reports.event_key = $1 AND
+		reports.team_key = $2`
 
 	comments = []Comment{}
 	return comments, s.db.SelectContext(ctx, &comments, query, eventKey, teamKey, realmID)
