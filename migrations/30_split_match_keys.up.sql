@@ -17,6 +17,7 @@ ALTER TABLE comments DROP COLUMN match_key;
 ALTER TABLE comments DROP COLUMN team_key;
 ALTER TABLE comments DROP COLUMN reporter_id;
 ALTER TABLE comments DROP COLUMN realm_id;
+ALTER TABLE comments ALTER COLUMN report_id SET NOT NULL;
 
 ALTER TABLE alliances DROP CONSTRAINT alliances_match_key_fkey;
 ALTER TABLE alliances ADD COLUMN event_key TEXT;
@@ -27,6 +28,7 @@ ALTER TABLE alliances ADD PRIMARY KEY(event_key, match_key, is_blue);
 UPDATE alliances SET match_key = split_part(match_key, '_', 2);
 
 ALTER TABLE reports DROP CONSTRAINT reports_match_key_fkey;
+ALTER TABLE reports DROP CONSTRAINT reports_event_key_fkey;
 UPDATE reports SET match_key = split_part(match_key, '_', 2);
 
 ALTER TABLE matches DROP CONSTRAINT matches_pkey;
