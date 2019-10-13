@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
@@ -85,7 +84,7 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		eventKey := vars["eventKey"]
-		partialMatchKey := vars["matchKey"]
+		matchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
 
 		var realmID *int64
@@ -109,9 +108,6 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 			return
 		}
 
-		// Add eventKey as prefix to matchKey so that matchKey is globally
-		// unique and consistent with TBA match keys.
-		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
 		match, err := s.Store.GetMatchAnalysisInfoForRealm(r.Context(), eventKey, matchKey, realmID)
 		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)

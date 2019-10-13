@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -15,12 +14,8 @@ func (s *Server) getReports() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		eventKey := vars["eventKey"]
-		partialMatchKey := vars["matchKey"]
+		matchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
-
-		// Add eventKey as prefix to matchKey so that matchKey is globally
-		// unique and consistent with TBA match keys.
-		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
 
 		var realmID *int64
 		userRealmID, err := ihttp.GetRealmID(r)
@@ -43,12 +38,8 @@ func (s *Server) putReport() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		eventKey := vars["eventKey"]
-		partialMatchKey := vars["matchKey"]
+		matchKey := vars["matchKey"]
 		teamKey := vars["teamKey"]
-
-		// Add eventKey as prefix to matchKey so that matchKey is globally
-		// unique and consistent with TBA match keys.
-		matchKey := fmt.Sprintf("%s_%s", eventKey, partialMatchKey)
 
 		var report store.Report
 		if err := json.NewDecoder(r.Body).Decode(&report); err != nil {

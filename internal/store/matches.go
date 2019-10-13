@@ -65,6 +65,7 @@ func (m *Match) GetTime() *time.Time {
 const matchesQuery = `
 SELECT
 	matches.key,
+	matches.event_key,
 	matches.predicted_time,
 	matches.scheduled_time,
 	matches.actual_time,
@@ -81,11 +82,11 @@ FROM
 INNER JOIN
 	alliances r
 	ON
-		matches.key = r.match_key AND r.is_blue = false
+		matches.key = r.match_key AND matches.event_key = r.event_key AND r.is_blue = false
 INNER JOIN
 	alliances b
 	ON
-		matches.key = b.match_key AND b.is_blue = true
+		matches.key = b.match_key AND matches.event_key = b.event_key AND b.is_blue = true
 INNER JOIN
 	events
 	ON
@@ -137,11 +138,11 @@ func (s *Service) GetEventRealmIDByMatchKeyTx(ctx context.Context, tx *sqlx.Tx, 
 }
 
 // GetMatchForRealm returns a specific match by key in the given realm.
-func (s *Service) GetMatchForRealm(ctx context.Context, matchKey string, realmID *int64) (Match, error) {
-	const query = matchesQuery + " AND matches.key = $2"
+func (s *Service) GetMatchForRealm(ctx context.Context, eventKey, matchKey string, realmID *int64) (Match, error) {
+	const query = matchesQuery + " AND matches.event_key = $2 AND matches.key = $3"
 
 	var m Match
-	err := s.db.GetContext(ctx, &m, query, realmID, matchKey)
+	err := s.db.GetContext(ctx, &m, query, realmID, eventKey, matchKey)
 	if err == sql.ErrNoRows {
 		return m, ErrNoResults{fmt.Errorf("unable to get match: %w", err)}
 	} else if err != nil {
@@ -163,8 +164,8 @@ func (s *Service) ExclusiveLockMatchesTx(ctx context.Context, tx *sqlx.Tx) error
 }
 
 // DeleteMatchTx deletes a specific match using the given transaction.
-func (s *Service) DeleteMatchTx(ctx context.Context, tx *sqlx.Tx, matchKey string) error {
-	_, err := tx.ExecContext(ctx, `DELETE FROM matches WHERE key = $1`, matchKey)
+func (s *Service) DeleteMatchTx(ctx context.Context, tx *sqlx.Tx, matchKey, eventKey string) error {
+	_, err := tx.ExecContext(ctx, `DELETE FROM matches WHERE key = $1 AND event_key = $2`, matchKey, eventKey)
 	if err != nil {
 		return fmt.Errorf("unable to delete match: %w", err)
 	}
@@ -177,11 +178,10 @@ func (s *Service) UpsertMatchTx(ctx context.Context, tx *sqlx.Tx, match Match) e
 	_, err := tx.NamedExecContext(ctx, `
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url)
 		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url)
-		ON CONFLICT (key)
+		ON CONFLICT (key, event_key)
 		DO
 			UPDATE
 				SET
-					event_key = :event_key,
 					predicted_time = :predicted_time,
 					scheduled_time = :scheduled_time,
 					actual_time = :actual_time,
@@ -196,7 +196,7 @@ func (s *Service) UpsertMatchTx(ctx context.Context, tx *sqlx.Tx, match Match) e
 		return fmt.Errorf("unable to upsert matches: %w", err)
 	}
 
-	if err = s.AlliancesUpsertTx(ctx, tx, match.Key, match.BlueAlliance, match.RedAlliance); err != nil {
+	if err = s.AlliancesUpsertTx(ctx, tx, match.EventKey, match.Key, match.BlueAlliance, match.RedAlliance); err != nil {
 		return fmt.Errorf("unable to upsert alliances: %w", err)
 	}
 
@@ -240,11 +240,10 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches
 		upsert, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url)
 		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url)
-		ON CONFLICT (key)
+		ON CONFLICT (key, event_key)
 		DO
 			UPDATE
 				SET
-					event_key = :event_key,
 					predicted_time = :predicted_time,
 					scheduled_time = :scheduled_time,
 					actual_time = :actual_time,
@@ -264,7 +263,7 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches
 				return fmt.Errorf("unable to upsert match: %w", err)
 			}
 
-			if err = s.AlliancesUpsertTx(ctx, tx, match.Key, match.BlueAlliance, match.RedAlliance); err != nil {
+			if err = s.AlliancesUpsertTx(ctx, tx, match.EventKey, match.Key, match.BlueAlliance, match.RedAlliance); err != nil {
 				return fmt.Errorf("unable to upsert alliances: %w", err)
 			}
 		}
@@ -285,15 +284,15 @@ FROM
 INNER JOIN
 	alliances r
 ON
-	matches.key = r.match_key AND r.is_blue = false
+	matches.key = r.match_key AND matches.event_key = r.event_key AND r.is_blue = false
 INNER JOIN
 	alliances b
 ON
-	matches.key = b.match_key AND b.is_blue = true
+	matches.key = b.match_key AND matches.event_key = b.event_key AND b.is_blue = true
 INNER JOIN
 	events
 	ON
-		matches.event_key = events.key	
+		matches.event_key = events.key
 WHERE
 	(events.realm_id = $1 OR events.realm_id IS NULL) AND
 	matches.event_key = $2`

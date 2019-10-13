@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -102,6 +103,15 @@ type ErrNotModified struct {
 func (nm ErrNotModified) Is(target error) bool {
 	_, ok := target.(ErrNotModified)
 	return ok
+}
+
+func trimMatchKey(tbaKey string) (string, error) {
+	parts := strings.Split(tbaKey, "_")
+	if len(parts) != 2 {
+		return "", errors.New("TBA match key isn't in <event key>_<match key> format")
+	}
+
+	return parts[1], nil
 }
 
 func (s *Service) makeRequest(ctx context.Context, path string) (*http.Response, error) {
@@ -258,6 +268,11 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 
 	var matches []store.Match
 	for _, tbaMatch := range tbaMatches {
+		matchKey, err := trimMatchKey(tbaMatch.Key)
+		if err != nil {
+			return nil, err
+		}
+
 		var predictedTime *time.Time
 		var actualTime *time.Time
 		var scheduledTime *time.Time
@@ -288,7 +303,7 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 		matchURL := fmt.Sprintf(tbaURL+"/match/%s", tbaMatch.Key)
 
 		match := store.Match{
-			Key:                tbaMatch.Key,
+			Key:                matchKey,
 			EventKey:           eventKey,
 			PredictedTime:      predictedTime,
 			ActualTime:         actualTime,

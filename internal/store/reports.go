@@ -42,6 +42,7 @@ type Report struct {
 	ReporterID *int64     `json:"reporterId" db:"reporter_id"`
 	RealmID    *int64     `json:"-" db:"realm_id"`
 	Data       ReportData `json:"data" db:"data"`
+	Comment    string     `json:"comment" db:"comment"`
 }
 
 // Leaderboard holds information about how many reports each reporter submitted.
@@ -75,10 +76,10 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 
 		_, err = tx.NamedExecContext(ctx, `
 			INSERT INTO
-				reports (event_key, match_key, team_key, reporter_id, realm_id, data)
-			VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :data)
+				reports (event_key, match_key, team_key, reporter_id, realm_id, data, comment)
+			VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :data, :comment)
 			ON CONFLICT (event_key, match_key, team_key, reporter_id)
-				DO UPDATE SET data = :data, realm_id = :realm_id
+				DO UPDATE SET data = :data, realm_id = :realm_id, comment = :comment
 		`, r)
 		if err != nil {
 			return fmt.Errorf("unable to upsert report: %w", err)
@@ -95,11 +96,11 @@ func (s *Service) GetEventReportsForRealm(ctx context.Context, eventKey string, 
 	const query = `
 	SELECT reports.*
 	FROM reports
-	INNER JOIN realms
-		ON realms.id = reports.realm_id
+	LEFT JOIN realms
+		ON realms.id = reports.realm_id AND
+		(realms.share_reports = true OR realms.id = $2)
 	WHERE
-		reports.event_key = $1 AND
-		(realms.share_reports = true OR realms.id = $2)`
+		reports.event_key = $1`
 
 	reports := []Report{}
 	return reports, s.db.SelectContext(ctx, &reports, query, eventKey, realmID)
@@ -111,12 +112,12 @@ func (s *Service) GetEventTeamReportsForRealm(ctx context.Context, eventKey stri
 	const query = `
 	SELECT reports.*
 	FROM reports
-	INNER JOIN realms
-		ON realms.id = reports.realm_id
+	LEFT JOIN realms
+		ON realms.id = reports.realm_id AND
+		(realms.share_reports = true OR realms.id = $3)
 	WHERE
 		reports.event_key = $1 AND
-		reports.team_key = $2 AND
-		(realms.share_reports = true OR realms.id = $3)`
+		reports.team_key = $2`
 
 	reports = make([]Report, 0)
 	return reports, s.db.SelectContext(ctx, &reports, query, eventKey, teamKey, realmID)
@@ -128,13 +129,13 @@ func (s *Service) GetMatchTeamReportsForRealm(ctx context.Context, eventKey, mat
 	const query = `
 	SELECT reports.*
 	FROM reports
-	INNER JOIN realms
-		ON realms.id = reports.realm_id
+	LEFT JOIN realms
+		ON realms.id = reports.realm_id AND
+		(realms.share_reports = true OR realms.id = $4)
 	WHERE
 		reports.event_key = $1 AND
 		reports.match_key = $2 AND
-		reports.team_key = $3 AND
-		(realms.share_reports = true OR realms.id = $4)`
+		reports.team_key = $3`
 
 	reports = make([]Report, 0)
 	return reports, s.db.SelectContext(ctx, &reports, query, eventKey, matchKey, teamKey, realmID)

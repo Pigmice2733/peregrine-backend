@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"errors"
@@ -51,11 +50,8 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 
 		matches := []match{}
 		for _, fullMatch := range fullMatches {
-			// Match keys are stored in TBA format, with a leading event key
-			// prefix that which needs to be removed before use.
-			key := strings.TrimPrefix(fullMatch.Key, eventKey+"_")
 			matches = append(matches, match{
-				Key:           key,
+				Key:           fullMatch.Key,
 				Time:          fullMatch.GetTime(),
 				ScheduledTime: fullMatch.ScheduledTime,
 				RedScore:      fullMatch.RedScore,
@@ -77,17 +73,13 @@ func (s *Server) matchHandler() http.HandlerFunc {
 		vars := mux.Vars(r)
 		eventKey, matchKey := vars["eventKey"], vars["matchKey"]
 
-		// Add eventKey as prefix to matchKey so that matchKey is globally
-		// unique and consistent with TBA match keys.
-		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
-
 		var realmID *int64
 		userRealmID, err := ihttp.GetRealmID(r)
 		if err == nil {
 			realmID = &userRealmID
 		}
 
-		fullMatch, err := s.Store.GetMatchForRealm(r.Context(), matchKey, realmID)
+		fullMatch, err := s.Store.GetMatchForRealm(r.Context(), eventKey, matchKey, realmID)
 		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
@@ -97,11 +89,8 @@ func (s *Server) matchHandler() http.HandlerFunc {
 			return
 		}
 
-		// Match keys are stored in TBA format, with a leading event key
-		// prefix that which needs to be removed before use.
-		key := strings.TrimPrefix(fullMatch.Key, eventKey+"_")
 		match := match{
-			Key:          key,
+			Key:          fullMatch.Key,
 			Time:         fullMatch.GetTime(),
 			RedScore:     fullMatch.RedScore,
 			BlueScore:    fullMatch.BlueScore,
@@ -131,10 +120,6 @@ func (s *Server) upsertMatchHandler() http.HandlerFunc {
 		vars := mux.Vars(r)
 		eventKey := vars["eventKey"]
 		matchKey := vars["matchKey"]
-
-		// Add eventKey as prefix to matchKey so that matchKey is globally
-		// unique and consistent with TBA match keys.
-		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
 
 		sm := store.Match{
 			Key:           matchKey,
@@ -194,12 +179,8 @@ func (s *Server) deleteMatchHandler() http.HandlerFunc {
 			return
 		}
 
-		// Add eventKey as prefix to matchKey so that matchKey is globally
-		// unique and consistent with TBA match keys.
-		matchKey = fmt.Sprintf("%s_%s", eventKey, matchKey)
-
 		existed, err := editMatch(r.Context(), s.Store, roles, userRealmID, matchKey, func(tx *sqlx.Tx) error {
-			if err := s.Store.DeleteMatchTx(r.Context(), tx, matchKey); err != nil {
+			if err := s.Store.DeleteMatchTx(r.Context(), tx, matchKey, eventKey); err != nil {
 				return fmt.Errorf("unable to delete match: %w", err)
 			}
 
