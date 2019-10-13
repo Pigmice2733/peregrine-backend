@@ -51,24 +51,6 @@ type Leaderboard []struct {
 	Reports    int64 `json:"reports" db:"num_reports"`
 }
 
-// GetEventTeamComments gets all report comments for a specific team at a specific event.
-// Includes private comments from the specified realm.
-func (s *Service) GetEventTeamComments(ctx context.Context, eventKey, teamKey string, realmID *int64) ([]string, error) {
-    const query = `
-	SELECT reports.comment
-	FROM reports
-	LEFT JOIN realms
-		ON realms.id = reports.realm_id AND
-		(realms.share_reports = true OR realms.id = $3)
-	WHERE
-		reports.event_key = $1 AND
-		reports.team_key = $2 AND
-		reports.comment IS NOT NULL`
-
-	comments := []string{}
-	return comments, s.db.SelectContext(ctx, &comments, query, eventKey, teamKey, realmID)
-}
-
 // UpsertReport creates a new report in the db, or replaces the existing one if
 // the same reporter already has a report in the db for that team and match. It
 // returns a boolean that is true when the report was created, and false when it

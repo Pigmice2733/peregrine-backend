@@ -10,29 +10,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (s *Server) getEventTeamComments() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		eventKey := vars["eventKey"]
-		teamKey := vars["teamKey"]
-
-		var realmID *int64
-		userRealmID, err := ihttp.GetRealmID(r)
-		if err == nil {
-			realmID = &userRealmID
-		}
-
-		comments, err := s.Store.GetEventTeamComments(r.Context(), eventKey, teamKey, realmID)
-		if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("getting report comments")
-			return
-		}
-
-		ihttp.Respond(w, comments, http.StatusOK)
-	}
-}
-
 func (s *Server) getReports() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
