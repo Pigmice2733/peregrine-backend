@@ -18,7 +18,7 @@ type Schema struct {
 	ID      int64        `json:"id" db:"id"`
 	Year    *int64       `json:"year,omitempty" db:"year"`
 	RealmID *int64       `json:"realmId,omitempty" db:"realm_id"`
-	Schema  SchemaFields `json:"schema" db:"schema"`
+	Schema  SchemaFields `json:"schema,omitempty" db:"schema"`
 }
 
 // FieldDescriptor defines properties of a schema field that aren't related to how it should be
@@ -64,15 +64,10 @@ func (sd *SchemaFields) Scan(src interface{}) error {
 	return json.Unmarshal(j, sd)
 }
 
-// CreateSchema creates a new schema
+// CreateSchema creates a new schema.
 func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
 	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
-		_, err := tx.NamedExecContext(ctx, `
-		INSERT
-			INTO
-				schemas (year, realm_id, schema)
-			VALUES (:year, :realm_id, :schema)
-		`, schema)
+		_, err := tx.NamedExecContext(ctx, `INSERT INTO schemas (year, realm_id, schema) VALUES (:year, :realm_id, :schema)`, schema)
 
 		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == pgExists {
 			return &ErrExists{fmt.Errorf("schema already exists: %v", err.Error())}
@@ -84,7 +79,7 @@ func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
 	})
 }
 
-// GetSchemaByID retrieves a schema given its ID
+// GetSchemaByID retrieves a schema given its ID.
 func (s *Service) GetSchemaByID(ctx context.Context, id int64) (Schema, error) {
 	var schema Schema
 
@@ -98,34 +93,19 @@ func (s *Service) GetSchemaByID(ctx context.Context, id int64) (Schema, error) {
 	return schema, nil
 }
 
-// GetSchemaByYear retrieves the schema for a given year
-func (s *Service) GetSchemaByYear(ctx context.Context, year int) (Schema, error) {
-	var schema Schema
-
-	err := s.db.GetContext(ctx, &schema, "SELECT * FROM schemas WHERE year = $1", year)
-	if err == sql.ErrNoRows {
-		return schema, ErrNoResults{fmt.Errorf("no schema for year %d exists", year)}
-	} else if err != nil {
-		return schema, fmt.Errorf("unable to retrieve schema: %w", err)
-	}
-
-	return schema, nil
-}
-
 // GetSchemasForRealm retrieves schemas from the database frm a specific realm,
 // from realms with public events, and standard FRC schemas. If the realm ID is
 // nil, no private realms' schemas will be retrieved.
 func (s *Service) GetSchemasForRealm(ctx context.Context, realmID *int64) ([]Schema, error) {
-	schemas := []Schema{}
+	schemas := make([]Schema, 0)
 
 	err := s.db.SelectContext(ctx, &schemas, `
-	SELECT schemas.*
+	SELECT schemas.id, schemas.year, schemas.realm_id
 	FROM schemas
 	LEFT JOIN realms
 		ON realms.id = schemas.realm_id
 	WHERE
-		schemas.year IS NULL OR
-		realms.id = NULL OR
+		realms.id IS NULL OR
 		(realms.share_reports = true OR realms.id = $1)
 	`, realmID)
 	if err != nil {

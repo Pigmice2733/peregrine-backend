@@ -285,14 +285,6 @@ paths:
         - schemas
       security:
         - BearerAuth: []
-      parameters:
-        - in: query
-          name: year
-          schema:
-            type: integer
-            example: 2018
-          required: false
-          description: Get schemas for a specified year
       responses:
         "200":
           content:
@@ -308,9 +300,8 @@ paths:
     post:
       summary: Create a new schema
       description:
-        Note that only global admins can create a schema for a year. Realm admins can only create a schema
-        for their realm. Normal users cannot create schemas. Also note if an ID is included on the schema
-        it will be ignored.
+        Only admins can create schemas.Also note if an ID is included on the schema it will be
+        ignored.
       operationId: createSchema
       security:
         - BearerAuth: []

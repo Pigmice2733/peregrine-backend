@@ -54,27 +54,6 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 
 func (s *Server) getSchemasHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if yearQuery := r.URL.Query().Get("year"); yearQuery != "" {
-			year, err := strconv.Atoi(yearQuery)
-			if err != nil {
-				ihttp.Error(w, http.StatusBadRequest)
-				return
-			}
-
-			schema, err := s.Store.GetSchemaByYear(r.Context(), year)
-			if errors.Is(err, store.ErrNoResults{}) {
-				ihttp.Error(w, http.StatusNotFound)
-				return
-			} else if err != nil {
-				s.Logger.WithError(err).Error("getting schema by year")
-				ihttp.Error(w, http.StatusInternalServerError)
-				return
-			}
-
-			ihttp.Respond(w, []store.Schema{schema}, http.StatusOK)
-			return
-		}
-
 		var realmID *int64
 		userRealmID, err := ihttp.GetRealmID(r)
 		if err == nil {

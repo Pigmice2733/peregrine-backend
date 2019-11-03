@@ -1,0 +1,1 @@
+ALTER TABLE schemas DROP CONSTRAINT schemas_year_key;
