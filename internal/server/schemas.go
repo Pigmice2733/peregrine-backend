@@ -79,26 +79,19 @@ func (s *Server) getSchemaByIDHandler() http.HandlerFunc {
 			return
 		}
 
-		schema, err := s.Store.GetSchemaByID(r.Context(), id)
-		if errors.Is(err, store.ErrNoResults{}) {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			s.Logger.WithError(err).Error("getting schema by id")
-			ihttp.Error(w, http.StatusInternalServerError)
-			return
-		}
-
-		roles := ihttp.GetRoles(r)
-
 		var realmID *int64
 		userRealmID, err := ihttp.GetRealmID(r)
 		if err == nil {
 			realmID = &userRealmID
 		}
 
-		if schema.Year == nil && !roles.IsSuperAdmin && schema.RealmID != realmID {
-			ihttp.Error(w, http.StatusForbidden)
+		schema, err := s.Store.GetSchemaForRealmByID(r.Context(), realmID, id)
+		if errors.Is(err, store.ErrNoResults{}) {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
+			s.Logger.WithError(err).Error("getting schema by id")
+			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
 

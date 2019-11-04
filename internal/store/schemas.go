@@ -79,11 +79,18 @@ func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
 	})
 }
 
-// GetSchemaByID retrieves a schema given its ID.
-func (s *Service) GetSchemaByID(ctx context.Context, id int64) (Schema, error) {
+// GetSchemaForRealmByID retrieves a schema given its ID.
+func (s *Service) GetSchemaForRealmByID(ctx context.Context, realmID *int64, id int64) (Schema, error) {
 	var schema Schema
 
-	err := s.db.GetContext(ctx, &schema, "SELECT * FROM schemas WHERE id = $1", id)
+	err := s.db.GetContext(ctx, &schema, `
+	SELECT schemas.*
+	FROM schemas
+	LEFT JOIN realms
+		ON realms.id = schemas.realm_id
+	WHERE
+		(realms.id IS NULL OR (realms.share_reports = true OR realms.id = $1))
+		AND schemas.id = $2`, realmID, id)
 	if err == sql.ErrNoRows {
 		return schema, ErrNoResults{fmt.Errorf("schema %d does not exist", schema.ID)}
 	} else if err != nil {

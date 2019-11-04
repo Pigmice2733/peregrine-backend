@@ -442,6 +442,7 @@ paths:
   /events/{eventKey}/stats:
     parameters:
       - $ref: "#/components/parameters/eventKey"
+      - $ref: "#/components/parameters/schemaId"
     get:
       summary: Get stats summary for all teams at an event
       operationId: getEventStats
@@ -480,6 +481,7 @@ paths:
       - $ref: "#/components/parameters/eventKey"
       - $ref: "#/components/parameters/matchKey"
       - $ref: "#/components/parameters/teamKey"
+      - $ref: "#/components/parameters/schemaId"
     get:
       summary: Get stats summary for team in specific match
       operationId: getMatchTeamStats
@@ -958,6 +960,14 @@ components:
         $ref: "#/components/schemas/matchKey"
       required: true
       description: Match Key
+    schemaId:
+      in: query
+      name: schema_id
+      schema:
+        type: number
+        example: 5
+      required: true
+      description: ID of the schema to use for analysis
   responses:
     internalServerError:
       description: Failed due to an internal server error

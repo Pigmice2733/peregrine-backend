@@ -1,10 +1,10 @@
 BEGIN;
-ALTER TABLE alliances DROP CONSTRAINT alliances_event_key_match_key_fkey;
+ALTER TABLE alliances DROP CONSTRAINT alliances_event_key_fkey;
 UPDATE alliances SET match_key = format('%s_%s', event_key, match_key);
 ALTER TABLE alliances DROP CONSTRAINT alliances_pkey;
 ALTER TABLE alliances DROP COLUMN event_key;
 
-ALTER TABLE reports DROP CONSTRAINT reports_event_key_match_key_fkey;
+ALTER TABLE reports DROP CONSTRAINT reports_event_key_fkey;
 UPDATE reports SET match_key = format('%s_%s', event_key, match_key);
 
 ALTER TABLE matches DROP CONSTRAINT matches_pkey;

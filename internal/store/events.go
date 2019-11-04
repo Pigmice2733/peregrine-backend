@@ -15,7 +15,6 @@ import (
 type Event struct {
 	Key          string         `json:"key" db:"key"`
 	RealmID      *int64         `json:"realmId,omitempty" db:"realm_id"`
-	SchemaID     *int64         `json:"schemaId,omitempty" db:"schema_id"`
 	Name         string         `json:"name" db:"name"`
 	District     *string        `json:"district,omitempty" db:"district"`
 	FullDistrict *string        `json:"fullDistrict,omitempty" db:"full_district"`
@@ -45,16 +44,11 @@ SELECT
 	lat,
 	lon,
 	tba_deleted,
-	events.realm_id,
-	COALESCE(schema_id, s.id) AS schema_id
+	realm_id
 FROM
-	events
-LEFT JOIN
-	schemas s
-ON
-	s.year = EXTRACT(YEAR FROM start_date)`
+	events`
 
-// GetEvents returns all events from the database. event.Webcasts and schemaID will be nil for every event.
+// GetEvents returns all events from the database. event.Webcasts will be nil for every event.
 // If tbaDeleted is true, events that have been deleted from TBA will be returned in addition to events that
 // have not been deleted. Otherwise, only events that have not been deleted will be returned.
 func (s *Service) GetEvents(ctx context.Context, tbaDeleted bool) (events []Event, err error) {
@@ -68,11 +62,11 @@ func (s *Service) GetEvents(ctx context.Context, tbaDeleted bool) (events []Even
 	return events, s.db.SelectContext(ctx, &events, query)
 }
 
-const eventsRealmQuery = eventsQuery + `WHERE (events.realm_id IS NULL OR events.realm_id = $1)`
+const eventsRealmQuery = eventsQuery + ` WHERE (realm_id IS NULL OR realm_id = $1)`
 
 // GetEventsForRealm returns all events from a specific realm. Additionally all
 // TBA events will be retrieved. If no realm is specified (nil) then just the TBA
-// events will be retrieved. event.Webcasts and schemaID will be nil for every event.
+// events will be retrieved. event.Webcasts will be nil for every event.
 // If tbaDeleted is true, events that have been deleted from TBA will be returned in addition to events that
 // have not been deleted. Otherwise, only events that have not been deleted will be returned.
 func (s *Service) GetEventsForRealm(ctx context.Context, tbaDeleted bool, realmID *int64) (events []Event, err error) {
@@ -114,14 +108,9 @@ func (s *Service) GetActiveEvents(ctx context.Context, tbaDeleted bool) ([]Event
 		lat,
 		lon,
 		tba_deleted,
-		events.realm_id,
-		COALESCE(schema_id, s.id) AS schema_id
+		realm_id
 	FROM
 		events
-	LEFT JOIN
-		schemas s
-	ON
-		s.year = EXTRACT(YEAR FROM start_date)
 	WHERE
 		start_date <= CURRENT_DATE
 		AND end_date >= CURRENT_DATE`
@@ -135,12 +124,12 @@ func (s *Service) GetActiveEvents(ctx context.Context, tbaDeleted bool) ([]Event
 }
 
 // EventsUpsert upserts multiple events into the database. It will set tba_deleted
-// to false for all updated events. schema_id will only be updated if null.
+// to false for all updated events.
 func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		eventStmt, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, gmaps_url, lat, lon, realm_id, schema_id, tba_deleted)
-		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :gmaps_url, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
+		INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, gmaps_url, lat, lon, realm_id, tba_deleted)
+		VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :gmaps_url, :lat, :lon, :realm_id, :tba_deleted)
 		ON CONFLICT (key)
 		DO
 			UPDATE
@@ -157,7 +146,6 @@ func (s *Service) EventsUpsert(ctx context.Context, events []Event) error {
 					lat = :lat,
 					lon = :lon,
 					realm_id = :realm_id,
-					schema_id = COALESCE(events.schema_id, :schema_id),
 					tba_deleted = false
 		`)
 		if err != nil {
@@ -232,8 +220,8 @@ func (s *Service) GetEventRealmIDTx(ctx context.Context, tx *sqlx.Tx, eventKey s
 // the event was created or updated.
 func (s *Service) UpsertEventTx(ctx context.Context, tx *sqlx.Tx, event Event) error {
 	_, err := tx.NamedExecContext(ctx, `
-			INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, gmaps_url, lat, lon, realm_id, schema_id, tba_deleted)
-				VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :gmaps_url, :lat, :lon, :realm_id, :schema_id, :tba_deleted)
+			INSERT INTO events (key, name, district, full_district, week, start_date, end_date, webcasts, location_name, gmaps_url, lat, lon, realm_id, tba_deleted)
+				VALUES (:key, :name, :district, :full_district, :week, :start_date, :end_date, :webcasts, :location_name, :gmaps_url, :lat, :lon, :realm_id, :tba_deleted)
 			ON CONFLICT (key) DO
 				UPDATE
 					SET
@@ -249,7 +237,6 @@ func (s *Service) UpsertEventTx(ctx context.Context, tx *sqlx.Tx, event Event) e
 						lat = :lat,
 						lon = :lon,
 						realm_id = :realm_id,
-						schema_id = :schema_id,
 						tba_deleted = :tba_deleted
 		`, event)
 	if err != nil {

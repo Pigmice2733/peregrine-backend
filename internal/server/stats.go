@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -22,21 +23,6 @@ func (s *Server) eventStats() http.HandlerFunc {
 			realmID = &userRealmID
 		}
 
-		event, err := s.Store.GetEventForRealm(r.Context(), eventKey, realmID)
-		if errors.Is(err, store.ErrNoResults{}) {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
-
-		if event.SchemaID == nil {
-			ihttp.Respond(w, errors.New("no schema found"), http.StatusBadRequest)
-			return
-		}
-
 		reports, err := s.Store.GetEventReportsForRealm(r.Context(), eventKey, realmID)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
@@ -44,7 +30,13 @@ func (s *Server) eventStats() http.HandlerFunc {
 			return
 		}
 
-		storeSchema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
+		schemaID, err := strconv.ParseInt(r.URL.Query().Get("schema_id"), 10, 64)
+		if err != nil {
+			ihttp.Error(w, http.StatusBadRequest)
+			return
+		}
+
+		storeSchema, err := s.Store.GetSchemaForRealmByID(r.Context(), realmID, schemaID)
 		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
@@ -93,21 +85,6 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 			realmID = &userRealmID
 		}
 
-		event, err := s.Store.GetEventForRealm(r.Context(), eventKey, realmID)
-		if errors.Is(err, store.ErrNoResults{}) {
-			ihttp.Error(w, http.StatusNotFound)
-			return
-		} else if err != nil {
-			ihttp.Error(w, http.StatusInternalServerError)
-			s.Logger.WithError(err).Error("retrieving event")
-			return
-		}
-
-		if event.SchemaID == nil {
-			ihttp.Respond(w, errors.New("no schema found"), http.StatusBadRequest)
-			return
-		}
-
 		match, err := s.Store.GetMatchAnalysisInfoForRealm(r.Context(), eventKey, matchKey, realmID)
 		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
@@ -125,7 +102,13 @@ func (s *Server) matchTeamStats() http.HandlerFunc {
 			return
 		}
 
-		storeSchema, err := s.Store.GetSchemaByID(r.Context(), *event.SchemaID)
+		schemaID, err := strconv.ParseInt(r.URL.Query().Get("schema_id"), 10, 64)
+		if err != nil {
+			ihttp.Error(w, http.StatusBadRequest)
+			return
+		}
+
+		storeSchema, err := s.Store.GetSchemaForRealmByID(r.Context(), realmID, schemaID)
 		if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return

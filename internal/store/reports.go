@@ -40,9 +40,10 @@ type Report struct {
 	MatchKey   string     `json:"-" db:"match_key"`
 	TeamKey    string     `json:"-" db:"team_key"`
 	ReporterID *int64     `json:"reporterId" db:"reporter_id"`
+	SchemaID   int64      `json:"schemaId" db:"schema_id"`
 	RealmID    *int64     `json:"-" db:"realm_id"`
 	Data       ReportData `json:"data" db:"data"`
-	Comment    string     `json:"comment" db:"comment"`
+	Comment    *string    `json:"comment" db:"comment"`
 }
 
 // Leaderboard holds information about how many reports each reporter submitted.
@@ -76,8 +77,8 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 
 		_, err = tx.NamedExecContext(ctx, `
 			INSERT INTO
-				reports (event_key, match_key, team_key, reporter_id, realm_id, data, comment)
-			VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :data, :comment)
+				reports (event_key, match_key, team_key, reporter_id, schema_id, realm_id, data, comment)
+			VALUES (:event_key, :match_key, :team_key, :reporter_id, :schema_id, :realm_id, :data, :comment)
 			ON CONFLICT (event_key, match_key, team_key, reporter_id)
 				DO UPDATE SET data = :data, realm_id = :realm_id, comment = :comment
 		`, r)
