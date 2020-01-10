@@ -283,9 +283,9 @@ func (s *Service) DeleteUserByID(ctx context.Context, id int64) error {
 	return nil
 }
 
-// DeleteUserByIDRealm deletes a specific user from the database.
-func (s *Service) DeleteUserByIDRealm(ctx context.Context, id, realmID int64) error {
-	res, err := s.db.ExecContext(ctx, "DELETE FROM users WHERE id = $1 AND realm_id = $2", id, realmID)
+// DeleteUserByIDRealmTx deletes a specific user from the database.
+func (s *Service) DeleteUserByIDRealmTx(ctx context.Context, tx *sqlx.Tx, id, realmID int64) error {
+	res, err := tx.ExecContext(ctx, "DELETE FROM users WHERE id = $1 AND realm_id = $2", id, realmID)
 	if err != nil {
 		return fmt.Errorf("unable to delete user %d: %w", id, err)
 	}
@@ -320,6 +320,17 @@ func (s *Service) CheckSimilarUsernameExists(ctx context.Context, username strin
 
 	if ok {
 		return ErrExists{errors.New("user with similar username exists")}
+	}
+
+	return nil
+}
+
+// ExclusiveLockUsersTx locks the users table so no changes can be made to it by anything other
+// than the given transaction.
+func (s *Service) ExclusiveLockUsersTx(ctx context.Context, tx *sqlx.Tx) error {
+	_, err := tx.ExecContext(ctx, "LOCK TABLE users IN EXCLUSIVE MODE")
+	if err != nil {
+		return fmt.Errorf("unable to lock users: %w", err)
 	}
 
 	return nil

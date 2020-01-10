@@ -13,6 +13,7 @@ import (
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
+	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	validator "gopkg.in/go-playground/validator.v9"
@@ -366,7 +367,7 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 			return
 		}
 
-		// Admins can only patch users in the same realm
+		// Admins can only patch users in the same realm, only super-admins can edit super-admins
 		if targetID != subjectID && !roles.IsSuperAdmin {
 			targetUser, err := s.Store.GetUserByID(r.Context(), targetID)
 			if err != nil {
@@ -378,11 +379,16 @@ func (s *Server) patchUserHandler() http.HandlerFunc {
 				ihttp.Error(w, http.StatusForbidden)
 				return
 			}
+			if targetUser.Roles.IsSuperAdmin {
+				ihttp.Error(w, http.StatusForbidden)
+				return
+			}
 		}
 
-		// If the creator user isn't an admin, reset roles
-		if !roles.IsAdmin && !roles.IsSuperAdmin {
-			ru.Roles = nil
+		// Only (super)admins can create admins or verify users
+		if ru.Roles != nil && (ru.Roles.IsAdmin || ru.Roles.IsVerified) && !(roles.IsAdmin || roles.IsSuperAdmin) {
+			ihttp.Error(w, http.StatusForbidden)
+			return
 		}
 
 		// Only super-admins can create super-admins
@@ -463,14 +469,33 @@ func (s *Server) deleteUserHandler() http.HandlerFunc {
 		if roles.IsSuperAdmin {
 			err = s.Store.DeleteUserByID(r.Context(), id)
 		} else {
-			var realmID int64
-			realmID, err = ihttp.GetRealmID(r)
-			if err != nil {
+			// Only super-admins can delete super-admins
+			err := s.Store.DoTransaction(r.Context(), func(tx *sqlx.Tx) error {
+				targetUser, err := s.Store.GetUserByID(r.Context(), id)
+				if err != nil {
+					return fmt.Errorf("unable to get target user: %w", err)
+				}
+				if targetUser.Roles.IsSuperAdmin {
+					return forbiddenError{}
+				}
+
+				var realmID int64
+				realmID, err = ihttp.GetRealmID(r)
+				if err != nil {
+					return forbiddenError{}
+				}
+
+				return s.Store.DeleteUserByIDRealmTx(r.Context(), tx, id, realmID)
+			})
+
+			if errors.Is(err, forbiddenError{}) {
 				ihttp.Error(w, http.StatusForbidden)
 				return
+			} else if err != nil {
+				s.Logger.WithError(err).Error("unable to delete user")
+				ihttp.Error(w, http.StatusInternalServerError)
+				return
 			}
-
-			err = s.Store.DeleteUserByIDRealm(r.Context(), id, realmID)
 		}
 
 		if errors.Is(err, store.ErrNoResults{}) {
