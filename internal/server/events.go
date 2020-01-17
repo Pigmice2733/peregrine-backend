@@ -3,11 +3,9 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
-
-	"errors"
 
 	ihttp "github.com/Pigmice2733/peregrine-backend/internal/http"
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
@@ -18,7 +16,7 @@ import (
 // eventsHandler returns a handler to get all events in a given year.
 func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tbaDeleted, _ := strconv.ParseBool(r.URL.Query().Get("tbaDeleted"))
+		tbaDeleted := true
 
 		var realmID *int64
 		userRealmID, err := ihttp.GetRealmID(r)
