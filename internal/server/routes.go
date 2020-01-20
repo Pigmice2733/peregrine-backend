@@ -27,6 +27,8 @@ func (s *Server) registerRoutes() *mux.Router {
 	r.Handle("/schemas", ihttp.ACL(s.createSchemaHandler(), true, true, true)).Methods(http.MethodPost)
 	r.Handle("/schemas/{id}", ihttp.ACL(s.getSchemaByIDHandler(), false, false, false)).Methods(http.MethodGet)
 
+	r.Handle("/years", s.eventYearsHandler()).Methods(http.MethodGet)
+
 	r.Handle("/events", s.eventsHandler()).Methods(http.MethodGet)
 	r.Handle("/events/{eventKey}", ihttp.ACL(s.upsertEventHandler(), true, true, true)).Methods(http.MethodPut)
 	r.Handle("/events/{eventKey}", s.eventHandler()).Methods(http.MethodGet)
