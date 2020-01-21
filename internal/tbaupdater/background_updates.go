@@ -73,7 +73,7 @@ func (s *Service) updatePerEventData(ctx context.Context, activeOnly bool) {
 	if activeOnly {
 		events, err = s.Store.GetActiveEvents(ctx, false)
 	} else {
-		events, err = s.Store.GetEvents(ctx, false)
+		events, err = s.Store.GetEvents(ctx, false, nil)
 	}
 
 	if err != nil {

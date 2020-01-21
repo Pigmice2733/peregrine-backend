@@ -366,6 +366,23 @@ paths:
           $ref: "#/components/responses/notFoundError"
         "500":
           $ref: "#/components/responses/internalServerError"
+  /years:
+    get:
+      summary: Get all years for all visible events
+      operationId: getEventYears
+      security:
+        - BearerAuth: []
+      tags:
+        - events
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+                  example: 2020
   /events:
     get:
       summary: Get all visible events
@@ -374,6 +391,14 @@ paths:
         - BearerAuth: []
       tags:
         - events
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: integer
+            example: 2020
+          required: false
+          description: A year to fetch events from. Leave unspecified for all years.
       responses:
         "200":
           content:

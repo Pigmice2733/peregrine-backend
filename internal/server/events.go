@@ -15,10 +15,32 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+func (s *Server) eventYearsHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
+		}
+
+		years, err := s.Store.GetEventYearsForRealm(r.Context(), realmID)
+		if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.Logger.WithError(err).Error("retrieving event data")
+			return
+		}
+
+		ihttp.Respond(w, &years, http.StatusOK)
+	}
+}
+
 // eventsHandler returns a handler to get all events in a given year.
 func (s *Server) eventsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tbaDeleted, _ := strconv.ParseBool(r.URL.Query().Get("tbaDeleted"))
+		var filterYear *int
+		if year, err := strconv.Atoi(r.URL.Query().Get("year")); err == nil {
+			filterYear = &year
+		}
 
 		var realmID *int64
 		userRealmID, err := ihttp.GetRealmID(r)
@@ -26,7 +48,7 @@ func (s *Server) eventsHandler() http.HandlerFunc {
 			realmID = &userRealmID
 		}
 
-		events, err := s.Store.GetEventsForRealm(r.Context(), tbaDeleted, realmID)
+		events, err := s.Store.GetEventsForRealm(r.Context(), true, realmID, filterYear)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("retrieving event data")
