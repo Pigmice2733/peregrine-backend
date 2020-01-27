@@ -1,0 +1,1 @@
+ALTER TABLE reports ALTER COLUMN comment DROP NOT NULL;

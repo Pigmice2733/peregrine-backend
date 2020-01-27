@@ -53,13 +53,13 @@ LEFT JOIN
 	schemas s
 ON
 	s.year = EXTRACT(YEAR FROM start_date)
-WHERE (EXTRACT(YEAR FROM start_date) = $1 OR $1 IS NULL)`
+	`
 
 // GetEvents returns all events from the database. event.Webcasts and schemaID will be nil for every event.
 // If tbaDeleted is true, events that have been deleted from TBA will be returned in addition to events that
 // have not been deleted. Otherwise, only events that have not been deleted will be returned.
 func (s *Service) GetEvents(ctx context.Context, tbaDeleted bool, year *int) (events []Event, err error) {
-	query := eventsQuery
+	query := eventsQuery + "WHERE (EXTRACT(YEAR FROM start_date) = $1 OR $1 IS NULL)"
 
 	if !tbaDeleted {
 		query += " AND NOT tba_deleted"
@@ -69,7 +69,7 @@ func (s *Service) GetEvents(ctx context.Context, tbaDeleted bool, year *int) (ev
 	return events, s.db.SelectContext(ctx, &events, query, year)
 }
 
-const eventsRealmQuery = eventsQuery + ` AND (events.realm_id IS NULL OR events.realm_id = $2)`
+const eventsRealmQuery = eventsQuery + `WHERE (events.realm_id IS NULL OR events.realm_id = $1)`
 
 const eventRealmYearQuery = `
 SELECT DISTINCT
@@ -84,14 +84,14 @@ WHERE (events.realm_id IS NULL OR events.realm_id = $1)
 // If tbaDeleted is true, events that have been deleted from TBA will be returned in addition to events that
 // have not been deleted. Otherwise, only events that have not been deleted will be returned.
 func (s *Service) GetEventsForRealm(ctx context.Context, tbaDeleted bool, realmID *int64, year *int) (events []Event, err error) {
-	query := eventsRealmQuery
+	query := eventsRealmQuery + "AND (EXTRACT(YEAR FROM start_date) = $2 OR $2 IS NULL)"
 
 	if !tbaDeleted {
 		query += " AND NOT tba_deleted"
 	}
 
 	events = make([]Event, 0)
-	return events, s.db.SelectContext(ctx, &events, query, year, realmID)
+	return events, s.db.SelectContext(ctx, &events, query, realmID, year)
 }
 
 // GetEventYearsForRealm returns a list of the years for all events from GetEventsForRealm.
