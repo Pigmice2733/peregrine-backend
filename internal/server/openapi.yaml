@@ -1137,6 +1137,11 @@ components:
           items:
             type: string
             example: frc4488
+        videos:
+          type: array
+          items:
+            type: string
+            example: https://www.youtube.com/watch?v=7ApbONq-B2Q
     stats:
       type: array
       items:

@@ -32,6 +32,11 @@ type webcast struct {
 	Channel string `json:"channel"`
 }
 
+type video struct {
+	Type string `json:"type"`
+	Key  string `json:"key"`
+}
+
 type event struct {
 	Key          string    `json:"key"`
 	Name         string    `json:"name"`
@@ -63,6 +68,7 @@ type match struct {
 		Blue alliance `json:"blue"`
 	} `json:"alliances"`
 	ScoreBreakdown scoreBreakdown `json:"score_breakdown"`
+	Videos         []video        `json:"videos"`
 }
 
 type scoreBreakdown struct {
@@ -156,6 +162,15 @@ func webcastURL(webcastType, channel string) (string, error) {
 	}
 
 	return "", errors.New("got invalid webcast url")
+}
+
+func videoURL(videoType, key string) (string, error) {
+	switch videoType {
+	case "youtube":
+		return fmt.Sprintf("https://www.youtube.com/watch?v=%s", key), nil
+	}
+
+	return "", errors.New("got invalid video url")
 }
 
 // Ping pings the TBA /status endpoint
@@ -300,6 +315,14 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 			blueScore = tbaMatch.Alliances.Blue.Score
 		}
 
+		videos := make([]string, 0)
+		for _, vid := range tbaMatch.Videos {
+			url, err := videoURL(vid.Type, vid.Key)
+			if err == nil {
+				videos = append(videos, url)
+			}
+		}
+
 		matchURL := fmt.Sprintf(tbaURL+"/match/%s", tbaMatch.Key)
 
 		match := store.Match{
@@ -315,6 +338,7 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 			RedScoreBreakdown:  tbaMatch.ScoreBreakdown.Red,
 			BlueScoreBreakdown: tbaMatch.ScoreBreakdown.Blue,
 			TBAURL:             &matchURL,
+			Videos:             videos,
 		}
 
 		matches = append(matches, match)
