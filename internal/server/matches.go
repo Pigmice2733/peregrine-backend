@@ -26,6 +26,7 @@ type match struct {
 	BlueAlliance  []string   `json:"blueAlliance"`
 	TBADeleted    bool       `json:"tbaDeleted"`
 	TBAURL        *string    `json:"tbaUrl"`
+	Videos        []string   `json:"videos"`
 }
 
 // matchesHandler returns a handler to get all matches at a given event.
@@ -60,6 +61,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 				BlueAlliance:  fullMatch.BlueAlliance,
 				TBADeleted:    fullMatch.TBADeleted,
 				TBAURL:        fullMatch.TBAURL,
+				Videos:        fullMatch.Videos,
 			})
 		}
 
@@ -98,6 +100,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 			BlueAlliance: fullMatch.BlueAlliance,
 			TBADeleted:   fullMatch.TBADeleted,
 			TBAURL:       fullMatch.TBAURL,
+			Videos:       fullMatch.Videos,
 		}
 
 		ihttp.Respond(w, match, http.StatusOK)
@@ -131,6 +134,7 @@ func (s *Server) upsertMatchHandler() http.HandlerFunc {
 			RedAlliance:   m.RedAlliance,
 			BlueAlliance:  m.BlueAlliance,
 			TBAURL:        m.TBAURL,
+			Videos:        m.Videos,
 		}
 
 		roles := ihttp.GetRoles(r)
