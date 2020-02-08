@@ -1137,6 +1137,19 @@ components:
           items:
             type: string
             example: frc4488
+        videos:
+          type: array
+          items:
+            properties:
+              type:
+                type: string
+                enum: [youtube, tba]
+              key:
+                type: string
+                example: 7ApbONq-B2Q
+            required:
+              - type
+              - key
     stats:
       type: array
       items:
