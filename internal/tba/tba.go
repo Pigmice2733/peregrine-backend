@@ -62,7 +62,13 @@ type match struct {
 		Red  alliance `json:"red"`
 		Blue alliance `json:"blue"`
 	} `json:"alliances"`
+	Videos         []video        `json:"videos"`
 	ScoreBreakdown scoreBreakdown `json:"score_breakdown"`
+}
+
+type video struct {
+	VideoType string `json:"type"`
+	Key       string `json:"key"`
 }
 
 type scoreBreakdown struct {
@@ -302,6 +308,11 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 
 		matchURL := fmt.Sprintf(tbaURL+"/match/%s", tbaMatch.Key)
 
+		videos := make([]store.Video, 0)
+		for _, vid := range tbaMatch.Videos {
+			videos = append(videos, store.Video{VideoType: vid.VideoType, Key: vid.Key})
+		}
+
 		match := store.Match{
 			Key:                matchKey,
 			EventKey:           eventKey,
@@ -314,6 +325,7 @@ func (s *Service) GetMatches(ctx context.Context, eventKey string) ([]store.Matc
 			BlueAlliance:       tbaMatch.Alliances.Blue.TeamKeys,
 			RedScoreBreakdown:  tbaMatch.ScoreBreakdown.Red,
 			BlueScoreBreakdown: tbaMatch.ScoreBreakdown.Blue,
+			Videos:             videos,
 			TBAURL:             &matchURL,
 		}
 

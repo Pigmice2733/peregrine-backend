@@ -17,15 +17,16 @@ import (
 )
 
 type match struct {
-	Key           string     `json:"key"`
-	Time          *time.Time `json:"time"`
-	ScheduledTime *time.Time `json:"scheduledTime,omitempty"`
-	RedScore      *int       `json:"redScore,omitempty"`
-	BlueScore     *int       `json:"blueScore,omitempty"`
-	RedAlliance   []string   `json:"redAlliance"`
-	BlueAlliance  []string   `json:"blueAlliance"`
-	TBADeleted    bool       `json:"tbaDeleted"`
-	TBAURL        *string    `json:"tbaUrl"`
+	Key           string       `json:"key"`
+	Time          *time.Time   `json:"time"`
+	ScheduledTime *time.Time   `json:"scheduledTime,omitempty"`
+	RedScore      *int         `json:"redScore,omitempty"`
+	BlueScore     *int         `json:"blueScore,omitempty"`
+	RedAlliance   []string     `json:"redAlliance"`
+	BlueAlliance  []string     `json:"blueAlliance"`
+	TBADeleted    bool         `json:"tbaDeleted"`
+	Videos        store.Videos `json:"videos"`
+	TBAURL        *string      `json:"tbaUrl"`
 }
 
 // matchesHandler returns a handler to get all matches at a given event.
@@ -60,6 +61,7 @@ func (s *Server) matchesHandler() http.HandlerFunc {
 				BlueAlliance:  fullMatch.BlueAlliance,
 				TBADeleted:    fullMatch.TBADeleted,
 				TBAURL:        fullMatch.TBAURL,
+				Videos:        fullMatch.Videos,
 			})
 		}
 
@@ -98,6 +100,7 @@ func (s *Server) matchHandler() http.HandlerFunc {
 			BlueAlliance: fullMatch.BlueAlliance,
 			TBADeleted:   fullMatch.TBADeleted,
 			TBAURL:       fullMatch.TBAURL,
+			Videos:       fullMatch.Videos,
 		}
 
 		ihttp.Respond(w, match, http.StatusOK)
@@ -131,6 +134,7 @@ func (s *Server) upsertMatchHandler() http.HandlerFunc {
 			RedAlliance:   m.RedAlliance,
 			BlueAlliance:  m.BlueAlliance,
 			TBAURL:        m.TBAURL,
+			Videos:        m.Videos,
 		}
 
 		roles := ihttp.GetRoles(r)

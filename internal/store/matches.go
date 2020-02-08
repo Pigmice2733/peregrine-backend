@@ -24,10 +24,35 @@ type Match struct {
 	BlueScore          *int           `json:"blueScore" db:"blue_score"`
 	RedAlliance        pq.StringArray `json:"redAlliance" db:"red_alliance"`
 	BlueAlliance       pq.StringArray `json:"blueAlliance" db:"blue_alliance"`
+	Videos             Videos         `json:"videos" db:"videos"`
 	TBADeleted         bool           `json:"tbaDeleted" db:"tba_deleted"`
 	RedScoreBreakdown  ScoreBreakdown `json:"redScoreBreakdown" db:"red_score_breakdown"`
 	BlueScoreBreakdown ScoreBreakdown `json:"blueScoreBreakdown" db:"blue_score_breakdown"`
 	TBAURL             *string        `json:"tbaUrl" db:"tba_url"`
+}
+
+// Video is a match video from TBA, the video type: "youtube" or "tba", and the video key.
+type Video struct {
+	VideoType string `json:"type"`
+	Key       string `json:"key"`
+}
+
+// Videos is a slice of videos with helper methods for use with a SQL database.
+type Videos []Video
+
+// Value marshals the videos into JSON to be stored in the database.
+func (vids Videos) Value() (driver.Value, error) {
+	return json.Marshal(vids)
+}
+
+// Scan unmarshals JSON from the database into videos.
+func (vids *Videos) Scan(src interface{}) error {
+	j, ok := src.([]byte)
+	if !ok {
+		return errors.New("got invalid type for Videos")
+	}
+
+	return json.Unmarshal(j, &vids)
 }
 
 // ScoreBreakdown changes year to year, but it's generally a map of strings
@@ -76,7 +101,8 @@ SELECT
 	b.team_keys AS blue_alliance,
 	matches.red_score_breakdown,
 	matches.blue_score_breakdown,
-	matches.tba_url
+	matches.tba_url,
+	matches.videos
 FROM
 	matches
 INNER JOIN
@@ -176,8 +202,8 @@ func (s *Service) DeleteMatchTx(ctx context.Context, tx *sqlx.Tx, matchKey, even
 // UpsertMatchTx upserts a match and its alliances into the database in the given transaction.
 func (s *Service) UpsertMatchTx(ctx context.Context, tx *sqlx.Tx, match Match) error {
 	_, err := tx.NamedExecContext(ctx, `
-		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url)
-		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url)
+		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url, videos)
+		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url, :videos)
 		ON CONFLICT (key, event_key)
 		DO
 			UPDATE
@@ -190,7 +216,8 @@ func (s *Service) UpsertMatchTx(ctx context.Context, tx *sqlx.Tx, match Match) e
 					tba_deleted = :tba_deleted,
 					red_score_breakdown = :red_score_breakdown,
 					blue_score_breakdown = :blue_score_breakdown,
-					tba_url = :tba_url
+					tba_url = :tba_url,
+					videos = :videos
 		`, match)
 	if err != nil {
 		return fmt.Errorf("unable to upsert matches: %w", err)
@@ -238,8 +265,8 @@ func (s *Service) MarkMatchesDeleted(ctx context.Context, eventKey string, match
 func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches []Match) error {
 	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		upsert, err := tx.PrepareNamedContext(ctx, `
-		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url)
-		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url)
+		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url, videos)
+		VALUES (:key, :event_key, :predicted_time, :scheduled_time, :actual_time, :red_score, :blue_score, :tba_deleted, :red_score_breakdown, :blue_score_breakdown, :tba_url, :videos)
 		ON CONFLICT (key, event_key)
 		DO
 			UPDATE
@@ -252,7 +279,8 @@ func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches
 					tba_deleted = false,
 					red_score_breakdown = :red_score_breakdown,
 					blue_score_breakdown = :blue_score_breakdown,
-					tba_url = :tba_url
+					tba_url = :tba_url,
+					videos = :videos
 	`)
 		if err != nil {
 			return fmt.Errorf("unable to prepare query to upsert matches: %w", err)
