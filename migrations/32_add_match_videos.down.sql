@@ -1,2 +1,2 @@
 ALTER TABLE matches
-    DROP COLUMN;
+    DROP COLUMN videos;
