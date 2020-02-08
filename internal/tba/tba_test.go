@@ -313,7 +313,10 @@ func TestGetMatches(t *testing.T) {
 						},
 						"predicted_time": 1520272800,
 						"time": 1520272800,
-						"actual_time": 1520274000
+						"actual_time": 1520274000,
+						"videos": [
+							{"type": "youtube", "key": "7ApbONq-B2Q"}
+						]
 					},
 					{
 						"key": "event_key2",
@@ -339,7 +342,10 @@ func TestGetMatches(t *testing.T) {
 								"foobar": 4.2321,
 								"blabla": 9
 							}
-						}
+						},
+						"videos": [
+							{"type": "youtube", "key": "7ApbONq-B2Q"}
+						]
 					}
 				]
 				`))
@@ -362,6 +368,7 @@ func TestGetMatches(t *testing.T) {
 					RedScoreBreakdown:  map[string]interface{}{"foobar": 3.0, "barbaz": true},
 					BlueScoreBreakdown: map[string]interface{}{"foobar": 1.0, "blabla": 3.212},
 					TBAURL:             newString(tbaURL + "/match/event_key1"),
+					Videos:             store.Videos{{VideoType: "youtube", Key: "7ApbONq-B2Q"}},
 				},
 				{
 					Key:                "key2",
@@ -376,6 +383,7 @@ func TestGetMatches(t *testing.T) {
 					RedScoreBreakdown:  map[string]interface{}{"foobar": 90.2, "barbaz": false},
 					BlueScoreBreakdown: map[string]interface{}{"foobar": 4.2321, "blabla": 9.0},
 					TBAURL:             newString(tbaURL + "/match/event_key2"),
+					Videos:             store.Videos{{VideoType: "youtube", Key: "7ApbONq-B2Q"}},
 				},
 			},
 			expectErr: false,
@@ -411,7 +419,10 @@ func TestGetMatches(t *testing.T) {
 						},
 						"predicted_time": 1520272800,
 						"time": 1520272800,
-						"actual_time": 1520274000
+						"actual_time": 1520274000,
+						"videos": [
+							{"type": "youtube", "key": "7ApbONq-B2Q"}
+						]
 					},
 					{
 						"key": "event_key2",
@@ -427,7 +438,10 @@ func TestGetMatches(t *testing.T) {
 						},
 						"predicted_time": null,
 						"time": 1525272780,
-						"actual_time": null
+						"actual_time": null,
+						"videos": [
+							{"type": "youtube", "key": "7ApbONq-B2Q"}
+						]
 					}
 				]
 				`))
@@ -448,6 +462,7 @@ func TestGetMatches(t *testing.T) {
 					RedAlliance:   []string{"frc254", "frc1234", "frc00"},
 					BlueAlliance:  []string{"frc2733", "frc9876", "frc1"},
 					TBAURL:        newString(tbaURL + "/match/event_key1"),
+					Videos:        store.Videos{{VideoType: "youtube", Key: "7ApbONq-B2Q"}},
 				},
 				{
 					Key:           "key2",
@@ -460,6 +475,7 @@ func TestGetMatches(t *testing.T) {
 					RedAlliance:   []string{"frc0", "frc1", "frc2"},
 					BlueAlliance:  []string{"frc2", "frc7", "frc3"},
 					TBAURL:        newString(tbaURL + "/match/event_key2"),
+					Videos:        store.Videos{{VideoType: "youtube", Key: "7ApbONq-B2Q"}},
 				},
 			},
 			expectErr: false,
