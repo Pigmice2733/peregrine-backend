@@ -35,33 +35,34 @@ func (s *Service) Run(ctx context.Context) {
 	storeEvents := make(chan []store.Event)
 	matchEvents := make(chan string)
 	rankingEvents := make(chan string)
+	activeEvents := make(chan string)
 
 	go func() {
-		for eventGroup := range events {
-			storeEvents <- eventGroup
-			for _, event := range eventGroup {
-				matchEvents <- event.Key
-				rankingEvents <- event.Key
+		defer func() {
+			close(storeEvents)
+			close(matchEvents)
+			close(rankingEvents)
+		}()
+
+		for {
+			select {
+			case event := <-activeEvents:
+				matchEvents <- event
+				rankingEvents <- event
+			case eventGroup := <-events:
+				storeEvents <- eventGroup
+				for _, event := range eventGroup {
+					matchEvents <- event.Key
+					rankingEvents <- event.Key
+				}
+			case <-ctx.Done():
+				return
 			}
 		}
-
-		close(storeEvents)
-		close(matchEvents)
-		close(rankingEvents)
 	}()
 
 	go s.fetchEvents(ctx, eventsInterval, events)
 	go s.storeEvents(ctx, storeEvents)
-
-	activeEvents := make(chan string)
-
-	go func() {
-		for event := range activeEvents {
-			matchEvents <- event
-			rankingEvents <- event
-		}
-	}()
-
 	go s.seedActiveEvents(ctx, activeInterval, activeEvents)
 
 	teams := make(chan []store.Team)
@@ -87,12 +88,13 @@ func (s *Service) fetchEvents(ctx context.Context, interval time.Duration, event
 
 	getEvents := func() {
 		tbaEvents, err := s.TBA.GetEvents(ctx, s.Year)
-		if err != nil && ctx.Err() != context.Canceled && !errors.Is(err, tba.ErrNotModified{}) {
+		if errors.Is(err, tba.ErrNotModified{}) {
+			return
+		} else if err != nil && ctx.Err() != context.Canceled {
 			s.Logger.WithError(err).Errorf("unable get events from TBA for year %d", s.Year)
 		}
 
 		s.Logger.WithField("year", s.Year).WithField("count", len(tbaEvents)).Info("pulled events from TBA")
-
 		events <- tbaEvents
 	}
 
@@ -160,12 +162,13 @@ func (s *Service) fetchTeams(ctx context.Context, interval time.Duration, teams 
 
 	getTeams := func() {
 		tbaTeams, err := s.TBA.GetTeams(ctx)
-		if err != nil && ctx.Err() != context.Canceled && !errors.Is(err, tba.ErrNotModified{}) {
+		if errors.Is(err, tba.ErrNotModified{}) {
+			return
+		} else if err != nil && ctx.Err() != context.Canceled {
 			s.Logger.WithError(err).Errorf("unable get teams from TBA")
 		}
 
 		s.Logger.WithField("count", len(tbaTeams)).Info("pulled teams")
-
 		teams <- tbaTeams
 	}
 
@@ -198,12 +201,13 @@ func (s *Service) fetchMatches(ctx context.Context, events <-chan string, matche
 
 	for eventKey := range events {
 		tbaMatches, err := s.TBA.GetMatches(ctx, eventKey)
-		if err != nil && ctx.Err() != context.Canceled && !errors.Is(err, tba.ErrNotModified{}) {
+		if errors.Is(err, tba.ErrNotModified{}) {
+			continue
+		} else if err != nil && ctx.Err() != context.Canceled {
 			s.Logger.WithError(err).Errorf("unable get matches from TBA for event %q", eventKey)
 		}
 
 		s.Logger.WithField("count", len(tbaMatches)).Info("pulled matches")
-
 		matches <- tbaMatches
 	}
 }
@@ -226,12 +230,13 @@ func (s *Service) fetchRankings(ctx context.Context, eventKeys <-chan string, ra
 
 	for eventKey := range eventKeys {
 		tbaRankings, err := s.TBA.GetTeamRankings(ctx, eventKey)
-		if err != nil && ctx.Err() != context.Canceled && !errors.Is(err, tba.ErrNotModified{}) {
+		if errors.Is(err, tba.ErrNotModified{}) {
+			continue
+		} else if err != nil && ctx.Err() != context.Canceled {
 			s.Logger.WithError(err).Errorf("unable get rankings from TBA for event %q", eventKey)
 		}
 
 		s.Logger.WithField("count", len(tbaRankings)).Info("pulled rankings")
-
 		rankings <- tbaRankings
 	}
 }
