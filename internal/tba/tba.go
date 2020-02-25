@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -97,6 +98,15 @@ const maxResponseSize int64 = 1.2e+6
 
 var tbaClient = &http.Client{
 	Timeout: time.Second * 10,
+	Transport: &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	},
 }
 
 // ErrNotModified is returned when a resource has not been modified since it was
