@@ -224,10 +224,13 @@ func (s *Service) GetEvents(ctx context.Context, year int) ([]store.Event, error
 		if err != nil {
 			return nil, err
 		}
+		startDate = startDate.Add(time.Hour * 12) // assume events start at noon
+
 		endDate, err := time.ParseInLocation("2006-01-02", tbaEvent.EndDate, timeZone)
 		if err != nil {
 			return nil, err
 		}
+		endDate = endDate.Add(time.Hour * (12 + 7)) // assume events end at 7pm
 
 		webcasts := make([]string, 0)
 		for _, webcast := range tbaEvent.Webcasts {
