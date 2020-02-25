@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -30,7 +31,7 @@ func (s *Server) uptime() time.Duration {
 }
 
 // Run starts the server, and returns if it runs into an error
-func (s *Server) Run() error {
+func (s *Server) Run(ctx context.Context) error {
 	router := s.registerRoutes()
 
 	var handler http.Handler = router
@@ -51,6 +52,17 @@ func (s *Server) Run() error {
 	}
 
 	s.start = time.Now()
-	s.Logger.WithField("httpAddress", s.Listen).Info("serving http")
-	return httpServer.ListenAndServe()
+
+	errs := make(chan error)
+	go func() {
+		s.Logger.WithField("httpAddress", s.Listen).Info("serving http")
+		errs <- httpServer.ListenAndServe()
+	}()
+
+	select {
+	case err := <-errs:
+		return err
+	case <-ctx.Done():
+		return httpServer.Shutdown(ctx)
+	}
 }

@@ -236,9 +236,8 @@ func (s *Service) MarkMatchesDeleted(ctx context.Context, eventKey string, match
 // UpdateTBAMatches puts a set of multiple matches and their alliances from TBA
 // into the database. New matches are added, existing matches will be updated,
 // and matches deleted from TBA will be deleted from the database. User-created
-// matches will be unaffected. If eventKey is specified, only matches from that
-// event will be affected. It will set tba_deleted to false for all updated matches.
-func (s *Service) UpdateTBAMatches(ctx context.Context, eventKey string, matches []Match) error {
+// matches will be unaffected. It will set tba_deleted to false for all updated matches.
+func (s *Service) UpdateTBAMatches(ctx context.Context, matches []Match) error {
 	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		upsert, err := tx.PrepareNamedContext(ctx, `
 		INSERT INTO matches (key, event_key, predicted_time, scheduled_time, actual_time, red_score, blue_score, tba_deleted, red_score_breakdown, blue_score_breakdown, tba_url, videos)

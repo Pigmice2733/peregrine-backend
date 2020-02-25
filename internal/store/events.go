@@ -110,41 +110,10 @@ func (s *Service) GetEventForRealm(ctx context.Context, eventKey string, realmID
 	return event, err
 }
 
-// GetActiveEvents returns all events that are currently happening. If tbaDeleted is true,
-// events that have been deleted from TBA will be returned in addition to events that have
-// not been deleted. Otherwise, only events that have not been deleted will be returned.
-func (s *Service) GetActiveEvents(ctx context.Context, tbaDeleted bool) ([]Event, error) {
-	query := `
-	SELECT
-	    key,
-		name,
-		district,
-		full_district,
-		week,
-		start_date,
-		end_date,
-		webcasts,
-		location_name,
-		lat,
-		lon,
-		tba_deleted,
-		events.realm_id,
-		COALESCE(schema_id, s.id) AS schema_id
-	FROM
-		events
-	LEFT JOIN
-		schemas s
-	ON
-		s.year = EXTRACT(YEAR FROM start_date)
-	WHERE
-		start_date <= CURRENT_DATE
-		AND end_date >= CURRENT_DATE`
-
-	if !tbaDeleted {
-		query += " AND NOT tba_deleted"
-	}
-
-	events := []Event{}
+// GetActiveEvents returns all event keys for events that are currently happening.
+func (s *Service) GetActiveEvents(ctx context.Context) ([]string, error) {
+	const query = `SELECT key FROM events WHERE start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE`
+	events := make([]string, 0)
 	return events, s.db.SelectContext(ctx, &events, query)
 }
 
