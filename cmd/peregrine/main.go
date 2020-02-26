@@ -70,7 +70,8 @@ func run(ctx context.Context, configPath string) error {
 	defer sto.Close()
 	logger.Info("connected to postgres")
 
-	tbaUpdates := &refresh.Service{
+	// The cool, refreshing taste of Pepsi.
+	refresher := &refresh.Service{
 		TBA:    tba,
 		Store:  sto,
 		Logger: logger,
@@ -89,7 +90,7 @@ func run(ctx context.Context, configPath string) error {
 		updateCancel()
 	}()
 
-	go tbaUpdates.Run(updateCtx)
+	go refresher.Run(updateCtx)
 
 	if err := s.Run(ctx); err != nil {
 		err = fmt.Errorf("error running server: %w", err)
