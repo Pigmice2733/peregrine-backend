@@ -102,6 +102,7 @@ func (s *Service) fetchEvents(ctx context.Context, interval time.Duration, event
 			return
 		} else if err != nil {
 			s.Logger.WithError(err).Errorf("unable get events from TBA for year %d", s.Year)
+			return
 		}
 
 		s.Logger.WithField("year", s.Year).WithField("count", len(tbaEvents)).Info("pulled events from TBA")
@@ -134,10 +135,9 @@ func (s *Service) seedActiveEvents(ctx context.Context, interval time.Duration, 
 		defer cancel()
 
 		activeEvents, err := s.Store.GetActiveEvents(timeoutContext)
-		if ctx.Err() == context.Canceled {
-			return
-		} else if err != nil {
+		if err != nil {
 			s.Logger.WithError(err).Errorf("unable get active events %d", s.Year)
+			return
 		}
 
 		s.Logger.WithField("count", len(activeEvents)).Info("pulled active events")
@@ -162,8 +162,9 @@ func (s *Service) storeEvents(ctx context.Context, events <-chan []store.Event) 
 		defer cancel()
 
 		err := s.Store.EventsUpsert(timeoutContext, eventGroup)
-		if err != nil && ctx.Err() != context.Canceled {
+		if err != nil {
 			s.Logger.WithError(err).Errorf("unable to upsert events")
+			return
 		}
 
 		s.Logger.WithField("count", len(eventGroup)).Info("stored events")
@@ -189,6 +190,7 @@ func (s *Service) fetchTeams(ctx context.Context, interval time.Duration, teams 
 			return
 		} else if err != nil {
 			s.Logger.WithError(err).Errorf("unable get teams from TBA")
+			return
 		}
 
 		s.Logger.WithField("count", len(tbaTeams)).Info("pulled teams")
@@ -216,6 +218,7 @@ func (s *Service) storeTeams(ctx context.Context, teams <-chan []store.Team) {
 		err := s.Store.TeamsUpsert(timeoutContext, teamsGroup)
 		if err != nil {
 			s.Logger.WithError(err).Errorf("unable to upsert teams")
+			continue
 		}
 
 		s.Logger.WithField("count", len(teamsGroup)).Info("stored teams")
@@ -238,6 +241,7 @@ func (s *Service) fetchMatches(ctx context.Context, events <-chan string, matche
 			continue
 		} else if err != nil {
 			s.Logger.WithError(err).Errorf("unable get matches from TBA for event %q", eventKey)
+			continue
 		}
 
 		s.Logger.WithField("count", len(tbaMatches)).Info("pulled matches")
@@ -259,6 +263,7 @@ func (s *Service) storeMatches(ctx context.Context, eventMatches <-chan eventMat
 		err := s.Store.UpdateTBAMatches(timeoutContext, matches.Matches)
 		if err != nil {
 			s.Logger.WithError(err).Errorf("unable to upsert matches")
+			continue
 		}
 
 		err = s.Store.MarkMatchesDeleted(ctx, matches.EventKey, matches.Matches)
@@ -286,6 +291,7 @@ func (s *Service) fetchRankings(ctx context.Context, eventKeys <-chan string, ra
 			continue
 		} else if err != nil {
 			s.Logger.WithError(err).Errorf("unable get rankings from TBA for event %q", eventKey)
+			continue
 		}
 
 		s.Logger.WithField("count", len(tbaRankings)).Info("pulled rankings")
@@ -301,8 +307,9 @@ func (s *Service) storeRankings(ctx context.Context, rankings <-chan []store.Eve
 		defer cancel()
 
 		err := s.Store.EventTeamsUpsert(timeoutContext, rankingGroup)
-		if err != nil && ctx.Err() != context.Canceled {
+		if err != nil {
 			s.Logger.WithError(err).Errorf("unable to upsert rankings")
+			continue
 		}
 
 		s.Logger.WithField("count", len(rankingGroup)).Info("stored rankings")
