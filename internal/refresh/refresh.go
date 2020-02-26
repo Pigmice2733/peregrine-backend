@@ -157,7 +157,7 @@ func (s *Service) seedActiveEvents(ctx context.Context, interval time.Duration, 
 func (s *Service) storeEvents(ctx context.Context, events <-chan []store.Event) {
 	const timeout = time.Second * 10
 
-	for eventGroup := range events {
+	upsertEvents := func(eventGroup []store.Event) {
 		timeoutContext, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
@@ -168,6 +168,10 @@ func (s *Service) storeEvents(ctx context.Context, events <-chan []store.Event) 
 		}
 
 		s.Logger.WithField("count", len(eventGroup)).Info("stored events")
+	}
+
+	for eventGroup := range events {
+		upsertEvents(eventGroup)
 	}
 }
 
@@ -211,17 +215,21 @@ func (s *Service) fetchTeams(ctx context.Context, interval time.Duration, teams 
 func (s *Service) storeTeams(ctx context.Context, teams <-chan []store.Team) {
 	const timeout = time.Second * 10
 
-	for teamsGroup := range teams {
+	upsertTeams := func(teamsGroup []store.Team) {
 		timeoutContext, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
 		err := s.Store.TeamsUpsert(timeoutContext, teamsGroup)
 		if err != nil {
 			s.Logger.WithError(err).Errorf("unable to upsert teams")
-			continue
+			return
 		}
 
 		s.Logger.WithField("count", len(teamsGroup)).Info("stored teams")
+	}
+
+	for teamsGroup := range teams {
+		upsertTeams(teamsGroup)
 	}
 }
 
@@ -232,16 +240,16 @@ func (s *Service) fetchMatches(ctx context.Context, events <-chan string, matche
 		close(matches)
 	}()
 
-	for eventKey := range events {
+	getMatches := func(eventKey string) {
 		timeoutContext, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
 		tbaMatches, err := s.TBA.GetMatches(timeoutContext, eventKey)
 		if errors.Is(err, tba.ErrNotModified{}) {
-			continue
+			return
 		} else if err != nil {
 			s.Logger.WithError(err).Errorf("unable get matches from TBA for event %q", eventKey)
-			continue
+			return
 		}
 
 		s.Logger.WithField("count", len(tbaMatches)).Info("pulled matches")
@@ -251,27 +259,36 @@ func (s *Service) fetchMatches(ctx context.Context, events <-chan string, matche
 			Matches:  tbaMatches,
 		}
 	}
+
+	for eventKey := range events {
+		getMatches(eventKey)
+	}
 }
 
-func (s *Service) storeMatches(ctx context.Context, eventMatches <-chan eventMatches) {
+func (s *Service) storeMatches(ctx context.Context, matches <-chan eventMatches) {
 	const timeout = time.Second * 10
 
-	for matches := range eventMatches {
+	updateMatches := func(m eventMatches) {
 		timeoutContext, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
-		err := s.Store.UpdateTBAMatches(timeoutContext, matches.Matches)
+		err := s.Store.UpdateTBAMatches(timeoutContext, m.Matches)
 		if err != nil {
 			s.Logger.WithError(err).Errorf("unable to upsert matches")
-			continue
+			return
 		}
 
-		err = s.Store.MarkMatchesDeleted(ctx, matches.EventKey, matches.Matches)
+		err = s.Store.MarkMatchesDeleted(ctx, m.EventKey, m.Matches)
 		if err != nil {
 			s.Logger.WithError(err).Errorf("unable to mark matches deleted matches")
+			return
 		}
 
-		s.Logger.WithField("count", len(matches.Matches)).Info("stored matches")
+		s.Logger.WithField("count", len(m.Matches)).Info("stored matches")
+	}
+
+	for m := range matches {
+		updateMatches(m)
 	}
 }
 
@@ -282,36 +299,44 @@ func (s *Service) fetchRankings(ctx context.Context, eventKeys <-chan string, ra
 		close(rankings)
 	}()
 
-	for eventKey := range eventKeys {
+	getRankings := func(eventKey string) {
 		timeoutContext, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
 		tbaRankings, err := s.TBA.GetTeamRankings(timeoutContext, eventKey)
 		if errors.Is(err, tba.ErrNotModified{}) {
-			continue
+			return
 		} else if err != nil {
 			s.Logger.WithError(err).Errorf("unable get rankings from TBA for event %q", eventKey)
-			continue
+			return
 		}
 
 		s.Logger.WithField("count", len(tbaRankings)).Info("pulled rankings")
 		rankings <- tbaRankings
+	}
+
+	for eventKey := range eventKeys {
+		getRankings(eventKey)
 	}
 }
 
 func (s *Service) storeRankings(ctx context.Context, rankings <-chan []store.EventTeam) {
 	const timeout = time.Second * 10
 
-	for rankingGroup := range rankings {
+	storeRankings := func(rankingGroup []store.EventTeam) {
 		timeoutContext, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
 		err := s.Store.EventTeamsUpsert(timeoutContext, rankingGroup)
 		if err != nil {
 			s.Logger.WithError(err).Errorf("unable to upsert rankings")
-			continue
+			return
 		}
 
 		s.Logger.WithField("count", len(rankingGroup)).Info("stored rankings")
+	}
+
+	for rankingGroup := range rankings {
+		storeRankings(rankingGroup)
 	}
 }
