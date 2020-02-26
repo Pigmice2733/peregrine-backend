@@ -105,8 +105,9 @@ func (s *Service) fetchEvents(ctx context.Context, interval time.Duration, event
 			return
 		}
 
-		s.Logger.WithField("year", s.Year).WithField("count", len(tbaEvents)).Info("pulled events from TBA")
 		events <- tbaEvents
+
+		s.Logger.WithField("year", s.Year).WithField("count", len(tbaEvents)).Info("sent year events")
 	}
 
 	getEvents()
@@ -140,7 +141,11 @@ func (s *Service) seedActiveEvents(ctx context.Context, interval time.Duration, 
 			return
 		}
 
-		s.Logger.WithField("count", len(activeEvents)).Info("pulled active events")
+		for _, event := range activeEvents {
+			events <- event
+		}
+
+		s.Logger.WithField("count", len(activeEvents)).Info("sent active events")
 	}
 
 	getEvents()
@@ -197,7 +202,8 @@ func (s *Service) fetchTeams(ctx context.Context, interval time.Duration, teams 
 			return
 		}
 
-		s.Logger.WithField("count", len(tbaTeams)).Info("pulled teams")
+		s.Logger.WithField("count", len(tbaTeams)).Info("sent teams")
+
 		teams <- tbaTeams
 	}
 
@@ -252,12 +258,12 @@ func (s *Service) fetchMatches(ctx context.Context, events <-chan string, matche
 			return
 		}
 
-		s.Logger.WithField("count", len(tbaMatches)).Info("pulled matches")
-
 		matches <- eventMatches{
 			EventKey: eventKey,
 			Matches:  tbaMatches,
 		}
+
+		s.Logger.WithField("count", len(tbaMatches)).Info("sent matches")
 	}
 
 	for eventKey := range events {
@@ -311,8 +317,9 @@ func (s *Service) fetchRankings(ctx context.Context, eventKeys <-chan string, ra
 			return
 		}
 
-		s.Logger.WithField("count", len(tbaRankings)).Info("pulled rankings")
 		rankings <- tbaRankings
+
+		s.Logger.WithField("count", len(tbaRankings)).Info("sent rankings")
 	}
 
 	for eventKey := range eventKeys {
