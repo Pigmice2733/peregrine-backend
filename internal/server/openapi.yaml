@@ -833,6 +833,14 @@ paths:
       operationId: getLeaderboard
       tags:
         - leaderboard
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: integer
+            example: 2020
+          required: false
+          description: Count reports for events in specified year only. Leave empty for all years.
       responses:
         "200":
           content:

@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/Pigmice2733/peregrine-backend/internal/store"
 
@@ -89,7 +90,12 @@ func (s *Server) leaderboardHandler() http.HandlerFunc {
 			return
 		}
 
-		leaderboard, err := s.Store.GetLeaderboardForRealm(r.Context(), realmID)
+		var filterYear *int
+		if year, err := strconv.Atoi(r.URL.Query().Get("year")); err == nil {
+			filterYear = &year
+		}
+
+		leaderboard, err := s.Store.GetLeaderboardForRealm(r.Context(), realmID, filterYear)
 		if err != nil {
 			ihttp.Error(w, http.StatusInternalServerError)
 			s.Logger.WithError(err).Error("getting leaderboard")
