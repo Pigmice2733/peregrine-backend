@@ -142,8 +142,9 @@ func (s *Service) GetMatchTeamReportsForRealm(ctx context.Context, eventKey, mat
 }
 
 // GetLeaderboardForRealm retrieves leaderboard information from the reports and users table for users
-// in the given realm.
-func (s *Service) GetLeaderboardForRealm(ctx context.Context, realmID int64) (Leaderboard, error) {
+// in the given realm. Specify year to filter for reports for events in the given year. Leave unspecified
+// for all years.
+func (s *Service) GetLeaderboardForRealm(ctx context.Context, realmID int64, year *int) (Leaderboard, error) {
 	leaderboard := make(Leaderboard, 0)
 
 	return leaderboard, s.db.SelectContext(ctx, &leaderboard, `
@@ -152,9 +153,12 @@ func (s *Service) GetLeaderboardForRealm(ctx context.Context, realmID int64) (Le
 	FROM users
 	LEFT JOIN reports
 		ON (users.id = reports.reporter_id)
+	LEFT JOIN events
+		ON (reports.event_key = events.key)
 	WHERE
-		users.realm_id = $1
+		users.realm_id = $1 AND
+		(EXTRACT(YEAR FROM events.start_date) = $2 OR $2 IS NULL)
 	GROUP BY users.id
 	ORDER BY num_reports DESC;
-	`, realmID)
+	`, realmID, year)
 }
