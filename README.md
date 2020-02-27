@@ -10,7 +10,7 @@ For a description of what scouting is, please view the [SCOUTING.md](SCOUTING.md
 
 ## Setup
 
-1. Install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and [Go](https://golang.org/doc/install) (>=1.13)
+1. Install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and [Go](https://golang.org/doc/install) (1.14)
 
 2. Clone the repo:
 
