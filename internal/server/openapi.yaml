@@ -684,29 +684,6 @@ paths:
           $ref: "#/components/responses/notFoundError"
         "500":
           $ref: "#/components/responses/internalServerError"
-  /events/{eventKey}/teams/{teamKey}/comments:
-    parameters:
-      - $ref: "#/components/parameters/eventKey"
-      - $ref: "#/components/parameters/teamKey"
-    get:
-      summary: Get comments about a team at an event
-      operationId: getTeamEventComments
-      security:
-        - BearerAuth: []
-      tags:
-        - comments
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/comment"
-        "401":
-          $ref: "#/components/responses/unauthorizedError"
-        "500":
-          $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/matches/{matchKey}/reports/{teamKey}:
     parameters:
       - $ref: "#/components/parameters/eventKey"
