@@ -2,12 +2,14 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 // A Stat holds a single statistic from a single match, and could be either a
@@ -35,12 +37,12 @@ func (rd *ReportData) Scan(src interface{}) error {
 
 // Report is data about how an FRC team performed in a specific match.
 type Report struct {
-	ID         int64      `json:"-" db:"id"`
-	EventKey   string     `json:"-" db:"event_key"`
-	MatchKey   string     `json:"-" db:"match_key"`
-	TeamKey    string     `json:"-" db:"team_key"`
+	ID         int64      `json:"id" db:"id"`
+	EventKey   string     `json:"eventKey" db:"event_key"`
+	MatchKey   string     `json:"matchKey" db:"match_key"`
+	TeamKey    string     `json:"teamKey" db:"team_key"`
 	ReporterID *int64     `json:"reporterId" db:"reporter_id"`
-	RealmID    *int64     `json:"-" db:"realm_id"`
+	RealmID    *int64     `json:"realmId" db:"realm_id"`
 	Data       ReportData `json:"data" db:"data"`
 	Comment    string     `json:"comment" db:"comment"`
 }
@@ -51,15 +53,28 @@ type Leaderboard []struct {
 	Reports    int64 `json:"reports" db:"num_reports"`
 }
 
+// GetReportByID retrieves a report given its ID
+func (s *Service) GetReportByID(ctx context.Context, id int64) (Report, error) {
+	var report Report
+
+	err := s.db.GetContext(ctx, &report, "SELECT * FROM reports WHERE id = $1", id)
+	if err == sql.ErrNoRows {
+		return report, ErrNoResults{fmt.Errorf("report with ID %d does not exist", report.ID)}
+	} else if err != nil {
+		return report, fmt.Errorf("unable to retrieve report: %w", err)
+	}
+
+	return report, nil
+}
+
 // UpsertReport creates a new report in the db, or replaces the existing one if
 // the same reporter already has a report in the db for that team and match. It
 // returns a boolean that is true when the report was created, and false when it
 // was updated.
-func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err error) {
+func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, id int64, err error) {
 	var existed bool
 
 	err = s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
-		var existed bool
 		err = tx.QueryRowContext(ctx, `
 			SELECT EXISTS(
 				SELECT FROM reports
@@ -74,21 +89,60 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, err
 			return fmt.Errorf("unable to determine if report exists: %w", err)
 		}
 
-		_, err = tx.NamedExecContext(ctx, `
-			INSERT INTO
+		reportStmt, err := tx.PrepareNamedContext(ctx, `INSERT INTO
 				reports (event_key, match_key, team_key, reporter_id, realm_id, data, comment)
 			VALUES (:event_key, :match_key, :team_key, :reporter_id, :realm_id, :data, :comment)
 			ON CONFLICT (event_key, match_key, team_key, reporter_id)
 				DO UPDATE SET data = :data, realm_id = :realm_id, comment = :comment
-		`, r)
+			RETURNING id
+		`)
 		if err != nil {
+			return fmt.Errorf("unable to prepare user insert statement: %w", err)
+		}
+
+		err = reportStmt.GetContext(ctx, &id, r)
+		if err != nil {
+			if err, ok := err.(*pq.Error); ok {
+				if err.Code == pgExists {
+					return ErrExists{fmt.Errorf("report unique violation: %s, %s, %s, %d", r.EventKey, r.MatchKey, r.TeamKey, r.ReporterID)}
+				}
+				if err.Code == pgFKeyViolation {
+					return ErrFKeyViolation{fmt.Errorf("report fk violation %s", err.Constraint)}
+				}
+			}
 			return fmt.Errorf("unable to upsert report: %w", err)
 		}
 
 		return nil
 	})
 
-	return !existed, err
+	return !existed, id, err
+}
+
+// UpdateReport updates an existing report in the db
+func (s *Service) UpdateReport(ctx context.Context, r Report) error {
+	res, err := s.db.NamedExecContext(ctx, `
+	UPDATE reports
+		SET
+			event_key = :event_key,
+			match_key = :match_key,
+			team_key = :team_key,
+			reporter_id = :reporter_id,
+			realm_id = :realm_id,
+			data = :data,
+			comment = :comment
+	    WHERE
+		    id = :id
+	`, r)
+	if err == nil {
+		if n, err := res.RowsAffected(); err != nil && n == 0 {
+			return ErrNoResults{fmt.Errorf("could not update non-existent report: %w", err)}
+		}
+	} else if err != nil {
+		return fmt.Errorf("unable to update report: %w", err)
+	}
+
+	return nil
 }
 
 // GetEventReportsForRealm returns all event reports for a specific event and realm.
@@ -96,7 +150,7 @@ func (s *Service) GetEventReportsForRealm(ctx context.Context, eventKey string, 
 	const query = `
 	SELECT reports.*
 	FROM reports
-	LEFT JOIN realms
+	INNER JOIN realms
 		ON realms.id = reports.realm_id AND
 		(realms.share_reports = true OR realms.id = $2)
 	WHERE
@@ -112,7 +166,7 @@ func (s *Service) GetEventTeamReportsForRealm(ctx context.Context, eventKey stri
 	const query = `
 	SELECT reports.*
 	FROM reports
-	LEFT JOIN realms
+	INNER JOIN realms
 		ON realms.id = reports.realm_id AND
 		(realms.share_reports = true OR realms.id = $3)
 	WHERE
@@ -123,13 +177,13 @@ func (s *Service) GetEventTeamReportsForRealm(ctx context.Context, eventKey stri
 	return reports, s.db.SelectContext(ctx, &reports, query, eventKey, teamKey, realmID)
 }
 
-// GetMatchTeamReportsForRealm retrieves all reports for a specific team and event, filtering to only retrieve reports for realms
+// GetMatchTeamReportsForRealm retrieves all reports for a specific match, team, and event, filtering to only retrieve reports for realms
 // that are sharing reports or have a matching realm ID.
 func (s *Service) GetMatchTeamReportsForRealm(ctx context.Context, eventKey, matchKey string, teamKey string, realmID *int64) (reports []Report, err error) {
 	const query = `
 	SELECT reports.*
 	FROM reports
-	LEFT JOIN realms
+	INNER JOIN realms
 		ON realms.id = reports.realm_id AND
 		(realms.share_reports = true OR realms.id = $4)
 	WHERE
@@ -139,6 +193,16 @@ func (s *Service) GetMatchTeamReportsForRealm(ctx context.Context, eventKey, mat
 
 	reports = make([]Report, 0)
 	return reports, s.db.SelectContext(ctx, &reports, query, eventKey, matchKey, teamKey, realmID)
+}
+
+// DeleteReportByID deletes a report with the specified id from the database
+func (s *Service) DeleteReportByID(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM reports WHERE id = $1", id)
+	if err != nil {
+		return fmt.Errorf("unable to delete report: %w", err)
+	}
+
+	return nil
 }
 
 // GetLeaderboardForRealm retrieves leaderboard information from the reports and users table for users
