@@ -84,7 +84,7 @@ func (s *Server) postReportHandler() http.HandlerFunc {
 		}
 
 		if !present {
-			ihttp.Error(w, http.StatusNotFound)
+			ihttp.Error(w, http.StatusBadRequest)
 			return
 		}
 
@@ -157,7 +157,7 @@ func (s *Server) putReportHandler() http.HandlerFunc {
 			if report.ReporterID != nil {
 				targetUser, err := s.Store.GetUserByID(r.Context(), *report.ReporterID)
 				if errors.Is(err, store.ErrNoResults{}) {
-					ihttp.Error(w, http.StatusNotFound)
+					ihttp.Error(w, http.StatusBadRequest)
 					return
 				} else if err != nil {
 					ihttp.Error(w, http.StatusInternalServerError)
