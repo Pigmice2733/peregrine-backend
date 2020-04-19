@@ -38,9 +38,9 @@ func (s *Service) AlliancesUpsertTx(ctx context.Context, tx *sqlx.Tx, eventKey, 
 	return nil
 }
 
-// IsTeamPresentAtMatch returns whether the specified team is on an alliance in the specified match
-func (s *Service) IsTeamPresentAtMatch(ctx context.Context, eventKey, matchKey, teamKey string, realmID *int64) (present bool, err error) {
-	err = s.db.QueryRowContext(ctx, `
+// LockAlliance returns whether the specified team is on an alliance in the specified match, and if so selects the alliance for update
+func (s *Service) LockAlliance(ctx context.Context, tx *sqlx.Tx, eventKey, matchKey, teamKey string, realmID *int64) (present bool, err error) {
+	err = tx.QueryRowContext(ctx, `
 			SELECT EXISTS(
 				SELECT FROM alliances
 				LEFT JOIN events
@@ -50,7 +50,7 @@ func (s *Service) IsTeamPresentAtMatch(ctx context.Context, eventKey, matchKey, 
 					alliances.match_key = $2 AND
 					$3 = ANY(alliances.team_keys) AND
 					(events.realm_id IS NULL OR events.realm_id = $4)
-
+				FOR UPDATE of alliances
 			)
 			`, eventKey, matchKey, teamKey, realmID).Scan(&present)
 	if err != nil {

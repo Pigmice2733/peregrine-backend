@@ -716,22 +716,28 @@ paths:
           schema:
             type: string
             example: 2019abca
-          required: true
-          description: Get reports from a specific event
+          required: false
+          description: Get only reports from a specific event
         - in: query
           name: team
           schema:
             type: string
             example: frc2733
-          required: true
-          description: Get reports from a specific team
+          required: false
+          description: Get only reports from a specific team
         - in: query
           name: match
           schema:
             type: string
             example: qm2
           required: false
-          description: Get reports from a specific match
+          description: Get only reports from a specific match
+        - in: query
+          name: reporter
+          schema:
+            $ref: "#/components/schemas/id"
+          required: false
+          description: Get only reports from a specific user
       operationId: getReports
       security:
         - BearerAuth: []
@@ -1153,6 +1159,9 @@ components:
     report:
       required:
         - data
+        - eventKey
+        - matchKey
+        - teamKey
       properties:
         id:
           $ref: "#/components/schemas/id"
@@ -1332,7 +1341,6 @@ components:
       type: integer
       format: int64
       example: 1
-      readOnly: true
     schema:
       required:
         - id
