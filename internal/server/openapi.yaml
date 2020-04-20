@@ -707,14 +707,38 @@ paths:
           $ref: "#/components/responses/unauthorizedError"
         "500":
           $ref: "#/components/responses/internalServerError"
-  /events/{eventKey}/matches/{matchKey}/reports/{teamKey}:
-    parameters:
-      - $ref: "#/components/parameters/eventKey"
-      - $ref: "#/components/parameters/matchKey"
-      - $ref: "#/components/parameters/teamKey"
+  /reports:
     get:
-      summary: Get reports for a team in a match at an event
-      operationId: getTeamMatchReports
+      summary: Get reports
+      parameters:
+        - in: query
+          name: event
+          schema:
+            type: string
+            example: 2019abca
+          required: false
+          description: Get only reports from a specific event
+        - in: query
+          name: team
+          schema:
+            type: string
+            example: frc2733
+          required: false
+          description: Get only reports from a specific team
+        - in: query
+          name: match
+          schema:
+            type: string
+            example: qm2
+          required: false
+          description: Get only reports from a specific match
+        - in: query
+          name: reporter
+          schema:
+            $ref: "#/components/schemas/id"
+          required: false
+          description: Get only reports from a specific user
+      operationId: getReports
       security:
         - BearerAuth: []
       tags:
@@ -727,6 +751,68 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/report"
+        "400":
+          $ref: "#/components/responses/badRequestError"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
+    post:
+      summary: Submit a report
+      security:
+        - BearerAuth: []
+      operationId: postReport
+      tags:
+        - reports
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/upload-report"
+      responses:
+        "201":
+          description: Submitted new report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/id"
+        "204":
+          description: Successfully replaced existing report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/id"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "422":
+          $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
+  /reports/{id}:
+    parameters:
+      - in: path
+        name: id
+        schema:
+          $ref: "#/components/schemas/id"
+        required: true
+        description: Numeric Report ID
+    get:
+      summary: Get report
+      operationId: getReport
+      security:
+        - BearerAuth: []
+      tags:
+        - reports
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/report"
+        "400":
+          $ref: "#/components/responses/badRequestError"
         "401":
           $ref: "#/components/responses/unauthorizedError"
         "404":
@@ -734,28 +820,48 @@ paths:
         "500":
           $ref: "#/components/responses/internalServerError"
     put:
-      summary: Submit a report for a team in a match at an event
+      summary: Update existing report
+      operationId: putReports
       security:
         - BearerAuth: []
-      operationId: postTeamMatchReport
       tags:
         - reports
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/report"
+              $ref: "#/components/schemas/upload-report"
       responses:
-        "201":
-          description: Submitted new report
         "204":
-          description: Successfully replaced existing report
+          description: Successfully update existing report
+        "400":
+          $ref: "#/components/responses/badRequestError"
         "401":
           $ref: "#/components/responses/unauthorizedError"
         "403":
           $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
         "422":
           $ref: "#/components/responses/unprocessableEntityError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
+    delete:
+      summary: Delete existing report
+      security:
+        - BearerAuth: []
+      operationId: deleteReport
+      tags:
+        - reports
+      responses:
+        "204":
+          description: Successfully deleted report
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "403":
+          $ref: "#/components/responses/forbiddenError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
         "500":
           $ref: "#/components/responses/internalServerError"
   /events/{eventKey}/matches/{matchKey}/comments/{teamKey}:
@@ -1089,12 +1195,57 @@ components:
           example: 2
     report:
       required:
+        - id
+        - eventKey
+        - matchKey
+        - teamKey
         - data
+        - comment
       properties:
+        id:
+          $ref: "#/components/schemas/id"
+        eventKey:
+          type: string
+          example: 2019abca
+        matchKey:
+          type: string
+          example: qm5
+        teamKey:
+          type: string
+          example: frc2733
+        realmId:
+          $ref: "#/components/schemas/id"
         reporterId:
           $ref: "#/components/schemas/id"
         data:
           $ref: "#/components/schemas/reportData"
+        comment:
+          type: string
+          example: "Played good defense"
+    upload-report:
+      required:
+        - eventKey
+        - matchKey
+        - teamKey
+      properties:
+        eventKey:
+          type: string
+          example: 2019abca
+        matchKey:
+          type: string
+          example: qm5
+        teamKey:
+          type: string
+          example: frc2733
+        realmId:
+          $ref: "#/components/schemas/id"
+        reporterId:
+          $ref: "#/components/schemas/id"
+        data:
+          $ref: "#/components/schemas/reportData"
+        comment:
+          type: string
+          example: "Played good defense"
     comment:
       required:
         - comment
@@ -1253,7 +1404,6 @@ components:
       type: integer
       format: int64
       example: 1
-      readOnly: true
     schema:
       required:
         - id

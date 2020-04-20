@@ -237,20 +237,3 @@ func editMatch(ctx context.Context, sto *store.Service, roles store.Roles, userR
 
 	return existed, err
 }
-
-type forbiddenError struct {
-	err error
-}
-
-func (f forbiddenError) Unwrap() error {
-	return f.err
-}
-
-func (f forbiddenError) Error() string {
-	return f.err.Error()
-}
-
-func (f forbiddenError) Is(target error) bool {
-	_, ok := target.(forbiddenError)
-	return ok
-}

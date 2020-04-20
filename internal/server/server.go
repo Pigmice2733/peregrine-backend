@@ -66,3 +66,37 @@ func (s *Server) Run(ctx context.Context) error {
 		return httpServer.Shutdown(ctx)
 	}
 }
+
+type forbiddenError struct {
+	err error
+}
+
+func (f forbiddenError) Unwrap() error {
+	return f.err
+}
+
+func (f forbiddenError) Error() string {
+	return f.err.Error()
+}
+
+func (f forbiddenError) Is(target error) bool {
+	_, ok := target.(forbiddenError)
+	return ok
+}
+
+type badRequestError struct {
+	err error
+}
+
+func (e badRequestError) Unwrap() error {
+	return e.err
+}
+
+func (e badRequestError) Error() string {
+	return e.err.Error()
+}
+
+func (e badRequestError) Is(target error) bool {
+	_, ok := target.(badRequestError)
+	return ok
+}

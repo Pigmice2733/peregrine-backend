@@ -216,6 +216,25 @@ func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 	return u, nil
 }
 
+// LockUser retrieves a user and locks it for update
+func (s *Service) LockUser(ctx context.Context, tx *sqlx.Tx, id int64) (User, error) {
+	var u User
+
+	err := tx.GetContext(ctx, &u, `
+	SELECT *
+	FROM users
+	WHERE id = $1
+	FOR UPDATE
+	`, id)
+	if err == sql.ErrNoRows {
+		return u, ErrNoResults{fmt.Errorf("user %d does not exist: %w", u.ID, err)}
+	} else if err != nil {
+		return u, fmt.Errorf("unable to lock user: %w", err)
+	}
+
+	return u, nil
+}
+
 // PatchUser updates a user by their ID.
 func (s *Service) PatchUser(ctx context.Context, pu PatchUser) error {
 	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
