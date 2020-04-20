@@ -15,7 +15,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (s *Server) getReportsHandler() http.HandlerFunc {
+func (s *Server) reportsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		eventQuery := r.URL.Query().Get("event")
 		matchQuery := r.URL.Query().Get("match")
@@ -58,6 +58,34 @@ func (s *Server) getReportsHandler() http.HandlerFunc {
 		}
 
 		ihttp.Respond(w, reports, http.StatusOK)
+	}
+}
+
+func (s *Server) reportHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
+		if err != nil {
+			ihttp.Error(w, http.StatusBadRequest)
+			return
+		}
+
+		var realmID *int64
+		userRealmID, err := ihttp.GetRealmID(r)
+		if err == nil {
+			realmID = &userRealmID
+		}
+
+		report, err := s.Store.GetReportForRealm(r.Context(), id, realmID)
+		if errors.Is(err, store.ErrNoResults{}) {
+			ihttp.Error(w, http.StatusNotFound)
+			return
+		} else if err != nil {
+			ihttp.Error(w, http.StatusInternalServerError)
+			s.Logger.WithError(err).Error("getting reports")
+			return
+		}
+
+		ihttp.Respond(w, report, http.StatusOK)
 	}
 }
 

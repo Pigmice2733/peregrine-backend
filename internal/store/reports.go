@@ -67,6 +67,28 @@ func (s *Service) LockReport(ctx context.Context, tx *sqlx.Tx, id int64) (Report
 	return report, nil
 }
 
+// GetReportForRealm retrieves a report in a specific realm
+func (s *Service) GetReportForRealm(ctx context.Context, id int64, realmID *int64) (Report, error) {
+	var report Report
+
+	err := s.db.GetContext(ctx, &report, `
+	SELECT reports.*
+		FROM reports
+	LEFT JOIN realms
+		ON realms.id = reports.realm_id
+	WHERE
+		reports.id = $1 AND
+		(reports.realm_id IS NULL OR realms.share_reports = true OR realms.id = $2)
+	`, id, realmID)
+	if err == sql.ErrNoRows {
+		return report, ErrNoResults{fmt.Errorf("report with ID %d does not exist", report.ID)}
+	} else if err != nil {
+		return report, fmt.Errorf("unable to retrieve report: %w", err)
+	}
+
+	return report, nil
+}
+
 // UpsertReport creates a new report in the db, or replaces the existing one if
 // the same reporter already has a report in the db for that team and match. It
 // returns a boolean that is true when the report was created, and false when it

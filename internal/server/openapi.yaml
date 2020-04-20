@@ -768,12 +768,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/report"
+              $ref: "#/components/schemas/upload-report"
       responses:
         "201":
           description: Submitted new report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/id"
         "204":
           description: Successfully replaced existing report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/id"
         "401":
           $ref: "#/components/responses/unauthorizedError"
         "403":
@@ -790,6 +798,27 @@ paths:
           $ref: "#/components/schemas/id"
         required: true
         description: Numeric Report ID
+    get:
+      summary: Get report
+      operationId: getReport
+      security:
+        - BearerAuth: []
+      tags:
+        - reports
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/report"
+        "400":
+          $ref: "#/components/responses/badRequestError"
+        "401":
+          $ref: "#/components/responses/unauthorizedError"
+        "404":
+          $ref: "#/components/responses/notFoundError"
+        "500":
+          $ref: "#/components/responses/internalServerError"
     put:
       summary: Update existing report
       operationId: putReports
@@ -801,7 +830,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/report"
+              $ref: "#/components/schemas/upload-report"
       responses:
         "204":
           description: Successfully update existing report
@@ -1158,13 +1187,39 @@ components:
           example: 2
     report:
       required:
+        - id
+        - eventKey
+        - matchKey
+        - teamKey
         - data
+        - comment
+      properties:
+        id:
+          $ref: "#/components/schemas/id"
+        eventKey:
+          type: string
+          example: 2019abca
+        matchKey:
+          type: string
+          example: qm5
+        teamKey:
+          type: string
+          example: frc2733
+        realmId:
+          $ref: "#/components/schemas/id"
+        reporterId:
+          $ref: "#/components/schemas/id"
+        data:
+          $ref: "#/components/schemas/reportData"
+        comment:
+          type: string
+          example: "Played good defense"
+    upload-report:
+      required:
         - eventKey
         - matchKey
         - teamKey
       properties:
-        id:
-          $ref: "#/components/schemas/id"
         eventKey:
           type: string
           example: 2019abca
