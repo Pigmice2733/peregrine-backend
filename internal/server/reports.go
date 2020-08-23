@@ -250,7 +250,7 @@ func (s *Server) putReportHandler() http.HandlerFunc {
 		if errors.Is(err, store.ErrConflictingReport{}) {
 			var conflictErr store.ErrConflictingReport
 			_ = errors.As(err, &conflictErr)
-			ihttp.Respond(w, ConflictResponse{Error: "exists", ID: conflictErr.ID}, http.StatusBadRequest)
+			ihttp.Respond(w, ConflictResponse{Error: "conflicts", ID: conflictErr.ID}, http.StatusBadRequest)
 			return
 		} else if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)

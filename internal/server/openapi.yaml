@@ -1168,7 +1168,7 @@ components:
             properties:
               error:
                 type: string
-                example: conflict
+                example: conflicts
               id:
                 $ref: "#/components/schemas/id"
   securitySchemes:
