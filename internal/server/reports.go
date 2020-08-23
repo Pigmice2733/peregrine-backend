@@ -170,6 +170,13 @@ func (s *Server) postReportHandler() http.HandlerFunc {
 	}
 }
 
+// ConflictResponse is returned when a report is updated such that the foreign keys conflict with another
+// existing report.
+type ConflictResponse struct {
+	Error string `json:"error"`
+	ID    int64  `json:"id"`
+}
+
 func (s *Server) putReportHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(mux.Vars(r)["id"], 10, 64)
@@ -177,6 +184,8 @@ func (s *Server) putReportHandler() http.HandlerFunc {
 			ihttp.Error(w, http.StatusBadRequest)
 			return
 		}
+
+		replace, _ := strconv.ParseBool(r.URL.Query().Get("replace"))
 
 		var report store.Report
 		if err := json.NewDecoder(r.Body).Decode(&report); err != nil {
@@ -235,10 +244,15 @@ func (s *Server) putReportHandler() http.HandlerFunc {
 
 				return nil
 			}, func(tx *sqlx.Tx) error {
-				return s.Store.UpdateReportTx(r.Context(), tx, report)
+				return s.Store.UpdateReportTx(r.Context(), tx, report, replace)
 			})
 
-		if errors.Is(err, store.ErrNoResults{}) {
+		if errors.Is(err, store.ErrConflictingReport{}) {
+			var conflictErr store.ErrConflictingReport
+			_ = errors.As(err, &conflictErr)
+			ihttp.Respond(w, ConflictResponse{Error: "conflicts", ID: conflictErr.ID}, http.StatusBadRequest)
+			return
+		} else if errors.Is(err, store.ErrNoResults{}) {
 			ihttp.Error(w, http.StatusNotFound)
 			return
 		} else if errors.Is(err, store.ErrExists{}) {
