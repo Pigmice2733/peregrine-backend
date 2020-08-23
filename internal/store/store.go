@@ -44,8 +44,10 @@ func (err ErrFKeyViolation) Is(target error) bool {
 	return ok
 }
 
-const pgExists = "23505"
-const pgFKeyViolation = "23503"
+const (
+	pgExists        = "23505"
+	pgFKeyViolation = "23503"
+)
 
 // Service provides methods for storing data in a PostgreSQL database.
 type Service struct {

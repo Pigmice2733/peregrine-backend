@@ -826,6 +826,14 @@ paths:
         - BearerAuth: []
       tags:
         - reports
+      parameters:
+        - in: query
+          name: replace
+          schema:
+            type: boolean
+            example: false
+          required: false
+          description: If true, replace any conflicting reports.
       requestBody:
         content:
           application/json:
@@ -1153,6 +1161,16 @@ components:
         text/plain:
           type: string
           example: Bad Request
+        application/json:
+          schema:
+            required:
+              - error
+            properties:
+              error:
+                type: string
+                example: conflict
+              id:
+                $ref: "#/components/schemas/id"
   securitySchemes:
     BearerAuth:
       type: http

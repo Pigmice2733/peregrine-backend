@@ -141,21 +141,55 @@ func (s *Service) UpsertReport(ctx context.Context, r Report) (created bool, id 
 	return !existed, id, err
 }
 
+// ErrConflictingReport is returned when an existing report conflicts with the report we're trying
+// to update.
+type ErrConflictingReport struct {
+	ID int64
+}
+
+// Is returns whether the target is an ErrConflictingReport.
+func (err ErrConflictingReport) Is(target error) bool {
+	_, ok := target.(ErrConflictingReport)
+	return ok
+}
+
+func (err ErrConflictingReport) Error() string {
+	return fmt.Sprintf("report with same event, match, team, and reporter id exists (id %d)", err.ID)
+}
+
 // UpdateReportTx updates an existing report in the db
-func (s *Service) UpdateReportTx(ctx context.Context, tx *sqlx.Tx, r Report) error {
-	res, err := tx.NamedExecContext(ctx, `
-	UPDATE reports
-		SET
-			event_key = :event_key,
-			match_key = :match_key,
-			team_key = :team_key,
-			reporter_id = :reporter_id,
-			realm_id = :realm_id,
-			data = :data,
-			comment = :comment
-	    WHERE
-		    id = :id
-	`, r)
+func (s *Service) UpdateReportTx(ctx context.Context, tx *sqlx.Tx, r Report, replace bool) error {
+	var id int64
+	err := tx.GetContext(ctx, &id, `
+		SELECT id
+		FROM reports
+		WHERE
+			event_key = $1 AND
+			match_key = $2 AND
+			team_key = $3 AND
+			reporter_id = $4`, r.EventKey, r.MatchKey, r.TeamKey, r.ReporterID)
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("unable to check if report exists: %w", err)
+	} else if err == nil && !replace {
+		return ErrConflictingReport{ID: id}
+	} else if err == nil && replace {
+		_, err := tx.ExecContext(ctx, "DELETE FROM reports WHERE id = $1", id)
+		if err != nil {
+			return fmt.Errorf("unable to delete conflicting report: %w", err)
+		}
+	}
+
+	res, err := tx.NamedExecContext(ctx, `UPDATE reports
+	SET
+		event_key = :event_key,
+		match_key = :match_key,
+		team_key = :team_key,
+		reporter_id = :reporter_id,
+		realm_id = :realm_id,
+		data = :data,
+		comment = :comment
+	WHERE
+		id = :id`, r)
 	if err == nil {
 		if n, err := res.RowsAffected(); err != nil && n == 0 {
 			return ErrNoResults{fmt.Errorf("could not update non-existent report: %w", err)}
