@@ -8,7 +8,7 @@ require (
 	github.com/go-playground/universal-translator v0.17.0 // indirect
 	github.com/google/go-cmp v0.5.4
 	github.com/gorilla/mux v1.8.0
-	github.com/jmoiron/sqlx v1.2.0
+	github.com/jmoiron/sqlx v1.3.4
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/lib/pq v1.9.0
