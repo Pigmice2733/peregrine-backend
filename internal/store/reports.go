@@ -164,10 +164,11 @@ func (s *Service) UpdateReportTx(ctx context.Context, tx *sqlx.Tx, r Report, rep
 		SELECT id
 		FROM reports
 		WHERE
-			event_key = $1 AND
-			match_key = $2 AND
-			team_key = $3 AND
-			reporter_id = $4`, r.EventKey, r.MatchKey, r.TeamKey, r.ReporterID)
+			id != $1 AND
+			event_key = $2 AND
+			match_key = $3 AND
+			team_key = $4 AND
+			reporter_id = $5`, r.ID, r.EventKey, r.MatchKey, r.TeamKey, r.ReporterID)
 	if err != nil && err != sql.ErrNoRows {
 		return fmt.Errorf("unable to check if report exists: %w", err)
 	} else if err == nil && !replace {
