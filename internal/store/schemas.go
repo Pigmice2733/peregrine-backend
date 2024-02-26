@@ -64,14 +64,14 @@ func (sd *SchemaFields) Scan(src interface{}) error {
 	return json.Unmarshal(j, sd)
 }
 
-// CreateSchema creates a new schema
-func (s *Service) CreateSchema(ctx context.Context, schema Schema) error {
+// Upsert creates a new schema or updates an existing one
+func (s *Service) UpsertSchema(ctx context.Context, schema Schema) error {
 	return s.DoTransaction(ctx, func(tx *sqlx.Tx) error {
 		_, err := tx.NamedExecContext(ctx, `
-		INSERT
-			INTO
-				schemas (year, realm_id, schema)
-			VALUES (:year, :realm_id, :schema)
+		INSERT INTO schemas (year, realm_id, schema)
+		VALUES (:year, :realm_id, :schema)
+		ON CONFLICT (year)
+		DO UPDATE SET schema = :schema
 		`, schema)
 
 		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == pgExists {
