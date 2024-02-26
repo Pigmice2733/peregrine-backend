@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (s *Server) createSchemaHandler() http.HandlerFunc {
+func (s *Server) upsertSchemaHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var schema store.Schema
 		if err := json.NewDecoder(r.Body).Decode(&schema); err != nil {
@@ -38,12 +38,12 @@ func (s *Server) createSchemaHandler() http.HandlerFunc {
 			schema.RealmID = nil
 		}
 
-		err := s.Store.CreateSchema(r.Context(), schema)
+		err := s.Store.UpsertSchema(r.Context(), schema)
 		if errors.Is(err, store.ErrExists{}) {
 			ihttp.Respond(w, err, http.StatusConflict)
 			return
 		} else if err != nil {
-			s.Logger.WithError(err).Error("creating schema")
+			s.Logger.WithError(err).Error("upserting schema")
 			ihttp.Error(w, http.StatusInternalServerError)
 			return
 		}
